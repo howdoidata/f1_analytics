@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-08-06T00:00:00-05:00'
 status: 'awaiting-operator'
 operator_actions:
-  - 'Refresh or authorize the Kaggle API credential for patelris/formula-1-complete-dataset-1950-2026, then rerun the named spike.'
+  - 'Investigate the Kaggle 400 Bad Request for patelris/formula-1-complete-dataset-1950-2026 directly in the Kaggle console (credential validity, dataset-terms acceptance, and request format are all untested causes), then rerun the named spike.'
   - 'Rerun the named spike after the 2026 Barcelona race has occurred to capture its FastF1 session evidence.'
 baseline_revision: '1db1beb16693a21f7bf9b26b0f07bfd465dc8d03'
 review_loop_iteration: 0
@@ -72,6 +72,29 @@ warnings: []
 - 2026-08-06: Completed all agent-executable Story 1.2 work. Set `awaiting-operator` because Kaggle re-download access requires an operator refresh/authorization and Barcelona's 2026 race was still future-dated at the evidence run.
 
 ## Review Triage Log
+
+### Review Findings (bmad-code-review, 2026-08-07)
+
+**Decision-needed:**
+
+- [x] [Review][Decision] Decision-record evidence not reproducible by the committed script — RESOLVED 2026-08-07: re-ran the committed script live with the documented `--python 3.13` command; reproduced an identical five-race matrix, pandas-3 failure, and Kaggle failure under Python 3.13.7. Decision record updated with a "Reproducibility Verification" section and corrected command/version history.
+- [x] [Review][Decision] Undisclosed epic-1-context.md rewrite bundled into this story's implementation commit — RESOLVED 2026-08-07: treated as legitimate in-scope epic maintenance. Added `epic-1-context.md` to the story's File List and Change Log, and restored the specific "4 requests/second and 500 requests/hour" Jolpica ceilings into the rewritten Requirements & Constraints bullet.
+- [x] [Review][Decision] Unsubstantiated "lap-accuracy warnings" claim in the decision record — RESOLVED 2026-08-07: the live re-run's terminal log verified the claim (FastF1 logged lap-accuracy-check failures for Melbourne drivers 81/27 and Canada driver 41). Decision record updated with a citation to this verification rather than removing the claim.
+
+**Patch:**
+
+- [x] [Review][Patch] Unguarded cache-setup and session-metadata calls can crash the whole spike with zero evidence output — FIXED 2026-08-07: `enable_cache` folded into the existing `get_session`/`load` try/except; metadata-dict construction now has its own try/except returning a named `session_metadata_exception` failure; `CACHE_DIR.mkdir` in `exploratory_fastf1_leg` now guarded and returns a named `preflight_failed` result on `OSError`.
+- [x] [Review][Patch] Pandas-3 resolver failure paraphrased instead of quoted verbatim — FIXED 2026-08-07 (as part of Decision 1): decision record now quotes uv's actual resolver stderr verbatim.
+- [x] [Review][Patch] Kaggle failure remediation asserts an unverified root cause for a 400 Bad Request — FIXED 2026-08-07: decision record, Follow-up Conditions, and the spec's `operator_actions` now state the root cause is undetermined and direct the operator to investigate in the Kaggle console rather than asserting a credential-refresh diagnosis.
+- [x] [Review][Patch] No timeout on the pandas-3 resolver subprocess or the Kaggle download call — FIXED 2026-08-07: `subprocess.run` now takes `timeout=RESOLVER_TIMEOUT_SECONDS` (180s) with a named `TimeoutExpired` failure; `kagglehub.dataset_download` now runs under `socket.setdefaulttimeout(KAGGLE_DOWNLOAD_TIMEOUT_SECONDS)` (120s).
+- [x] [Review][Patch] Dead import `shutil` — FIXED 2026-08-07: removed.
+- [x] [Review][Patch] `fillna(False).sum()` conflates "flag is False" with "flag is missing" — FIXED 2026-08-07: now uses `.sum(skipna=True)` for the true-count plus new explicit `fastf1_generated_missing_count`/`is_accurate_missing_count` fields.
+- [x] [Review][Patch] A session that loads with zero laps/weather is still marked `status: pass` — FIXED 2026-08-07: `load_session` now sets `status: "empty"` when a session loads without error but `lap_count == 0`; the leg-level `all(status == "pass")` aggregation already treats this as not-passing.
+- [x] [Review][Patch] Script exit code is always 0 regardless of leg failures — FIXED 2026-08-07: `main()` now returns 1 if any of the four legs did not report `status: "pass"`.
+
+All patches verified live: re-ran `uv run --isolated --python 3.13 --with fastf1==3.8.3 --with kagglehub python scripts/spike_fastf1_adoption.py` post-patch — identical five-race evidence numbers reproduced, new `*_missing_count` fields present and zero (no missing flags in this data), exit code correctly 1 (Barcelona and Kaggle legs still failing as expected pending the race occurring / operator investigation). `python3 -m py_compile`, `rg` five-heading check, and `git diff --check` all still pass.
+
+**Dismissed as noise (6):** Kaggle credential-path check limited to `~/.kaggle/access_token` (matches `docs/local_setup.md`'s documented KaggleHub Option 3 convention, not a bug); `sprint-status.yaml` `last_updated` timestamp looking suspiciously round (cosmetic, non-evidentiary); `session.laps is None` before `.columns` access (already caught by the surrounding try/except, so a named failure is still reported); `offline_mode(True)` call unguarded before try/finally (negligible probability, self-contained blast radius); TOCTOU race between `KAGGLE_TOKEN.is_file()` and `.stat()` (negligible for a local single-user manual script); claim that the 2026-08-07 "bookkeeping" changelog entry understates bundled changes (based on misreading the diff as one commit — that edit is in fact still uncommitted and separate from the 2026-08-06 implementation commit, and accurately describes only itself).
 
 ## Design Notes
 

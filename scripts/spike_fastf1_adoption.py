@@ -16,7 +16,7 @@ from __future__ import annotations
 import importlib.metadata
 import json
 import platform
-import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -29,6 +29,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CACHE_DIR = ROOT / "data" / "raw" / "fastf1_cache"
 KAGGLE_TOKEN = Path.home() / ".kaggle" / "access_token"
 KAGGLE_DATASET = "patelris/formula-1-complete-dataset-1950-2026"
+RESOLVER_TIMEOUT_SECONDS = 180
+KAGGLE_DOWNLOAD_TIMEOUT_SECONDS = 120
 TARGETS = (
     ("Melbourne", "Australian Grand Prix"),
     ("Miami", "Miami Grand Prix"),
@@ -66,7 +68,15 @@ def pandas_3_compatibility_gate() -> dict[str, Any]:
         "import fastf1, pandas; print(fastf1.__version__, pandas.__version__)",
     ]
     try:
-        completed = subprocess.run(command, text=True, capture_output=True, check=False)
+        completed = subprocess.run(
+            command, text=True, capture_output=True, check=False, timeout=RESOLVER_TIMEOUT_SECONDS
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "preflight_failed",
+            "command": command,
+            "exception": f"TimeoutExpired: resolver exceeded {RESOLVER_TIMEOUT_SECONDS}s",
+        }
     except OSError as error:
         return {"status": "preflight_failed", "command": command, "exception": exception_summary(error)}
     return {
@@ -90,10 +100,16 @@ def lap_evidence(session: Any) -> dict[str, Any]:
         "stint_count": int(stints.nunique()) if "Stint" in columns else None,
         "compound_column_present": "Compound" in columns,
         "compound_count": int(compounds.nunique()) if "Compound" in columns else None,
-        "fastf1_generated_count": int(laps["FastF1Generated"].fillna(False).sum())
+        "fastf1_generated_count": int(laps["FastF1Generated"].sum(skipna=True))
         if "FastF1Generated" in columns
         else None,
-        "is_accurate_true_count": int(laps["IsAccurate"].fillna(False).sum())
+        "fastf1_generated_missing_count": int(laps["FastF1Generated"].isna().sum())
+        if "FastF1Generated" in columns
+        else None,
+        "is_accurate_true_count": int(laps["IsAccurate"].sum(skipna=True))
+        if "IsAccurate" in columns
+        else None,
+        "is_accurate_missing_count": int(laps["IsAccurate"].isna().sum())
         if "IsAccurate" in columns
         else None,
     }
@@ -105,21 +121,24 @@ def weather_evidence(session: Any) -> dict[str, Any]:
 
 
 def load_session(fastf1: Any, event: str) -> tuple[Any | None, dict[str, Any]]:
-    # Reassert the mandatory managed cache immediately before every load.
-    fastf1.Cache.enable_cache(str(CACHE_DIR))
     try:
+        # Reassert the mandatory managed cache immediately before every load.
+        fastf1.Cache.enable_cache(str(CACHE_DIR))
         session = fastf1.get_session(2026, event, "R")
         session.load(laps=True, telemetry=False, weather=True, messages=False)
     except Exception as error:  # Live services have diverse public failure types.
         return None, {"status": "failed", "exception": exception_summary(error)}
-    result: dict[str, Any] = {
-        "status": "pass",
-        "session": {
-            "event_name": session.event["EventName"],
-            "session_name": session.name,
-            "session_date": str(session.date),
-        },
-    }
+    try:
+        result: dict[str, Any] = {
+            "status": "pass",
+            "session": {
+                "event_name": session.event["EventName"],
+                "session_name": session.name,
+                "session_date": str(session.date),
+            },
+        }
+    except Exception as error:
+        return session, {"status": "failed", "session_metadata_exception": exception_summary(error)}
     try:
         result.update(lap_evidence(session))
     except Exception as error:
@@ -128,6 +147,10 @@ def load_session(fastf1: Any, event: str) -> tuple[Any | None, dict[str, Any]]:
         result.update(weather_evidence(session))
     except Exception as error:
         result.update({"status": "failed", "weather_evidence_exception": exception_summary(error)})
+    if result.get("status") == "pass" and result.get("lap_count") == 0:
+        # A session that loaded without error but has zero laps (e.g. a
+        # cancelled/red-flagged race) is not a verified data-presence pass.
+        result["status"] = "empty"
     return session, result
 
 
@@ -138,7 +161,12 @@ def exploratory_fastf1_leg() -> tuple[dict[str, Any], dict[str, Any]]:
         failure = {"status": "preflight_failed", "exception": exception_summary(error)}
         return failure, failure
 
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        failure = {"status": "preflight_failed", "exception": exception_summary(error)}
+        return failure, failure
+
     live_results: dict[str, Any] = {}
     for label, event in TARGETS:
         _, evidence = load_session(fastf1, event)
@@ -181,9 +209,14 @@ def kaggle_redownload_leg() -> dict[str, Any]:
     try:
         import kagglehub
 
-        with tempfile.TemporaryDirectory(prefix="fastf1-kaggle-spike-") as destination:
-            downloaded = kagglehub.dataset_download(KAGGLE_DATASET, path=destination)
-            result.update({"status": "pass", "downloaded_path_present": Path(downloaded).exists()})
+        previous_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(KAGGLE_DOWNLOAD_TIMEOUT_SECONDS)
+        try:
+            with tempfile.TemporaryDirectory(prefix="fastf1-kaggle-spike-") as destination:
+                downloaded = kagglehub.dataset_download(KAGGLE_DATASET, path=destination)
+                result.update({"status": "pass", "downloaded_path_present": Path(downloaded).exists()})
+        finally:
+            socket.setdefaulttimeout(previous_timeout)
     except Exception as error:
         result.update({"status": "failed", "exception": exception_summary(error)})
     return result
@@ -192,6 +225,7 @@ def kaggle_redownload_leg() -> dict[str, Any]:
 def main() -> int:
     compatibility = pandas_3_compatibility_gate()
     exploratory, replay = exploratory_fastf1_leg()
+    kaggle = kaggle_redownload_leg()
     evidence = {
         "spike": "fastf1_adoption",
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -205,10 +239,11 @@ def main() -> int:
         "pandas_3_compatibility": compatibility,
         "exploratory_fastf1": exploratory,
         "offline_cache_replay": replay,
-        "kaggle_redownload": kaggle_redownload_leg(),
+        "kaggle_redownload": kaggle,
     }
     print(json.dumps(evidence, indent=2, sort_keys=True, default=str))
-    return 0
+    all_legs_passed = all(leg.get("status") == "pass" for leg in (compatibility, exploratory, replay, kaggle))
+    return 0 if all_legs_passed else 1
 
 
 if __name__ == "__main__":

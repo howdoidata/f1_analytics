@@ -1,6 +1,6 @@
 # Story 1.2: FastF1 Adoption Spike
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -16,22 +16,22 @@ so that AD-6's source-role binding rests on evidence rather than documentation.
 
 ## Tasks / Subtasks
 
-- [ ] Create a narrow, named live-adoption spike. (AC: 1, 3)
-  - [ ] Add `scripts/spike_fastf1_adoption.py` (or an equally explicit snake_case name) as a standalone evidence script; do not create a production loader or DuckDB tables.
-  - [ ] Preflight Python, pandas, FastF1, cache-directory, and Kaggle credential requirements. Report a named failure and stop the affected leg; never report an unverified partial result as a pass.
-  - [ ] Pin or otherwise print the exact resolved Python, pandas, FastF1, and KaggleHub versions in the output and decision record.
-  - [ ] Enable FastF1's managed cache at `data/raw/fastf1_cache/` before every FastF1 load. Do not disable it and do not commit cache payloads.
-- [ ] Exercise the three adoption legs and preserve evidence. (AC: 1)
-  - [ ] First test whether the declared Python 3.13 + pandas 3.0.x + FastF1 3.8.x environment resolves and imports. Capture the resolver/import failure surface verbatim if it does not.
-  - [ ] Only if a compatible FastF1 environment is explicitly selected for exploratory data presence, load Race sessions for Melbourne, Miami, Canada, Barcelona, and Silverstone with `Session.load(laps=True, telemetry=False, weather=True, messages=False)`.
-  - [ ] For each race, record session metadata, lap presence/count, stint/compound presence/count derived from laps, and weather presence/count. Preserve counts of `FastF1Generated` and `IsAccurate` laps; neither flag is proof that the fact class is absent or fully reliable.
-  - [ ] Run a cache-replay check using FastF1 offline mode after the cache is populated. Record whether the five sessions replay without fresh network requests; do not make a second live request loop merely to test the cache.
-  - [ ] Test Kaggle re-download availability for `patelris/formula-1-complete-dataset-1950-2026` using the documented local Kaggle credential and a disposable destination. Record availability and any credential/access failure; do not treat a downloaded dataset as current-season truth.
-- [ ] Record and close the source decision. (AC: 1, 2, 3)
-  - [ ] Add `_bmad-output/planning-artifacts/decisions/fastf1-source-adoption-decision-record.md` with the exact commands, timestamp, environment, cache result, five-race × fact-class matrix, Kaggle outcome, and raw exception summaries.
-  - [ ] Record all five PRD §9 decision fields: access model, cost, license/terms risk, authentication, and maintenance burden.
-  - [ ] State an explicit adoption decision. If pandas 3 compatibility fails, do not force-install FastF1 and call it compatible; select and record either the pandas pin/spine-amendment path or the alternate-source path.
-  - [ ] Record the script commands and validation results in this story's Dev Agent Record, as required by `AGENTS.md`.
+- [x] Create a narrow, named live-adoption spike. (AC: 1, 3)
+  - [x] Add `scripts/spike_fastf1_adoption.py` (or an equally explicit snake_case name) as a standalone evidence script; do not create a production loader or DuckDB tables.
+  - [x] Preflight Python, pandas, FastF1, cache-directory, and Kaggle credential requirements. Report a named failure and stop the affected leg; never report an unverified partial result as a pass.
+  - [x] Pin or otherwise print the exact resolved Python, pandas, FastF1, and KaggleHub versions in the output and decision record.
+  - [x] Enable FastF1's managed cache at `data/raw/fastf1_cache/` before every FastF1 load. Do not disable it and do not commit cache payloads.
+- [x] Exercise the three adoption legs and preserve evidence. (AC: 1)
+  - [x] First test whether the declared Python 3.13 + pandas 3.0.x + FastF1 3.8.x environment resolves and imports. Capture the resolver/import failure surface verbatim if it does not.
+  - [x] Only if a compatible FastF1 environment is explicitly selected for exploratory data presence, load Race sessions for Melbourne, Miami, Canada, Barcelona, and Silverstone with `Session.load(laps=True, telemetry=False, weather=True, messages=False)`.
+  - [x] For each race, record session metadata, lap presence/count, stint/compound presence/count derived from laps, and weather presence/count. Preserve counts of `FastF1Generated` and `IsAccurate` laps; neither flag is proof that the fact class is absent or fully reliable.
+  - [x] Run a cache-replay check using FastF1 offline mode after the cache is populated. Record whether the five sessions replay without fresh network requests; do not make a second live request loop merely to test the cache.
+  - [x] Test Kaggle re-download availability for `patelris/formula-1-complete-dataset-1950-2026` using the documented local Kaggle credential and a disposable destination. Record availability and any credential/access failure; do not treat a downloaded dataset as current-season truth.
+- [x] Record and close the source decision. (AC: 1, 2, 3)
+  - [x] Add `_bmad-output/planning-artifacts/decisions/fastf1-source-adoption-decision-record.md` with the exact commands, timestamp, environment, cache result, five-race × fact-class matrix, Kaggle outcome, and raw exception summaries.
+  - [x] Record all five PRD §9 decision fields: access model, cost, license/terms risk, authentication, and maintenance burden.
+  - [x] State an explicit adoption decision. If pandas 3 compatibility fails, do not force-install FastF1 and call it compatible; select and record either the pandas pin/spine-amendment path or the alternate-source path.
+  - [x] Record the script commands and validation results in this story's Dev Agent Record, as required by `AGENTS.md`.
 
 ## Dev Notes
 
@@ -114,11 +114,21 @@ GPT-5 Codex
 - `python3 -m json.tool /tmp/fastf1-adoption-spike-20260806.json` — pass; completed evidence capture is valid JSON.
 - `rg -n '^### (access model|cost|license/terms risk|authentication|maintenance burden)$' _bmad-output/planning-artifacts/decisions/fastf1-source-adoption-decision-record.md` — exactly five required headings found.
 - `git diff --check` — pass.
+- 2026-08-07 code review follow-up: `uv run --isolated --python 3.13 --with fastf1==3.8.3 --with kagglehub python scripts/spike_fastf1_adoption.py` re-run live twice (once to confirm reproducibility per Decision 1, once post-patch) — both times reproduced an identical five-race matrix, pandas-3 failure, and Kaggle 400 failure under Python 3.13.7 as documented; exit code correctly 1 given the still-failing Barcelona and Kaggle legs.
+- 2026-08-07: `python3 -m py_compile scripts/spike_fastf1_adoption.py` — pass (post-patch).
+- 2026-08-07: `rg` five-heading check and `git diff --check` — both still pass (post-patch).
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/1-2-fastf1-adoption-spike.md`
+- `_bmad-output/implementation-artifacts/epic-1-context.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `_bmad-output/planning-artifacts/architecture/architecture-f1_analytics-2026-08-06/ARCHITECTURE-SPINE.md`
 - `_bmad-output/planning-artifacts/decisions/fastf1-source-adoption-decision-record.md`
 - `scripts/spike_fastf1_adoption.py`
+
+### Change Log
+
+- 2026-08-06: Implemented the FastF1 adoption spike — live-evidence script, five-race matrix, Kaggle re-download probe, and source decision record with the pandas-<3.0 fallback and Architecture Spine amendment. Also refreshed `epic-1-context.md` to match the rebuilt Epic 1 scope (recovery/salvage/foundation/ingestion stories) — omitted from this entry originally; disclosed during 2026-08-07 code review.
+- 2026-08-07: Reconciled story bookkeeping — checked off all Tasks/Subtasks and moved Status to `review` to match the Dev Agent Record evidence already on file; verified each deliverable against the acceptance criteria (script compiles, decision record has all 5 PRD §9 fields, `git diff --check` clean, cache directory gitignored) before checking off. No implementation changes made.
+- 2026-08-07: Code review (bmad-code-review) — re-ran the committed spike script live to confirm the decision record's evidence is reproducible (identical five-race matrix, pandas-3 failure, and Kaggle failure under the documented `--python 3.13` command); cited the terminal-log source for the lap-accuracy-warnings claim; restored the specific Jolpica rate ceilings (4 requests/second, 500 requests/hour) into `epic-1-context.md`, which was dropped when that file was rewritten in the 2026-08-06 commit without a File List/Change Log mention.
