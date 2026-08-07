@@ -1,0 +1,144 @@
+# Filled from Antonio's enhanced input, 2026-08-06 — first intake batch.
+# Restates (enhanced) the content of the lost "Gmail - 2026 F1 Questions.pdf".
+# Nothing here is ever used as a computed answer (AD-12); expected answers are
+# verification targets, premises are checked before computation (FR-19/AD-16).
+
+intake:
+  batch_name: "2026-questions-enhanced"
+  submitted_by: "Antonio"
+  submitted_at: "2026-08-06"
+  source_artifact: "Antonio, in-session 2026-08-06 — enhanced restatement of the lost external/f1-questions/Gmail - 2026 F1 Questions.pdf"
+  replaces: null
+
+questions:
+  - prompt: "Melbourne GP: Guess the fastest lap time set by an Atlassian Williams F1 Team driver during the Australian Grand Prix Race on Sunday."
+    intent: verify
+    season: 2026
+    grand_prix: "Australian Grand Prix"
+    session: race
+    team_scope: "Atlassian Williams F1 Team"
+    driver_scope: null
+    answer_type: lap_time
+    expected_answer:
+      value: "1:23.590"
+      display_text: "Carlos Sainz at 1:23.590, in lap 54"
+      source: "supplied answer set (enhanced), 2026-08-06"
+      confidence: claimed
+    premises:
+      - statement: "Carlos Sainz raced for Williams at the 2026 Australian Grand Prix"
+        if_incorrect: ""
+      - statement: "The fastest Williams lap was set by Sainz, not Albon"
+        if_incorrect: ""
+    components: []
+    notes: >
+      Enhanced answer also claims the lap NUMBER (54) the time was set on —
+      corroborate during extraction even though the question asks only for the
+      time. Matches the PRD-surviving fragment (1:23.590).
+
+  - prompt: "Miami GP: Guess the combined finishing positions of both Williams F1 Team drivers in Sunday's Grand Prix."
+    intent: verify
+    season: 2026
+    grand_prix: "Miami Grand Prix"
+    session: race
+    team_scope: "Williams F1 Team"
+    driver_scope: null
+    answer_type: combined_finishing_position
+    expected_answer:
+      value: 19
+      display_text: "P9 (Sainz) + P10 (Albon) = 19, a double points finish"
+      source: "supplied answer set (enhanced), 2026-08-06"
+      confidence: claimed
+    premises:
+      - statement: "Both Williams drivers were classified finishers at Miami (double points finish)"
+        if_incorrect: ""
+    components: []
+    notes: >
+      Per-driver split supplied: Sainz P9, Albon P10. FR-6 requires the output
+      to record each contributing position plus the combined value — verify the
+      split as well as the sum.
+
+  - prompt: "Canadian GP: Guess the highest finishing position achieved by an Atlassian Williams F1 Team driver in the 2026 Canadian Grand Prix."
+    intent: verify
+    season: 2026
+    grand_prix: "Canadian Grand Prix"
+    session: race
+    team_scope: "Atlassian Williams F1 Team"
+    driver_scope: null
+    answer_type: finishing_position
+    expected_answer:
+      value: 9
+      display_text: "Carlos Sainz crossing the line in P9 on Sunday"
+      source: "supplied answer set (enhanced), 2026-08-06"
+      confidence: claimed
+    premises:
+      - statement: "Carlos Sainz was a classified finisher at the 2026 Canadian Grand Prix"
+        if_incorrect: ""
+    components: []
+    notes: "This is the Story 2.1 first-light question (Q03)."
+
+  - prompt: "Barcelona GP: Guess which lap Carlos Sainz will set his fastest race lap time on during the 2026 Barcelona-Catalunya Grand Prix this Sunday."
+    intent: verify
+    season: 2026
+    grand_prix: "Spanish Grand Prix (Barcelona-Catalunya)"
+    session: race
+    team_scope: "Williams"
+    driver_scope: "Carlos Sainz"
+    answer_type: lap_number
+    expected_answer:
+      value: 60
+      display_text: "his personal fastest lap of the race on Lap 60"
+      source: "supplied answer set (enhanced), 2026-08-06"
+      confidence: claimed
+    premises:
+      - statement: "Carlos Sainz completed enough timed race laps at Barcelona to have a personal fastest lap"
+        if_incorrect: ""
+    components: []
+    notes: >
+      KNOWN EXPECTED DISCREPANCY: the pre-loss record shows Jolpica's
+      result-level fastest-lap field returning lap 58 vs this claimed 60
+      (Story 7.6 rolled back a bridge that rendered 58 as final). Extraction
+      must resolve from lap-level timing (FastF1) and, on disagreement with
+      this expected answer, land as discrepant_needs_review showing both
+      values — exactly the Story 2.7 default-deny path.
+
+  - prompt: "British GP: Two predictions — Q5.1: which compound of tyre (Soft, Medium, Hard, Inters or Full Wet) will be fitted to Alex Albon's car for the start of Sunday's Grand Prix? Q5.2: on what lap will his first tyre change be?"
+    intent: verify
+    season: 2026
+    grand_prix: "British Grand Prix"
+    session: race
+    team_scope: "Williams"
+    driver_scope: "Alexander Albon"
+    answer_type: multi_part
+    expected_answer: null
+    premises:
+      - statement: "Albon made at least one tyre change during the race"
+        if_incorrect: ""
+      - statement: "Albon retired on Lap 45"
+        if_incorrect: >
+          Pre-loss source evidence (raw_jolpica_results) recorded laps=43 with
+          status=Retired — the narrative's Lap 45 may be a premise error. Verify
+          against FastF1 lap data; if 45 is wrong, the corrected answer is the
+          source-backed retirement lap. (This was the discrepancy the old
+          project could only leave open — the premise_incorrect mechanism plus
+          this corrected-answer parameter exists for exactly this case.)
+      - statement: "The first tyre change occurred at the Lap 1 red-flag restart (collision), not a routine pit stop"
+        if_incorrect: ""
+    components:
+      - label: "starting tyre compound"
+        kind: tyre_compound
+        expected_value: "MEDIUM"
+      - label: "first tyre-change lap"
+        kind: lap_number
+        expected_value: 1
+    notes: >
+      Narrative (kept apart from answers per FR-11): Lap 1 collision with Ollie
+      Bearman (Haas); restarted with a new front wing and HARD tyres; retired
+      on Lap 45 per the narrative (see premise 2 — source evidence previously
+      said after lap 43). DEFINITIONAL NOTE for Q5.2: the supplied narrative
+      implies the change happened during the red-flag stoppage — first-change
+      lap = 1 under the "pit/change event lap" definition (the definition the
+      prior gatherer item-set declaration recorded), while the first stint
+      boundary shows HARD from lap 2. The catalog row must pin ONE definition;
+      expected_value 1 assumes the event-lap definition — flag at reconciliation
+      if extraction uses stint-boundary semantics. Retirement lap is narrative
+      context, NOT a scored component of this question.

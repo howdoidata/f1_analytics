@@ -1,0 +1,39 @@
+.DS_Store
+**/.DS_Store
+.vscode/
+
+# Local data and generated outputs
+data/raw/
+data/processed/
+data/.run_marker
+data/.run.lock
+outputs/
+_bmad-output/implementation-artifacts/daily-pipeline-run-records.jsonl
+_bmad-output/implementation-artifacts/.daily-pipeline-run-record-lock
+_bmad-output/party-mode/
+_bmad-output/**/.memlog.md
+
+# Local credentials and environment files
+.env
+.env.*
+.kaggle/
+kaggle.json
+access_token
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.bmad-loop/runs/
+.bmad-loop/cache/
+
+# Installed tool payloads -- not project-owned
+.claude/
+.agents/
+_bmad/*
+!_bmad/custom/
+.bmad-loop/policy.toml
+_bmad/render/

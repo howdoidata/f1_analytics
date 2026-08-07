@@ -1,0 +1,94 @@
+# generated: 2026-08-06 19:17:36 -0500
+# last_updated: 2026-08-06 19:17:36 -0500
+# project: f1_analytics
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+#
+# REBUILD NOTE (2026-08-06):
+# ==========================
+# This file replaces the sprint-status.yaml lost in the 2026-08-01 data event.
+# It tracks the post-loss rebuild plan (epics.md, 2026-08-06): no prior work is
+# treated as done (spine AD-10). Old story keys from the pre-loss numbering do
+# NOT exist here; surviving old story files in this folder are historical
+# reference only.
+
+generated: 2026-08-06 19:17:36 -0500
+last_updated: 2026-08-06 19:17:36 -0500
+project: f1_analytics
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  epic-1: backlog
+  1-1-record-the-loss-and-gain-offsite-protection: backlog
+  1-2-fastf1-adoption-spike: backlog
+  1-3-salvage-the-platform-snapshot-under-the-merge-rules: backlog
+  1-4-project-foundation-that-survives-a-fresh-clone: backlog
+  1-5-kaggle-curated-layer-rebuilt: backlog
+  1-6-fastf1-facts-landed-with-rate-discipline: backlog
+  1-7-current-season-combined-tables-and-the-coverage-arbiter: backlog
+  1-8-advisory-build-validation-logged: backlog
+  epic-1-retrospective: optional
+  epic-2: backlog
+  2-1-one-question-end-to-end-first-light: backlog
+  2-2-the-full-catalog-taxonomy-and-boundaries: backlog
+  2-3-results-based-extraction-miami-and-canada-complete: backlog
+  2-4-lap-facts-melbourne-and-barcelona-complete: backlog
+  2-5-the-coverage-matrix-and-the-british-gp-multi-part: backlog
+  2-6-the-feature-contract-written-by-the-same-build: backlog
+  2-7-known-answer-reconciliation-gates-on-antonios-input: backlog
+  2-8-premise-validation-with-corrected-answers: backlog
+  epic-2-retrospective: optional
+  epic-3: backlog
+  3-1-scoring-rules-over-one-complete-build: backlog
+  3-2-leakage-safe-baseline-predictions: backlog
+  3-3-the-backtest-report-all-five-questions: backlog
+  3-4-portfolio-explanations-with-the-framing-guardrail: backlog
+  3-5-status-badges-and-the-report-surface-system: backlog
+  3-6-analyst-workflow-surfaces: backlog
+  3-7-the-output-bundle-and-portfolio-summary: backlog
+  3-8-track-2-review-surfaces-now-unblocked: backlog
+  epic-3-retrospective: optional
+  epic-4: backlog
+  4-1-the-in-repo-interchange-companion: backlog
+  4-2-answer-the-three-threads-and-name-the-defects: backlog
+  4-3-the-insight-package-producer-rebuilt-to-v2: backlog
+  4-4-first-conforming-delivery: backlog
+  epic-4-retrospective: optional

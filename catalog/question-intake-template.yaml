@@ -1,0 +1,108 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# QUESTION INTAKE TEMPLATE — f1_analytics
+# ─────────────────────────────────────────────────────────────────────────────
+# How to use:
+#   1. COPY this file to  catalog/intake/<YYYY-MM-DD>-<batch-name>.yaml
+#      (never fill the template in place — it stays blank for the next batch).
+#   2. Fill one entry under `questions:` per question. Add as many as you like —
+#      the catalog schema absorbs new questions and answer types by data (NFR-7).
+#   3. Hand the filled file over. Intake processing (Story 2.2/2.7/2.8) turns
+#      each entry into a committed catalog row; nothing you write here is ever
+#      used as a computed answer (AD-12 — seed answers never become targets).
+#   4. Your input is VALIDATED at entry (FR-20): schema, driver/team/race name
+#      resolution, arithmetic consistency of expected answers, range checks.
+#      Unambiguous input errors are auto-corrected — your original wording is
+#      preserved verbatim and every correction is shown to you, never silent.
+#      Ambiguous errors come back as questions with options, not rejections.
+#
+# What happens to each entry:
+#   intent: answer  → the system extracts the answer from source data and
+#                     reports it with full provenance and a status.
+#   intent: verify  → you supplied an expected answer; the system computes the
+#                     source-backed answer INDEPENDENTLY, then compares:
+#                       agree    → status `computed`, your value corroborated
+#                       disagree → status `discrepant_needs_review`, BOTH values
+#                                  shown with provenance — never silently picked
+#   premises        → every listed premise is checked BEFORE any computation
+#                     (fail early, AD-16). A false premise → status
+#                     `premise_incorrect` + the failed premise with evidence +
+#                     the corrected answer under the corrected premise (FR-19).
+#
+# Field guidance:
+#   - Leave a field null/"" if unknown — honest gaps beat guesses. `unsure` is
+#     a valid answer_type; classification is part of intake processing.
+#   - display_text: give answers EXACTLY as your source shows them
+#     (e.g. "1:23.590", "Lap 60") — normalization happens system-side.
+#   - premises: state every assumption baked into the question, one per line.
+#     "Sainz set the fastest Williams lap" assumes Sainz raced; "what lap did
+#     he retire" assumes he retired. If you already know a premise is shaky
+#     and know the truth, put it in if_incorrect — it becomes the
+#     corrected-answer parameter.
+#   - notes: narrative/context (incidents, restarts, why it matters). Preserved
+#     as narrative, never parsed into deterministic components (FR-11).
+# ─────────────────────────────────────────────────────────────────────────────
+
+intake:
+  batch_name: ""                  # short slug, e.g. "2026-questions-enhanced"
+  submitted_by: ""                # who supplied these
+  submitted_at: ""                # YYYY-MM-DD
+  source_artifact: ""             # provenance of the batch (email, PDF, chat) —
+                                  # cited by path/description, not duplicated
+  replaces: null                  # earlier batch file this supersedes, if any
+
+questions:
+  # ── Repeat this block per question. Delete guidance comments in your copy. ──
+  - prompt: ""                    # the question, verbatim as asked
+    intent: answer                # answer | verify
+    season: 2026
+    grand_prix: ""                # e.g. "Canadian Grand Prix"
+    session: race                 # race | qualifying | sprint | practice
+    team_scope: ""                # e.g. "Williams" (any alias is fine)
+    driver_scope: null            # driver name, or null for team-wide
+    answer_type: unsure           # lap_time | lap_number | finishing_position |
+                                  # combined_finishing_position | tyre_compound |
+                                  # pit_change_lap | multi_part | unsure |
+                                  # <any new category — recorded, extractor optional>
+    expected_answer:              # fill ONLY when intent: verify — else leave null
+      value: null                 # machine-ish value if you have one (60, "MEDIUM")
+      display_text: ""            # exactly as your source shows it ("Lap 60")
+      source: ""                  # where this claimed answer came from
+      confidence: claimed         # claimed | verified_elsewhere | guess
+    premises:                     # assumptions embedded in the question (may be [])
+      - statement: ""             # e.g. "Carlos Sainz retired from the race"
+        if_incorrect: ""          # optional: the corrected premise/answer if you
+                                  # already know it (corrected-answer parameter)
+    components: []                # multi-part questions ONLY — one entry per part:
+    # - label: ""                 #   e.g. "starting tyre compound"
+    #   kind: ""                  #   tyre_compound | lap_number | ...
+    #   expected_value: null      #   per-part expected answer, if verifying
+    notes: ""                     # narrative context, kept apart from answers
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WORKED EXAMPLE (delete in your copy) — a Q05-style multi-part with a premise:
+#
+#  - prompt: "What tyre did Alex Albon start the British GP on, and on what lap
+#             did he first change tyres?"
+#    intent: verify
+#    season: 2026
+#    grand_prix: "British Grand Prix"
+#    session: race
+#    team_scope: "Williams"
+#    driver_scope: "Alexander Albon"
+#    answer_type: multi_part
+#    expected_answer: null                    # per-part values below instead
+#    premises:
+#      - statement: "Albon made at least one tyre change during the race"
+#        if_incorrect: ""
+#      - statement: "A lap-1 collision and restart affected his tyre strategy"
+#        if_incorrect: ""
+#    components:
+#      - label: "starting tyre compound"
+#        kind: tyre_compound
+#        expected_value: "MEDIUM"
+#      - label: "first tyre-change lap"
+#        kind: lap_number
+#        expected_value: 2
+#    notes: "Known context: lap 1 collision, front wing change under the
+#            restart — narrative only, not part of the deterministic answer."
+# ─────────────────────────────────────────────────────────────────────────────
