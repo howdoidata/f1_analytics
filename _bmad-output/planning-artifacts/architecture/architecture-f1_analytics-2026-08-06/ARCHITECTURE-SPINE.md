@@ -198,7 +198,7 @@ From the damage record (`repository-damage-and-recovery-options-2026-08-01.md`) 
 | uv (env + lock) | 0.12.x (0.12.2 verified 2026-08-06; 0.12.0 changed `uv init` build-system defaults and lockfile validation — set up against 0.12 docs, not memory) |
 | DuckDB | 1.5.x (1.5.5 verified 2026-08-06) |
 | pandas | 3.0.x (3.0.5 verified 2026-08-06; behavior changes vs the lost 2.x-era code) |
-| FastF1 | 3.8.x (3.8.3 verified 2026-08-06; pandas-3 compat spike gates adoption, AD-6) |
+| FastF1 | 3.8.x (3.8.3 verified 2026-08-06; adopted in a separate `pandas<3.0` environment after the pandas-3 resolver conflict recorded in `decisions/fastf1-source-adoption-decision-record.md`, AD-6) |
 | Plotly | 6.x (6.9.0 verified 2026-08-06; figures) |
 | pytest | 9.x (9.1.1 verified 2026-08-06) |
 

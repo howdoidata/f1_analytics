@@ -1,6 +1,6 @@
 # Story 1.2: FastF1 Adoption Spike
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -101,9 +101,24 @@ GPT-5 Codex
 
 ### Completion Notes List
 
-- Ultimate context engine analysis completed — comprehensive developer guide created.
-- Status set to `ready-for-dev`; implementation has not run.
+- Added the bounded live-evidence script `scripts/spike_fastf1_adoption.py`; it uses only public FastF1 APIs, enables `data/raw/fastf1_cache/` before each load, and prints machine-readable evidence.
+- Ran `python3 -m py_compile scripts/spike_fastf1_adoption.py` successfully.
+- Ran `uv run --isolated --python 3.13 --with pandas==3.0.5 --with fastf1==3.8.3 python -c 'import fastf1, pandas; print(fastf1.__version__, pandas.__version__)'`; the resolver failed honestly because FastF1 3.8.3 declares `pandas>=2.1.1,<3.0.0`.
+- Ran the named spike in its compatible FastF1 3.8.3 / pandas 2.3.3 environment. Melbourne, Miami, Canada, and Silverstone loaded and replayed from the managed cache in offline mode. Barcelona resolved to a future 2026-09-13 event and reported `DataNotLoadedError`; no zero facts were fabricated.
+- The disposable KaggleHub re-download attempt found a non-empty local credential but failed with `KaggleApiHTTPError: 400 Client Error: Bad Request`; no credential or payload was recorded. This requires a Kaggle operator action before it can be reverified.
+- Selected the explicit pandas-<3.0 FastF1 environment fallback and amended the Architecture Spine. The durable decision record contains the five required PRD §9 fields.
+
+### Validation
+
+- `python3 -m py_compile scripts/spike_fastf1_adoption.py` — pass.
+- `python3 -m json.tool /tmp/fastf1-adoption-spike-20260806.json` — pass; completed evidence capture is valid JSON.
+- `rg -n '^### (access model|cost|license/terms risk|authentication|maintenance burden)$' _bmad-output/planning-artifacts/decisions/fastf1-source-adoption-decision-record.md` — exactly five required headings found.
+- `git diff --check` — pass.
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/1-2-fastf1-adoption-spike.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/planning-artifacts/architecture/architecture-f1_analytics-2026-08-06/ARCHITECTURE-SPINE.md`
+- `_bmad-output/planning-artifacts/decisions/fastf1-source-adoption-decision-record.md`
+- `scripts/spike_fastf1_adoption.py`

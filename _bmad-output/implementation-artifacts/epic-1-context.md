@@ -4,7 +4,7 @@
 
 ## Goal
 
-Re-establish a trustworthy, reproducible local F1 data foundation before question extraction begins. The epic protects the recovered repository, proves FastF1 is viable for the required 2026 lap, stint, and weather facts, rebuilds curated and current-season data with explicit source precedence, and records advisory quality evidence so later answer components can be trusted rather than inferred from incomplete or stale data.
+Rebuild a trustworthy, locally runnable F1 data foundation after repository loss: protect the recovered work on a clean pushable lineage, restore only safe snapshot assets, establish a fresh-clone Python environment, and land complete Kaggle, FastF1, and current-season gap-fill data into DuckDB. The result gives later question-extraction work reproducible source data, explicit completeness and quality evidence, and a repository whose recovery state is honest. It deliberately establishes data foundations, not user-facing analytics.
 
 ## Stories
 
@@ -19,27 +19,28 @@ Re-establish a trustworthy, reproducible local F1 data foundation before questio
 
 ## Requirements & Constraints
 
-- The foundation must run locally from a fresh clone through documented `uv run` commands. It uses Python 3.13, pandas 3.0.x, FastF1 3.8.x, DuckDB 1.5.x, and an offline pytest suite. Kaggle credentials must be documented; FastF1 and Jolpica require none.
-- Before FastF1 becomes a dependency, perform and record a three-part adoption spike: pandas-3 compatibility (including any failing surface), session/lap/stint availability for Melbourne, Miami, Canada, Barcelona, and Silverstone, and Kaggle dataset re-download availability. The source decision record must cover access model, cost, license/terms risk, authentication, and maintenance burden. A failing leg succeeds only when its explicit fallback is recorded.
-- Ingestion must cache raw source payloads before parsing. Every loader exhausts pagination, checks published source totals where available, and treats truncation, missing prerequisites, or exhausted retries as named, statused failures—not partial success. Tests use recorded fixtures and never access a network.
-- FastF1's managed cache is mandatory at `data/raw/fastf1_cache/`; an immediate second run must not make fresh requests. Use named rate-limit constants, plan Jolpica runs below its 4 requests/second and 500 requests/hour ceilings, use bounded exponential backoff for 429/5xx responses, and avoid hot retries.
-- Rebuild Kaggle CSVs into raw and curated DuckDB tables, including results, entities, circuits, qualifying, enriched results, and standings. A missing or stale source file must fail before a thinner table is produced. Reuse a single cumulative-standings computation and use the sole allowed name-to-id reconciliation for `final_driver_standings.constructor_id`.
-- Current-season combined data must apply one coverage arbiter: Kaggle wins where it has results, Jolpica fills only absent rounds, and overlapping count divergence retains Kaggle while surfacing the deviation. The coverage comparison lives in one SQL view.
-- Run advisory null-rate and referential-integrity validation at build completion. Persist a row per check in `validation_results`, plus source inventory/load metadata; report failed checks without failing an otherwise completed build. Validation may read only through the database layer.
-- Preserve recovery safety: never run `git gc`, `git prune`, `git repack`, or blanket `git restore .`. Snapshot code and documents are salvage only; its pre-pagination-fix data cannot overwrite the seven surviving live Jolpica cache files, and its July-9 DuckDB file is never restored as truth.
-- Every unit validates preconditions before work. Source/content ambiguity, missing data, partial data, and conflicts must be explicit findings; code must not silently substitute or guess.
+- Preserve the damaged master lineage for forensics. Recovery must use a fresh orphan branch, record the missing tracked paths, remove the loop policy from tracking, and push the clean lineage before rebuilding. Never run `git gc`, `git prune`, `git repack`, or `git restore` as part of recovery.
+- Restore the platform snapshot selectively: retain the seven post-pagination-fix Jolpica cache files after byte comparison, restore the V1 code only under `recovery/reference/`, and never restore the July-9 DuckDB file as truth.
+- The project must bootstrap from a fresh clone with Python 3.13, uv 0.12.x conventions, an editable `src` package, and documented credentials. Kaggle needs its local token file; FastF1 and Jolpica need none. Pytest must run offline and fail loudly on network access; tests use recorded fixtures only.
+- The FastF1 adoption gate must test pandas 3.0 compatibility, session/lap/stint availability for Melbourne, Miami, Canada, Barcelona, and Silverstone, and Kaggle re-download availability. Record all outcomes, including failures and the chosen fallback, in a source decision record before source-dependent implementation proceeds.
+- Kaggle supplies the authoritative curated results history. Build its raw and curated race, result, driver, constructor, circuit, qualifying, enriched-result, and standings tables from source CSVs; stale or missing inputs must stop the stage with a named prerequisite failure.
+- FastF1 supplies lap timing, tyre/stint, and weather facts. Cache before parsing, verify landed data against session lap/driver counts, map source rows to shared identities at the loader boundary, and treat truncated fetches as explicit failures rather than thinner data. Cache re-runs must make no network requests; 429/5xx handling uses bounded exponential backoff with named rate constants.
+- Gap-fill current-season results through FastF1's Ergast-compatible Jolpica access under its request budget. Kaggle wins wherever it has results; Jolpica fills only zero-row rounds. Divergent row counts keep Kaggle data and must be reported as a deviation.
+- Every build runs null-rate and referential-integrity checks, records source and load metadata plus one validation row per check, and surfaces failures without failing an otherwise completed build. Missing or ambiguous prerequisites fail early; determinable corrected facts should be recorded.
+- Keep the system local, lightweight, and manually invoked with `uv run` scripts. Do not add scheduling, daily pipeline/run records, CI obligations, hosted services, paid sources, or betting-oriented output.
 
 ## Technical Decisions
 
-- Use a local DuckDB store with table classes `raw_*`, curated bare tables, `combined_*`, future `question_*` tables, and append-only metadata logs. Views live under `sql/`; generated artifacts live under `outputs/`; raw cache and the derived database are gitignored.
-- Source roles are fixed: Kaggle is authoritative for curated results; FastF1 supplies lap timing, stints, weather, and Ergast-compatible Jolpica access for current-season gap fill. OpenF1 is retired and its one verified Q05 compound fact remains citation-only evidence. No new source, including paid data, may be used without a five-field decision record.
-- Map all external records at loader boundaries into the Ergast/Jolpica-style `driver_id` and `constructor_id` space. FastF1 mapping is name-derived, never car-number-derived.
-- Keep the package in `src/f1_analytics/`, with `data_sources/`, `database/`, `analysis/`, and `validation/` packages. Scripts are thin entry points; database helpers own storage interactions; validation is imported by scripts rather than analysis.
-- Record raw payloads and run offline tests against fixture copies. Live-source verification belongs only in explicitly named spike or ingestion scripts.
+- Store durable tabular state in the single local `data/processed/f1_analytics.duckdb`; source caches and the database are derived and gitignored. Ingestion tables use idempotent replace-sync writes.
+- Keep source I/O in `data_sources/`, DuckDB access in `database/`, advisory checks in `validation/`, and thin stage wiring in `scripts/`. The analysis core must not import I/O, database, validation, or script modules; consumers render persisted artifacts rather than recomputing authoritative state.
+- Use `raw_*` for source landings, plain curated names for Kaggle tables, and `combined_*` for current-season merged tables. Define the sole Kaggle/Jolpica comparison in the `sql/` coverage view, whose statuses are `match`, `kaggle_only`, `jolpica_only`, `row_count_diverges`, and `no_data`.
+- Reuse one cumulative-standings function for every standings table. Implement the sanctioned name-to-ID reconciliation for `final_driver_standings.constructor_id`; do not create parallel derivations.
+- FastF1 is adopted only through the spike and source decision record. OpenF1 is retired as an ingestion source; its prior Q05 compound finding is citable corroboration only. Any new source requires a decision record covering access, cost, license/terms, authentication, and maintenance burden.
+- Use integer types end-to-end for lap numbers and positions, UTC ISO-8601 timestamps, snake_case Python modules, and no mutable module-level state in `analysis/`.
 
 ## Cross-Story Dependencies
 
-- Story 1.1's offsite-protected clean lineage precedes all recovery work; Story 1.3 selectively restores usable snapshot assets without violating cache safeguards.
-- Story 1.2's decision record gates Story 1.6. Story 1.4 establishes the package, invocation, and offline-test conventions consumed by Stories 1.5–1.8.
-- Story 1.5's curated layer is a prerequisite for FastF1 loading and combined data. Story 1.6's verified FastF1 facts and Story 1.5's curated tables feed Story 1.7; Stories 1.5 and 1.7 feed Story 1.8 validation.
-- Epic 2 relies on the curated/combined results, verified FastF1 lap and stint tables, source coverage outcomes, and validation evidence produced here.
+- Recovery and offsite protection come first; snapshot salvage must preserve its clean recovery constraints.
+- The FastF1 source decision gates FastF1 ingestion. The project foundation gates every executable data stage.
+- Kaggle curation precedes FastF1 landing and combined-table construction. Combined tables additionally require the Jolpica raw landings and coverage view.
+- Advisory validation runs after curated and combined tables exist and is invoked by each completed build.
