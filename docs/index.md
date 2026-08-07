@@ -1,6 +1,6 @@
 # f1_analytics Documentation Index
 
-Status: Current.
+Status: Superseded (pre-rebuild snapshot, generated 2026-07-12/13, describing the codebase before the 2026-08-01 data-loss event). For the current post-rebuild project state — build/setup, package layout, and credentials — see [`README.md`](../README.md) at the repo root and `_bmad-output/planning-artifacts/`.
 
 **Type:** monolith
 **Primary Language:** Python
@@ -49,6 +49,8 @@ Portfolio Formula 1 analytics project. Ingests Kaggle historical data and Jolpic
 Python 3.13.7 (matches the repo's own `.venv`); packages in `requirements.txt` (kagglehub, pandas, duckdb, plotly, jupyter, nbconvert); a KaggleHub API token at `~/.kaggle/access_token` (never committed — see `local_setup.md`).
 
 ### Setup
+
+**This section describes the pre-rebuild (V1) environment and no longer reflects the live project.** The current setup is `uv sync` against the root `pyproject.toml` — see [`README.md`](../README.md).
 
 ```bash
 pip install -r requirements.txt

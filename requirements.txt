@@ -1,6 +1,0 @@
-kagglehub
-pandas
-duckdb
-plotly
-jupyter
-nbconvert
