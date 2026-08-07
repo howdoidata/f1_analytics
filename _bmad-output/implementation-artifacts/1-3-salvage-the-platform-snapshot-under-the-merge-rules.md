@@ -4,7 +4,7 @@ baseline_commit: 54ac360f9fa511e3f419c13861162176ae1e4b1d
 
 # Story 1.3: Salvage The Platform Snapshot Under The Merge Rules
 
-Status: review
+Status: done
 
 ## Story
 
@@ -30,14 +30,14 @@ so that the rebuild starts from everything that survived.
   - [x] Leave all 7 live files untouched regardless of the comparison outcome (live always wins — this is evidence, not a gate).
   - [x] Record the 7-pair comparison table in this story's Dev Agent Record (AGENTS.md convention: commands + results go in the active story file, not `docs/run_log.md`).
 - [x] Task 3: Land the remaining Jolpica JSONs and the Kaggle CSVs (AC: 1)
-  - [x] Copy every snapshot Jolpica JSON whose filename is NOT one of the 7 protected files into the matching `data/raw/jolpica/<endpoint>/` subfolder (60 files: all of `pitstops/`, since 0 live files exist there today, plus the remainder of `results`, `qualifying`, `driverStandings`, `constructorStandings`, `laps`).
+  - [x] Copy every snapshot Jolpica JSON whose filename is NOT one of the 7 protected files into the matching `data/raw/jolpica/<endpoint>/` subfolder (62 files: all of `pitstops/`, since 0 live files exist there today, plus the remainder of `results`, `qualifying`, `driverStandings`, `constructorStandings`, `laps` — corrected from the originally planned 60, since 2 of the 7 "protected" filenames have no snapshot counterpart at all and were never in the copy set to begin with).
   - [x] Copy all 8 snapshot Kaggle CSVs into `data/raw/f1_complete_dataset/`. Note: `f1_races.csv` already exists on disk and is byte-identical to the snapshot's copy (verified during story creation) — a plain overwrite is safe and expected, not a conflict requiring special handling.
   - [x] Do not restore `data/processed/f1_analytics.duckdb` from the snapshot anywhere in the repo. `data/processed/` must remain empty after this story (it is currently empty).
 - [x] Task 4: Restore `docs/decisions.md` only (AC: 2)
   - [x] Copy `docs/decisions.md` from the snapshot into `docs/decisions.md`.
   - [x] Do not restore any other snapshot `docs/` file (`implementation_notes/`, `handoffs/`, `questions.md`, `backlog.md`, `run_log.md`, `project_profile.md`, `terminal_roles/`, `prompts/`, `diagrams/`, `inbox/`, etc.) — epics.md's Story 1.3 AC names only `docs/decisions.md`; the rest belongs to the superseded pre-questions-era governance/platform-bootstrap track and stays out of scope for this story.
 - [x] Task 5: Land the V1 reference code under `recovery/reference/` (AC: 2)
-  - [x] Copy the snapshot's `src/f1_analytics/` (14 files: `config.py`, `__init__.py`, `data_sources/__init__.py`, `data_sources/standings.py`, `data_sources/combined_dataset.py`, `data_sources/jolpica.py`, `data_sources/kaggle_csv.py`, `data_sources/jolpica_loader.py`, `validation/__init__.py`, `validation/checks.py`, `database/__init__.py`, `database/duckdb_io.py`, `analysis/championship_leaders.py`, `analysis/combined_championship_leaders.py`) to `recovery/reference/src/f1_analytics/`, preserving the same subpath structure.
+  - [x] Copy the snapshot's `src/f1_analytics/` (15 files: `config.py`, `__init__.py`, `data_sources/__init__.py`, `data_sources/standings.py`, `data_sources/combined_dataset.py`, `data_sources/jolpica.py`, `data_sources/kaggle_csv.py`, `data_sources/jolpica_loader.py`, `validation/__init__.py`, `validation/checks.py`, `database/__init__.py`, `database/duckdb_io.py`, `analysis/__init__.py`, `analysis/championship_leaders.py`, `analysis/combined_championship_leaders.py` — corrected from the originally planned 14, which omitted `analysis/__init__.py`) to `recovery/reference/src/f1_analytics/`, preserving the same subpath structure.
   - [x] Copy the snapshot's `scripts/` (7 files: `download_kagglehub_f1_data.py`, `build_f1_dataset.py`, `pull_jolpica_data.py`, `build_combined_dataset.py`, `analyze_championship_leaders.py`, plus `workflow.py` and `fitness_check.py` — platform-tooling scripts bundled in the same snapshot, archived here for completeness since they land under reference-only `recovery/`, not under the real `scripts/`) to `recovery/reference/scripts/`.
   - [x] Copy the snapshot's `sql/` (`analysis/kaggle_jolpica_coverage.sql`, `analysis/README.md`, `curated/README.md`) to `recovery/reference/sql/`.
   - [x] Copy the snapshot's `notebooks/championship_leader_combined_analysis.ipynb` to `recovery/reference/notebooks/`.
@@ -47,6 +47,13 @@ so that the rebuild starts from everything that survived.
   - [x] `git add docs/decisions.md recovery/reference/` (`data/raw/` and `data/processed/` stay gitignored — do not force-add them).
   - [x] Confirm no `git restore`, `git gc`, `git prune`, or `git repack` command appears anywhere in the session's command history for this story.
   - [x] Run the verification commands below and record their output in the Dev Agent Record.
+
+### Review Findings
+
+- [x] [Review][Patch] Byte-comparison table's SHA-256 values are corrupted — 10 of 12 recorded digests are truncated by 1-2 hex characters and don't match the real live/snapshot file hashes [1-3-salvage-the-platform-snapshot-under-the-merge-rules.md:146-152] — fixed: recomputed all 12 digests directly against the live repo and a fresh tarball extraction; qualitative results unchanged.
+- [x] [Review][Patch] `sprint-status.yaml` `last_updated` timestamp regresses within this diff — moves backward from `06:00:00` to `01:01:14` on the same date, unexplained [_bmad-output/implementation-artifacts/sprint-status.yaml:52] — no edit made: the regression exists only in commit `1dcdf79`'s history; the current working file has since moved forward to `10:34:42` via unrelated, uncommitted Story 1.4 work, so there is nothing left to fix on disk and editing this shared file now would touch that other in-progress work.
+- [x] [Review][Patch] Self-reported counts in the AC/Task-checklist/Expected-structure-table text are stale vs. the Debug Log's own corrected numbers — "67 Jolpica JSONs" (actual 69), "14 src files" (actual 15, Task 5), "60 newly-copied files" (actual 62, Task 3), "8 blank-EOF files" (actual 10, Validation) [1-3-salvage-the-platform-snapshot-under-the-merge-rules.md:17,33,40,85,168] — fixed: all five locations (Task 3, Task 5, Expected-structure table, Dev Notes Validation, References, Debug Log, Dev Agent Record Validation) updated to the reconciled numbers.
+- [x] [Review][Defer] `docs/decisions.md` carries an undefined `TARGET_DIR` placeholder (3 occurrences), non-chronological entry ordering, and unflagged content about an abandoned "multi-project platform bootstrap" initiative — pre-existing characteristics of the verbatim-restored historical document, consistent with this story's own precedent of not editing salvaged content [docs/decisions.md] — deferred, pre-existing
 
 ## Dev Notes
 
@@ -82,7 +89,7 @@ so that the rebuild starts from everything that survived.
 | Path | Action | Purpose |
 | --- | --- | --- |
 | `data/raw/f1_complete_dataset/*.csv` | UPDATE (gitignored) | 8 Kaggle CSVs land here (1 already present and identical). |
-| `data/raw/jolpica/{results,qualifying,driverStandings,constructorStandings,laps,pitstops}/*.json` | UPDATE (gitignored) | 67 total Jolpica JSONs; the 7 already-present live files are never overwritten. |
+| `data/raw/jolpica/{results,qualifying,driverStandings,constructorStandings,laps,pitstops}/*.json` | UPDATE (gitignored) | 69 total Jolpica JSONs (67 landed from the snapshot + 2 pre-existing live files with no snapshot counterpart); the 7 already-present live files are never overwritten. |
 | `docs/decisions.md` | NEW | Restored pre-questions-era decision log. |
 | `recovery/reference/src/f1_analytics/**` | NEW | V1 code, reference only, never imported by `src/`. |
 | `recovery/reference/scripts/**` | NEW | V1 + platform-tooling scripts, reference only. |
@@ -97,7 +104,7 @@ Do not create `data/processed/f1_analytics.duckdb`, `src/f1_analytics/__init__.p
 
 - `shasum -a 256` (or `cmp`) each of the 7 protected files against its snapshot counterpart; record match/differ per file.
 - `find data/processed -type f` → empty, unchanged from before the salvage.
-- `find data/raw/jolpica -type f | wc -l` → 67 (7 pre-existing + 60 newly landed).
+- `find data/raw/jolpica -type f | wc -l` → 69 (7 pre-existing + 62 newly landed; 2 of the 7 pre-existing "protected" files have no snapshot counterpart at all, so only 5 were actually skipped from the copy).
 - `find data/raw/f1_complete_dataset -type f | wc -l` → 8.
 - `test -f docs/decisions.md` → present.
 - `git status --porcelain` shows only `docs/decisions.md` and new files under `recovery/reference/` as additions — nothing under `data/` appears (gitignored).
@@ -117,7 +124,7 @@ Do not create `data/processed/f1_analytics.duckdb`, `src/f1_analytics/__init__.p
 - [Source: `_bmad-output/planning-artifacts/decisions/repository-damage-and-recovery-options-2026-08-01.md` — handling constraints, exchange position]
 - [Source: `_bmad-output/planning-artifacts/project-state-reconstruction-2026-08-06.md` — §4 what survives / platform snapshot caveats, §5 recommended restart path]
 - [Source: `_bmad-output/implementation-artifacts/1-2-fastf1-adoption-spike.md` — previous story's Dev Notes and Change Log]
-- [Source: `recovery/platform-external-f1_analytics-snapshot-2026-07-09.tar.gz` — inventoried 2026-08-07: 262 archive entries, 8 Kaggle CSVs, 67 Jolpica JSONs, 14 `src/f1_analytics/` files, 7 `scripts/`, 3 `sql/`, 1 notebook, `docs/decisions.md`, `data/processed/f1_analytics.duckdb`]
+- [Source: `recovery/platform-external-f1_analytics-snapshot-2026-07-09.tar.gz` — inventoried 2026-08-07: 262 archive entries, 8 Kaggle CSVs, 67 Jolpica JSONs, 15 `src/f1_analytics/` files, 7 `scripts/`, 3 `sql/`, 1 notebook, `docs/decisions.md`, `data/processed/f1_analytics.duckdb`]
 - [Source: `.gitignore` — `data/raw/`, `data/processed/` gitignored; `recovery/` is not]
 
 ## Dev Agent Record
@@ -133,7 +140,7 @@ Claude Sonnet 5
 - Finding: 2 of the 7 "protected" files (`driverStandings/2026_10.json`, `qualifying/2026_11.json`) have no snapshot counterpart at all — the snapshot's `driverStandings/` and `qualifying/` endpoints only go up to round 9 (`2026_1.json`...`2026_9.json`), since those rounds hadn't been played as of the 2026-07-09 snapshot date. Recorded as "no snapshot counterpart" rather than forcing a checksum comparison against a nonexistent file.
 - Consequence of that finding: the story's Task 1 verification target of "67 JSONs" and the Validation section's "67 (7 pre-existing + 60 newly landed)" undercounts by 2 — the actual post-salvage `data/raw/jolpica` total is **69** (67 snapshot files, all landed, since none of the 5 real duplicates were skipped from the *live* side — plus the 2 live files that were never in the snapshot to begin with). Full arithmetic: 67 snapshot files − 5 protected files that already exist live (skipped, not overwritten) = 62 newly copied; 7 pre-existing live files + 62 newly copied = 69. This is reported as found, not forced to match the story's stated 67; the AC's actual requirement (protected files never overwritten, live always wins) is satisfied regardless.
 - Also found the snapshot's `src/f1_analytics/` tree has 15 files, not the 14 the Task 5 checklist enumerates — the checklist's list omits `analysis/__init__.py`. Copied the full tree (all 15 files, including `analysis/__init__.py`) rather than cherry-picking the enumerated 14, since the AC's actual instruction is "copy the snapshot's `src/f1_analytics/`... preserving the same subpath structure" and leaving `analysis/` without an `__init__.py` while its sibling packages have theirs would break that structural intent.
-- `git diff --check` on the staged changes flags "new blank line at EOF" on 8 of the salvaged V1 files under `recovery/reference/`. These trailing blank lines are original to the snapshot's authored files (verified: present in the extracted snapshot copy, not introduced by the copy operation). Left as-is — this is verbatim reference salvage (AD-10: salvage, not fixed points; never imported by `src/`), and reformatting archived V1 code would misrepresent what was actually recovered.
+- `git diff --check` on the staged changes flags "new blank line at EOF" on 10 of the salvaged V1 files under `recovery/reference/` (`recovery/reference/sql/analysis/README.md`, `recovery/reference/sql/curated/README.md`, and 8 files under `recovery/reference/src/f1_analytics/`). These trailing blank lines are original to the snapshot's authored files (verified: present in the extracted snapshot copy, not introduced by the copy operation). Left as-is — this is verbatim reference salvage (AD-10: salvage, not fixed points; never imported by `src/`), and reformatting archived V1 code would misrepresent what was actually recovered.
 - Excluded `.DS_Store` (in the snapshot's `sql/` and elsewhere) and the KaggleHub cache marker `data/raw/f1_complete_dataset/.complete/datasets/.../bundle.complete` from all copies — neither is a deliverable named in the AC.
 - Cleaned up the scratch extraction directory after all copies and comparisons completed.
 
@@ -143,13 +150,15 @@ Computed with `shasum -a 256` on each live file and its snapshot counterpart (wh
 
 | File | Live SHA-256 | Snapshot SHA-256 | Result |
 | --- | --- | --- | --- |
-| `jolpica/constructorStandings/2026_1.json` | `ed7bc53d298f616b3ffe3c2871c5df1c33cbdcca14a9428bb27d1453f3f79ec` | `5a97b5adbae412d0789233e763d765c92b3938ac945aa3eea84e3342f9d5c5a` | differs |
-| `jolpica/constructorStandings/2026_7.json` | `5e3572b1e67b81cf856dbf8ab441cb4b02ecf1667d89b29a8b043a22d50caf9` | `759b5b3d8263f478fc6d56bd9710e423e2c8f79013ee8ebcd6432f395eb277f` | differs |
-| `jolpica/driverStandings/2026_10.json` | `286f593318b1ebadf15dc0f9ce25c5e8d41f36d5a25a6642d033e735d088fcb` | — (no such file in snapshot) | no snapshot counterpart |
-| `jolpica/laps/2026_8.json` | `8fb944b418470fa1301e484502dac7192015fcaa5d3ddf443abc649725f8fd` | `b75152ffbca8192bb4cebbf510b094f85667dedb90fe9c9de74ce3abac677b3` | differs |
-| `jolpica/qualifying/2026_11.json` | `ab0d0439d248a9ecc4b12b6c0b28da8205e727f6fc7cf77e15227fc12270163` | — (no such file in snapshot) | no snapshot counterpart |
-| `jolpica/results/2026_10.json` | `3f1724645fd08adb89cb1c358338f322157ca8e8d8730a12951ef6ea88af0b7` | `fa3d8ef5e9d80c68914710c92030b96f8ad2dd1836883fb46c78c8ab4ea9450f` | differs |
-| `jolpica/results/2026_5.json` | `a2ebaaa9b11ab9746d462b7d314e5a09185093cbaaa77adaa59bbe0232d27710` | `f275ef58d3d6d6fdc72f8ee104acc432ed1273721e878b7502e0634a1c2e3dc` | differs |
+| `jolpica/constructorStandings/2026_1.json` | `ed7bc53d298f616b3ffe3c2871c5df1c33cbdcca14a9428bb27d1453f3f79ecc` | `5a97b5adbae412d0789233e763d765c92b3938ac945aa3eea84e3342f9d5c5aa` | differs |
+| `jolpica/constructorStandings/2026_7.json` | `5e3572b1e67b81cf856dbf8ab441cb4b02ecf1667d89b29a8b043a22d50caf96` | `759b5b3d8263f478fc6d56bd9710e423e2c8f79013ee8ebcd6432f395eb277fa` | differs |
+| `jolpica/driverStandings/2026_10.json` | `286f593318b1ebadf15dc0f9ce25c5e8d41f36d5a25a6642d033e735d088fcb1` | — (no such file in snapshot) | no snapshot counterpart |
+| `jolpica/laps/2026_8.json` | `8fb944b418470fa1301e484502dac7192015fcaa5d3ddf443abc649725f8fdd9` | `b75152ffbca8192bb4cebbf510b094f85667dedb90fe9c9de74ce3abac677b3c` | differs |
+| `jolpica/qualifying/2026_11.json` | `ab0d0439d248a9ecc4b12b6c0b28da8205e727f6fc7cf77e15227fc12270163a` | — (no such file in snapshot) | no snapshot counterpart |
+| `jolpica/results/2026_10.json` | `3f1724645fd08adb89cb1c358338f322157ca8e8d8730a12951ef6ea88af0b7f` | `fa3d8ef5e9d80c68914710c92030b96f8ad2dd1836883fb46c78c8ab4ea9450f` | differs |
+| `jolpica/results/2026_5.json` | `a2ebaaa9b11ab9746d462b7d314e5a09185093cbaaa77adaa59bbe0232d27710` | `f275ef58d3d6d6fdc72f8ee104acc432ed1273721e878b7502e0634a1c2e3dca` | differs |
+
+Corrected 2026-08-07 during code review: 10 of these 12 recorded digests were truncated by 1-2 hex characters in the original Dev Agent Record and did not match either the live or snapshot files. Recomputed directly with `shasum -a 256` against the live repo and a fresh tarball extraction; the qualitative results (differs / no snapshot counterpart) are unchanged from the original table.
 
 Interpretation: the 5 files with a snapshot counterpart all differ — expected, since the live versions are the post-pagination-fix corrected cache and the snapshot predates that fix. The other 2 have no snapshot file at all — those rounds (10, 11) simply hadn't been played yet as of the 2026-07-09 snapshot. In every case the live file was left untouched; the snapshot never overwrote a protected file.
 
@@ -169,7 +178,7 @@ Interpretation: the 5 files with a snapshot counterpart all differ — expected,
 - `find data/raw/f1_complete_dataset -type f | wc -l` → 8. Pass.
 - `test -f docs/decisions.md` → present. Pass.
 - `git status --porcelain` (post `git add`) → only `docs/decisions.md` and new files under `recovery/reference/` staged as additions; nothing under `data/` appears. Pass.
-- `git diff --check` (staged) → flags "new blank line at EOF" on 8 files under `recovery/reference/src/f1_analytics/` and `recovery/reference/sql/`; all pre-existing in the snapshot's original authored files, not introduced here — see Debug Log. Not treated as a blocker: fixing it would mean editing verbatim V1 salvage, contrary to AD-10.
+- `git diff --check` (staged) → flags "new blank line at EOF" on 10 files under `recovery/reference/src/f1_analytics/` and `recovery/reference/sql/`; all pre-existing in the snapshot's original authored files, not introduced here — see Debug Log. Not treated as a blocker: fixing it would mean editing verbatim V1 salvage, contrary to AD-10.
 - Manual review of this session's full command history: no `git restore`, `git gc`, `git prune`, `git repack`, or `git checkout -- .` was ever run. Pass.
 - 7 protected files re-checked with `shasum -a 256` immediately before staging — identical to their pre-salvage values (they were never written to). Pass.
 
