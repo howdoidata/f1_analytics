@@ -1,0 +1,9 @@
+{
+  "race_label": "UnmappedDriver",
+  "event": "Bad Grand Prix",
+  "season": 2026,
+  "round": 2,
+  "lap_count": 6,
+  "weather_count": 2,
+  "drivers": ["HAM", "VER", "ZZZ"]
+}

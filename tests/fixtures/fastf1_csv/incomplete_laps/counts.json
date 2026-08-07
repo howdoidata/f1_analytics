@@ -1,0 +1,9 @@
+{
+  "race_label": "Incomplete",
+  "event": "Truncated Grand Prix",
+  "season": 2026,
+  "round": 3,
+  "lap_count": 6,
+  "weather_count": 2,
+  "drivers": ["ALO", "HAM", "VER"]
+}

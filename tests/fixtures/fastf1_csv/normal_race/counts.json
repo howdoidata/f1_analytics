@@ -1,0 +1,9 @@
+{
+  "race_label": "Normal",
+  "event": "Test Grand Prix",
+  "season": 2026,
+  "round": 1,
+  "lap_count": 6,
+  "weather_count": 2,
+  "drivers": ["ALO", "HAM", "VER"]
+}
