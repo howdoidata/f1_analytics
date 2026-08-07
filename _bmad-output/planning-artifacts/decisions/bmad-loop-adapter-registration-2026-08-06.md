@@ -9,6 +9,10 @@ Register both the `claude` and `codex` adapters with the project's BMAD Loop
 installation. Keep `claude` as the default adapter for dev, review, and triage
 in `.bmad-loop/policy.toml`.
 
+Track `.codex/hooks.json` in the repository. Its commands resolve the Git
+worktree root at runtime before invoking `.bmad-loop/bmad_loop_hook.py`, so no
+developer-specific absolute path is required.
+
 ## Rationale
 
 Both coding CLIs are available for future orchestration use. Keeping the
@@ -21,3 +25,5 @@ per-role Codex override to be added later without re-registering hooks.
   installed and refreshed together during future Loop upgrades.
 - Any future policy role set to `codex` is already registered; no additional
   `bmad-loop init` step is required.
+- A Codex hook invoked outside a Git worktree fails instead of locating an
+  unrelated hook; this configuration is intended only for this repository.
