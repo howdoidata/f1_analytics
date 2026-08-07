@@ -12,14 +12,14 @@ route: 'one-shot'
 
 **Problem:** Codex hooks were excluded from version control because their commands embedded a developer-specific absolute path.
 
-**Approach:** Track the shared hook manifest with commands that locate the current Git worktree at runtime, while continuing to ignore all other local Codex state.
+**Approach:** Track the shared hook manifest with commands that locate the current Git worktree at runtime, and keep any future Codex files visible for explicit review.
 
 ## Suggested Review Order
 
 - Hook commands resolve the checked-out repository, not a developer’s home directory.
   [`hooks.json:8`](../../.codex/hooks.json#L8)
 
-- The ignore rules track only the portable manifest and contain future local Codex files.
+- There is no Codex-specific ignore rule, so future local configuration stays visible for review.
   [`.gitignore:4`](../../.gitignore#L4)
 
 - The durable decision records the ownership boundary and failure behavior.

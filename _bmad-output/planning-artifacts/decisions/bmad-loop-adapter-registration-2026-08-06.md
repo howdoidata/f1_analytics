@@ -13,6 +13,10 @@ Track `.codex/hooks.json` in the repository. Its commands resolve the Git
 worktree root at runtime before invoking `.bmad-loop/bmad_loop_hook.py`, so no
 developer-specific absolute path is required.
 
+Do not ignore `.codex/` in this repository. Any additional project-local
+Codex configuration remains visible in `git status` for an explicit review
+rather than being silently hidden.
+
 ## Rationale
 
 Both coding CLIs are available for future orchestration use. Keeping the

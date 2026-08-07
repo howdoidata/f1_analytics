@@ -1,8 +1,6 @@
 .DS_Store
 **/.DS_Store
 .vscode/
-.codex/*
-!.codex/hooks.json
 
 # Local data and generated outputs
 data/raw/
