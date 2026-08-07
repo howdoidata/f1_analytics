@@ -7,6 +7,7 @@ laps, and completeness verification against the counts sidecar. No
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
@@ -14,9 +15,12 @@ import pandas as pd
 import pytest
 
 from f1_analytics.data_sources.fastf1_loader import (
+    FASTF1_AMBIGUOUS_DRIVER_CODE_OVERRIDES,
     FASTF1_TEAM_TO_CONSTRUCTOR_ID_ALIASES,
+    AmbiguousFastF1DriverCodeError,
     FastF1RaceLoadError,
     IncompleteFastF1DataError,
+    UnassignedFastF1StintError,
     UnmappedFastF1NameError,
     derive_stints,
     load_and_map_race,
@@ -90,6 +94,57 @@ def test_map_driver_ids_raises_named_error_for_a_nan_driver_value_instead_of_dro
         map_driver_ids(laps, drivers)
 
     assert "<missing Driver value>" in str(excinfo.value)
+
+
+def test_map_driver_ids_raises_named_error_for_an_ambiguous_code_with_no_sanctioned_override():
+    # Real F1 3-letter codes are reused across eras. MAG (Jan Magnussen /
+    # Kevin Magnussen) is a genuine curated-table collision with no entry
+    # in FASTF1_AMBIGUOUS_DRIVER_CODE_OVERRIDES -- a silent drop_duplicates()
+    # pick would resolve confidently to the wrong driver with no error;
+    # this must raise instead.
+    assert "MAG" not in FASTF1_AMBIGUOUS_DRIVER_CODE_OVERRIDES
+    ambiguous_drivers = pd.DataFrame(
+        {"driver_id": ["magnussen", "kevin_magnussen"], "code": ["MAG", "MAG"]}
+    )
+    laps = pd.DataFrame({"Driver": ["MAG"]})
+
+    with pytest.raises(AmbiguousFastF1DriverCodeError) as excinfo:
+        map_driver_ids(laps, ambiguous_drivers)
+
+    assert "MAG" in str(excinfo.value)
+
+
+def test_map_driver_ids_resolves_an_ambiguous_code_via_the_sanctioned_override_table():
+    # VER matches both vergne and max_verstappen in the curated table
+    # (fastf1-driver-code-reconciliation-decision-record.md); it must
+    # resolve to the sanctioned override, never an arbitrary curated row.
+    assert FASTF1_AMBIGUOUS_DRIVER_CODE_OVERRIDES["VER"] == "max_verstappen"
+    ambiguous_drivers = pd.DataFrame(
+        {"driver_id": ["vergne", "max_verstappen"], "code": ["VER", "VER"]}
+    )
+    laps = pd.DataFrame({"Driver": ["VER"]})
+
+    mapped = map_driver_ids(laps, ambiguous_drivers)
+
+    assert mapped.tolist() == ["max_verstappen"]
+
+
+def test_map_driver_ids_does_not_raise_for_an_ambiguous_code_absent_from_this_races_laps():
+    # A duplicate code elsewhere in the curated table that this race's
+    # laps never reference (and that has no sanctioned override) must not
+    # block an otherwise-clean mapping.
+    assert "MAG" not in FASTF1_AMBIGUOUS_DRIVER_CODE_OVERRIDES
+    ambiguous_drivers = pd.DataFrame(
+        {
+            "driver_id": ["magnussen", "kevin_magnussen", "hamilton"],
+            "code": ["MAG", "MAG", "HAM"],
+        }
+    )
+    laps = pd.DataFrame({"Driver": ["HAM"]})
+
+    mapped = map_driver_ids(laps, ambiguous_drivers)
+
+    assert mapped.tolist() == ["hamilton"]
 
 
 def test_map_constructor_ids_raises_named_error_for_unmapped_team(constructors: pd.DataFrame):
@@ -169,6 +224,20 @@ def test_map_constructor_ids_resolves_all_four_sanctioned_aliases_against_real_c
     assert mapped.tolist() == ["alpine", "cadillac", "rb", "red_bull"]
 
 
+def test_map_constructor_ids_raises_named_error_when_an_alias_target_is_absent_from_constructors():
+    # A stale alias (its target id no longer present, e.g. after a curated
+    # -table refresh) must not silently inject a dangling constructor_id --
+    # it falls through to the same UnmappedFastF1NameError as any other
+    # unresolved Team string.
+    constructors_missing_alias_target = pd.DataFrame({"constructor_id": ["ferrari"], "name": ["Ferrari"]})
+    laps = pd.DataFrame({"Team": ["Red Bull Racing"]})
+
+    with pytest.raises(UnmappedFastF1NameError) as excinfo:
+        map_constructor_ids(laps, constructors_missing_alias_target)
+
+    assert "Red Bull Racing" in str(excinfo.value)
+
+
 def test_map_laps_to_ids_adds_both_id_columns(drivers: pd.DataFrame, constructors: pd.DataFrame):
     laps, _, _ = read_race_dump(FASTF1_FIXTURE_DIR / "normal_race")
 
@@ -202,6 +271,40 @@ def test_derive_stints_groups_by_driver_and_stint_with_lap_bounds(
     assert ver_stint_2["lap_count"] == 1
 
     assert len(stints) == 4  # VER x2 stints, HAM x1, ALO x1
+
+
+def test_derive_stints_raises_named_error_for_a_lap_with_no_stint_assignment(
+    drivers: pd.DataFrame, constructors: pd.DataFrame
+):
+    # FastF1 leaves some untimed/out-laps with no Stint assignment. Folding
+    # those into one artificial stint per driver would span non-contiguous
+    # laps under a single stint_number -- this must raise instead.
+    laps, _, _ = read_race_dump(FASTF1_FIXTURE_DIR / "normal_race")
+    mapped = map_laps_to_ids(laps, drivers, constructors)
+    mapped["Stint"] = mapped["Stint"].astype(float)
+    ver_index = mapped.index[mapped["Driver"] == "VER"][0]
+    mapped.loc[ver_index, "Stint"] = None
+
+    with pytest.raises(UnassignedFastF1StintError) as excinfo:
+        derive_stints(mapped)
+
+    assert "verstappen" in str(excinfo.value)
+
+
+def test_verify_completeness_raises_named_error_for_a_driver_missing_from_landed_laps(
+    drivers: pd.DataFrame, constructors: pd.DataFrame
+):
+    # Lap/weather counts both meet the sidecar's totals here, isolating the
+    # driver-roster check from the lap/weather undercount checks -- unlike
+    # incomplete_laps, which conflates both failure modes in one fixture
+    # and never lets this branch run independently.
+    laps, weather, counts = read_race_dump(FASTF1_FIXTURE_DIR / "missing_driver")
+    mapped = map_laps_to_ids(laps, drivers, constructors)
+
+    with pytest.raises(IncompleteFastF1DataError) as excinfo:
+        verify_completeness(mapped, weather, counts)
+
+    assert "ALO" in str(excinfo.value)
 
 
 def test_verify_completeness_passes_when_landed_matches_sidecar(
@@ -290,6 +393,27 @@ def test_load_and_map_race_raises_named_error_for_incomplete_laps(
         )
 
     assert "Incomplete" in str(excinfo.value)
+
+
+def test_load_and_map_race_raises_named_error_when_round_is_missing_from_counts(
+    tmp_path: Path, drivers: pd.DataFrame, constructors: pd.DataFrame
+):
+    # fastf1_fetch.py falls back to a None round when it can't read
+    # RoundNumber off the FastF1 session -- a null round would otherwise
+    # silently defeat the season+round join later stories depend on.
+    race_dir = tmp_path / "NoRound"
+    race_dir.mkdir()
+    source_dir = FASTF1_FIXTURE_DIR / "normal_race"
+    shutil.copy(source_dir / "laps.csv", race_dir / "laps.csv")
+    shutil.copy(source_dir / "weather.csv", race_dir / "weather.csv")
+    counts = json.loads((source_dir / "counts.json").read_text())
+    counts["round"] = None
+    (race_dir / "counts.json").write_text(json.dumps(counts))
+
+    with pytest.raises(FastF1RaceLoadError) as excinfo:
+        load_and_map_race(race_dir, drivers, constructors, label="NoRound", season=2026)
+
+    assert "round" in str(excinfo.value)
 
 
 def test_load_and_map_race_wraps_a_corrupt_counts_json_instead_of_crashing_the_run(
