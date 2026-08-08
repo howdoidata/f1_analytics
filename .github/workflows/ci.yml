@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add uv to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: uv sync
+
+      # tests/conftest.py blocks all network access (AD-11) -- this suite
+      # never needs Kaggle/FastF1 credentials to run.
+      - name: Run tests
+        run: uv run pytest -v
+
+  bmad-context:
+    name: BMAD context bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # context.py exits 1 on any finding (kernel budget, frontmatter,
+      # dead links, foreign/missing index) -- no extra parsing needed.
+      - name: Validate context bundle
+        run: python3 _bmad/scripts/context.py validate --json
+
+      # sweep never exits non-zero on its own (it's a report, not a gate),
+      # so the stale/missing counts are checked here instead.
+      - name: Sweep for stale or missing sources
+        run: |
+          python3 _bmad/scripts/context.py sweep --json | tee sweep.json
+          if [ "$(jq '(.stale | length) + (.missing | length)' sweep.json)" != "0" ]; then
+            echo "::error::context.py sweep found stale or missing entries -- see output above"
+            exit 1
+          fi
+
+  bmad-skill-parity:
+    name: BMAD skill surface parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # .claude/skills and .agents/skills are two installed copies of the
+      # same BMAD skill set (claude-code and codex surfaces). They must
+      # never silently drift -- a skill edited on one surface and not the
+      # other is exactly the failure mode this check exists to catch.
+      - name: Diff .claude/skills against .agents/skills
+        run: |
+          if ! diff -rq .claude/skills .agents/skills; then
+            echo "::error::.claude/skills and .agents/skills have drifted -- reinstall/sync both surfaces"
+            exit 1
+          fi
