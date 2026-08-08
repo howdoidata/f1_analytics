@@ -187,3 +187,35 @@ def test_main_raises_named_error_when_curated_tables_are_missing(tmp_path: Path)
     assert "drivers" in str(excinfo.value)
     assert "constructors" in str(excinfo.value)
     assert "Story 1.5" in str(excinfo.value)
+
+
+def test_a_later_run_landing_fewer_races_does_not_shrink_the_table(tmp_path: Path, capsys: pytest.CaptureFixture):
+    db_path = tmp_path / "test.duckdb"
+    _seed_curated_tables(db_path)
+    fastf1_raw_dir = tmp_path / "fastf1_raw"
+
+    good_targets = (("RaceA", "Race A Grand Prix"), ("RaceB", "Race B Grand Prix"))
+    good_fetch = _fake_fetch({"RaceA", "RaceB"}, {"RaceA": "normal_race", "RaceB": "normal_race"})
+    first_exit_code = pull_fastf1_data_main(
+        targets=good_targets, season=2026, fastf1_raw_dir=fastf1_raw_dir, db_path=db_path, fetch=good_fetch
+    )
+    assert first_exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        landed_after_first_run = conn.execute("SELECT COUNT(*) FROM raw_fastf1_laps").fetchone()[0]
+    assert landed_after_first_run == 12  # two races x 6 laps (normal_race fixture)
+
+    # A later run where RaceB transiently fails must never shrink the table
+    # a prior, more-complete run already landed.
+    degraded_fetch = _fake_fetch({"RaceA"}, {"RaceA": "normal_race"})
+    second_exit_code = pull_fastf1_data_main(
+        targets=good_targets, season=2026, fastf1_raw_dir=fastf1_raw_dir, db_path=db_path, fetch=degraded_fetch
+    )
+
+    assert second_exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        landed_after_second_run = conn.execute("SELECT COUNT(*) FROM raw_fastf1_laps").fetchone()[0]
+    assert landed_after_second_run == 12  # unchanged -- the shrinking write was refused
+
+    captured = capsys.readouterr()
+    assert "raw_fastf1_laps" in captured.out
+    assert "keeping the previously-landed table" in captured.out

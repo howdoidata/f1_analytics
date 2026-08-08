@@ -26,7 +26,7 @@ import pandas as pd
 
 from f1_analytics.config import DUCKDB_PATH, FASTF1_CACHE_DIR, FASTF1_RAW_DIR
 from f1_analytics.data_sources.fastf1_loader import FastF1RaceLoadError, load_and_map_race
-from f1_analytics.database.duckdb_io import connect_duckdb, write_dataframe
+from f1_analytics.database.duckdb_io import WriteRegressionError, connect_duckdb, write_dataframe
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -169,6 +169,20 @@ def pull_race(
     return {"label": label, "status": "pass", "race": race}
 
 
+def write_table_unless_regressed(conn, table_name: str, frame: pd.DataFrame) -> None:
+    """Land `table_name`, refusing a write that would shrink it (AD-13).
+
+    A run that lands fewer races than an earlier run (e.g. transient
+    per-race failures) must never overwrite a more-complete prior table --
+    the prior landed data stays intact and this run's shortfall is named,
+    mirroring `load_jolpica_results`'s degrade-without-losing-data posture.
+    """
+    try:
+        write_dataframe(conn, table_name, frame, refuse_regression=True)
+    except WriteRegressionError as error:
+        print(f"[pull_fastf1_data] {error}; keeping the previously-landed table")
+
+
 def main(
     targets: tuple[tuple[str, str], ...] = TARGETS,
     season: int = SEASON,
@@ -204,11 +218,11 @@ def main(
 
     with connect_duckdb(db_path) as conn:
         if laps_frames:
-            write_dataframe(conn, "raw_fastf1_laps", pd.concat(laps_frames, ignore_index=True))
+            write_table_unless_regressed(conn, "raw_fastf1_laps", pd.concat(laps_frames, ignore_index=True))
         if stints_frames:
-            write_dataframe(conn, "raw_fastf1_stints", pd.concat(stints_frames, ignore_index=True))
+            write_table_unless_regressed(conn, "raw_fastf1_stints", pd.concat(stints_frames, ignore_index=True))
         if weather_frames:
-            write_dataframe(conn, "raw_fastf1_weather", pd.concat(weather_frames, ignore_index=True))
+            write_table_unless_regressed(conn, "raw_fastf1_weather", pd.concat(weather_frames, ignore_index=True))
 
     landed = [outcome["label"] for outcome in outcomes if outcome["status"] == "pass"]
     failed = [outcome["label"] for outcome in outcomes if outcome["status"] != "pass"]

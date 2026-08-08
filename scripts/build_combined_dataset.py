@@ -46,7 +46,7 @@ from f1_analytics.data_sources.jolpica_loader import (
     load_and_map_season_results,
 )
 from f1_analytics.data_sources.standings import compute_cumulative_standings
-from f1_analytics.database.duckdb_io import connect_duckdb, write_dataframe
+from f1_analytics.database.duckdb_io import WriteRegressionError, connect_duckdb, write_dataframe
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -310,9 +310,17 @@ def main(
     jolpica_results = load_jolpica_results(season, season_dir, fetch_result, drivers, constructors)
 
     with connect_duckdb(db_path) as conn:
-        # raw_jolpica_results is written even when empty: kaggle_jolpica_coverage.sql
-        # joins against it every run, so it must always exist first.
-        write_dataframe(conn, "raw_jolpica_results", jolpica_results)
+        # raw_jolpica_results is written even when empty on a table's first
+        # write: kaggle_jolpica_coverage.sql joins against it every run, so
+        # it must always exist first. On every later run, refuse_regression
+        # guards against a degraded/partial fetch overwriting a previously
+        # more-complete table -- if refused, the existing (better) table is
+        # reused for the rest of this run instead of degrading to it.
+        try:
+            write_dataframe(conn, "raw_jolpica_results", jolpica_results, refuse_regression=True)
+        except WriteRegressionError as error:
+            print(f"[build_combined_dataset] {error}; reusing the previously-landed table for this run")
+            jolpica_results = conn.execute("SELECT * FROM raw_jolpica_results").fetch_df()
 
         conn.execute(COVERAGE_VIEW_SQL_PATH.read_text())
         coverage = conn.execute("SELECT * FROM kaggle_jolpica_coverage").fetch_df()

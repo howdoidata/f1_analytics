@@ -326,6 +326,47 @@ def test_main_degrades_gracefully_when_jolpica_load_fails(tmp_path: Path, capsys
     assert set(combined_results["source"]) == {"kaggle"}
 
 
+def test_main_reuses_previous_jolpica_data_when_a_later_fetch_regresses(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+):
+    db_path = tmp_path / "test.duckdb"
+    jolpica_raw_dir = tmp_path / "jolpica_raw"
+    _seed_curated_tables(db_path)
+
+    good_fetch = _fake_fetch("pass", "normal_season")
+    first_exit_code = build_combined_dataset_main(
+        season=2026, db_path=db_path, jolpica_raw_dir=jolpica_raw_dir, fetch=good_fetch
+    )
+    assert first_exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        landed_after_first_run = conn.execute("SELECT COUNT(*) FROM raw_jolpica_results").fetchone()[0]
+    assert landed_after_first_run == 7  # normal_season fixture: rounds 1, 3, 4
+
+    # A later run whose live Jolpica fetch degrades to just round 1 (the
+    # "incomplete" fixture, 1 row) must not overwrite the 7-row table a
+    # prior, more-complete run already landed.
+    degraded_fetch = _fake_fetch("pass", "incomplete")
+    second_exit_code = build_combined_dataset_main(
+        season=2026, db_path=db_path, jolpica_raw_dir=jolpica_raw_dir, fetch=degraded_fetch
+    )
+    assert second_exit_code == 0
+
+    with connect_duckdb(db_path, read_only=True) as conn:
+        landed_after_second_run = conn.execute("SELECT COUNT(*) FROM raw_jolpica_results").fetchone()[0]
+        coverage = conn.execute("SELECT * FROM kaggle_jolpica_coverage ORDER BY round").fetch_df()
+        combined_results = conn.execute("SELECT * FROM combined_results").fetch_df()
+
+    assert landed_after_second_run == 7  # unchanged -- the shrinking write was refused
+    # combined_results/coverage were rebuilt from the reused (still-good) data,
+    # not degraded to round 1 only.
+    assert coverage.set_index("round")["status"].to_dict() == EXPECTED_STATUS_BY_ROUND
+    assert set(combined_results.loc[combined_results["round"] == 3, "source"]) == {"jolpica"}
+
+    captured = capsys.readouterr()
+    assert "raw_jolpica_results" in captured.out
+    assert "reusing the previously-landed table for this run" in captured.out
+
+
 def test_main_raises_named_error_when_curated_tables_are_missing(tmp_path: Path):
     db_path = tmp_path / "test.duckdb"
     # Deliberately do NOT seed results/races/drivers/constructors -- as if
