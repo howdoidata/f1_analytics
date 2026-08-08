@@ -35,3 +35,12 @@
 - source_spec: none
   summary: Tracking _bmad-output/**/.memlog.md in git makes concurrent bmad-loop worktree sessions appending to the same logical memlog capable of producing real git merge conflicts — structurally impossible while the file was gitignored.
   evidence: Surfaced by review of the memlog-tracking decision (track-bmad-workspace-memlogs-2026-08-08.md); not caused by any code in this repo, but a new failure mode this repo can now hit that it couldn't before. No concurrent-worktree memlog collision has occurred yet; no fix designed. [_bmad/scripts/memlog.py, .bmad-loop/policy.toml (scm.isolation = "worktree")]
+
+## Deferred from: code review of story-1.7 (2026-08-08)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-7-current-season-combined-tables-and-the-coverage-arbiter.md`
+  summary: `build_combined_dataset.py`'s full-table replace-sync write of `raw_jolpica_results` can regress previously-landed Jolpica rows if a later run's live fetch degrades or fails.
+  evidence: `write_dataframe` performs `CREATE OR REPLACE TABLE` unconditionally from the current run's in-memory result, including the empty-shaped degrade path, with no merge against what's already durable — the same regression class Story 1.6's review log already flagged and explicitly deferred "for a Story 1.7/1.8 follow-up"; 1.7 inherits the pattern (via the shared AD-4 `write_dataframe` writer, which this story's Boundaries required it to use) rather than resolving it.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-7-current-season-combined-tables-and-the-coverage-arbiter.md`
+  summary: `combined_results.time` mixes Kaggle's compact clock/gap format with Jolpica's raw pandas-Timedelta string, so downstream consumers see two incompatible formats depending on which source won a given round.
+  evidence: `jolpica_loader.shape_results` casts Jolpica's `totalRaceTime` straight to `.astype("string")` without reformatting to Kaggle's `"1:31:44.742"`/`"+5.023"` convention (the code's own comment already flags this as "best-effort"); no test asserts the `time` value's format. Not fixed inline because the exact target format needs a decision, not a guess — same reasoning as the `add_standing_rank()` ranking-convention deferral from Story 1.5's review.

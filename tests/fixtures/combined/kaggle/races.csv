@@ -1,0 +1,6 @@
+season,round,race_name,circuit_id,date,time,url
+2026,1,Match Grand Prix,bahrain,2026-03-01,15:00:00,https://example.com/race/2026/1
+2026,2,KaggleOnly Grand Prix,jeddah,2026-03-08,17:00:00,https://example.com/race/2026/2
+2026,3,JolpicaOnly Grand Prix,melbourne,2026-03-15,05:00:00,https://example.com/race/2026/3
+2026,4,Diverges Grand Prix,suzuka,2026-03-22,05:00:00,https://example.com/race/2026/4
+2026,5,NoData Grand Prix,shanghai,2026-03-29,07:00:00,https://example.com/race/2026/5
