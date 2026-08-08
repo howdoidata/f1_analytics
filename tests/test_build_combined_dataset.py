@@ -35,6 +35,7 @@ KAGGLE_FIXTURE_DIR = COMBINED_FIXTURE_DIR / "kaggle"
 JOLPICA_DUMP_DIR = COMBINED_FIXTURE_DIR / "jolpica_dump"
 
 COVERAGE_VIEW_SQL_PATH = PROJECT_ROOT / "sql" / "kaggle_jolpica_coverage.sql"
+VALIDATION_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "validation"
 
 _SCRIPT_PATH = PROJECT_ROOT / "scripts" / "build_combined_dataset.py"
 _spec = importlib.util.spec_from_file_location("build_combined_dataset", _SCRIPT_PATH)
@@ -424,6 +425,81 @@ def test_main_raises_named_error_when_the_database_file_does_not_exist_at_all(tm
 
     assert "Story 1.5" in str(excinfo.value)
     assert str(db_path) in str(excinfo.value)
+
+
+# --- Story 1.8: advisory validation + source_load logging ----------------
+
+
+def test_main_logs_source_load_rows_for_kaggle_and_jolpica(tmp_path: Path):
+    db_path = tmp_path / "test.duckdb"
+    _seed_curated_tables(db_path)
+    fetch = _fake_fetch("pass", "normal_season")
+
+    exit_code = build_combined_dataset_main(
+        season=2026, db_path=db_path, jolpica_raw_dir=tmp_path / "jolpica_raw", fetch=fetch
+    )
+
+    assert exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        combined_results = conn.execute("SELECT * FROM combined_results").fetch_df()
+        load_log = conn.execute("SELECT * FROM source_load_log ORDER BY source_name").fetch_df()
+
+    expected_kaggle_count = int((combined_results["source"] == "kaggle").sum())
+    expected_jolpica_count = int((combined_results["source"] == "jolpica").sum())
+
+    assert set(load_log["source_name"]) == {"kaggle", "jolpica"}
+    assert (load_log["table_name"] == "combined_results").all()
+    kaggle_row = load_log[load_log["source_name"] == "kaggle"].iloc[0]
+    jolpica_row = load_log[load_log["source_name"] == "jolpica"].iloc[0]
+    assert kaggle_row["row_count"] == expected_kaggle_count
+    assert jolpica_row["row_count"] == expected_jolpica_count
+
+    with connect_duckdb(db_path, read_only=True) as conn:
+        registry = conn.execute("SELECT * FROM source_registry").fetch_df()
+    assert set(registry["source_name"]) == {"kaggle", "jolpica"}
+
+
+def test_main_logs_a_combined_results_orphan_violation_and_still_exits_0(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+):
+    # orphan_referential/results.csv carries a "ghost_driver" row absent
+    # from drivers.csv. With the Jolpica fetch degraded (kaggle_only for
+    # this round), that Kaggle row flows straight into combined_results
+    # unchanged -- so the orphan must surface as a failing validation row
+    # for BOTH `results` and `combined_results`, not curated alone.
+    db_path = tmp_path / "test.duckdb"
+    scenario_dir = VALIDATION_FIXTURE_DIR / "orphan_referential"
+    with connect_duckdb(db_path) as conn:
+        write_dataframe(conn, "results", pd.read_csv(scenario_dir / "results.csv"))
+        write_dataframe(conn, "races", pd.read_csv(scenario_dir / "races.csv"))
+        write_dataframe(conn, "drivers", pd.read_csv(scenario_dir / "drivers.csv"))
+        write_dataframe(conn, "constructors", pd.read_csv(scenario_dir / "constructors.csv"))
+    fetch = _fake_fetch("failed", None)
+
+    exit_code = build_combined_dataset_main(
+        season=2026, db_path=db_path, jolpica_raw_dir=tmp_path / "jolpica_raw", fetch=fetch
+    )
+
+    assert exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        findings = conn.execute(
+            "SELECT * FROM validation_results "
+            "WHERE column_name = 'driver_id' AND check_type = 'referential_integrity'"
+        ).fetch_df()
+        combined_results = conn.execute("SELECT * FROM combined_results").fetch_df()
+
+    # round 2 is a clean round (both drivers resolve) -- only round 1's
+    # ghost_driver row is the orphan.
+    assert set(combined_results["driver_id"]) == {"verstappen", "ghost_driver", "hamilton"}
+
+    findings_by_table = findings.set_index("table_name")
+    assert not findings_by_table.loc["results", "passed"]
+    assert not findings_by_table.loc["combined_results", "passed"]
+    assert findings_by_table.loc["combined_results", "orphan_count"] == 1
+
+    captured = capsys.readouterr()
+    assert "validation" in captured.out
+    assert "FAILED" in captured.out
 
 
 # --- run_fetch_subprocess(): the real, live-Jolpica code path every actual

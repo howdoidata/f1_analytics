@@ -24,6 +24,13 @@ posture. Only a genuinely MISSING curated prerequisite table
 (`results`/`races`/`drivers`/`constructors`) is a hard, pre-write failure
 (mirrors `require_curated_tables()` in `pull_fastf1_data.py`).
 
+After writes, runs Story 1.8's advisory null-rate/referential-integrity
+validations against curated + `combined_results` tables (not the two
+`*_standings_by_round` tables -- no registry entry checks them) and logs
+`source_load` rows for both kaggle and jolpica. A failing check is
+printed but never changes this script's exit code (AD-8:
+advisory-and-logged).
+
 Run from the repository root:
 
     uv run scripts/build_combined_dataset.py
@@ -47,6 +54,9 @@ from f1_analytics.data_sources.jolpica_loader import (
 )
 from f1_analytics.data_sources.standings import compute_cumulative_standings
 from f1_analytics.database.duckdb_io import WriteRegressionError, connect_duckdb, write_dataframe
+from f1_analytics.validation.checks import run_validations
+from f1_analytics.validation.runner import load_present_tables, print_validation_findings
+from f1_analytics.validation.store import log_source_load, log_validation_results
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,6 +66,21 @@ FETCH_TIMEOUT_SECONDS = 300
 SEASON = 2026
 
 REQUIRED_CURATED_TABLES = ("results", "races", "drivers", "constructors")
+
+# Curated tables (Story 1.5) plus this run's own combined_results
+# extension (Story 1.7) -- exactly what checks.NULL_RATE_CHECKS/
+# REFERENTIAL_CHECKS reference for this script. Deliberately excludes
+# combined_driver_standings_by_round/combined_constructor_standings_by_round
+# -- no registry entry checks them (see deferred-work.md).
+VALIDATION_TABLES: tuple[str, ...] = (
+    "results",
+    "drivers",
+    "constructors",
+    "final_driver_standings",
+    "races",
+    "circuits",
+    "combined_results",
+)
 
 # AD-2's five-status vocabulary; combined_results reads these tags,
 # never recomputes the comparison.
@@ -332,10 +357,24 @@ def main(
         write_dataframe(conn, "combined_driver_standings_by_round", driver_standings)
         write_dataframe(conn, "combined_constructor_standings_by_round", constructor_standings)
 
+        # Advisory validation (Story 1.8, AD-8): runs after this script's
+        # own writes above -- a failing check is printed and logged but
+        # never changes this script's exit code.
+        tables = load_present_tables(conn, list(VALIDATION_TABLES))
+        validation_frame = run_validations(tables)
+        log_validation_results(conn, validation_frame)
+        print_validation_findings("build_combined_dataset", validation_frame)
+
+        # combined_results is fully rebuilt every run, so these counts
+        # always reflect this run's own write -- never a stale figure from
+        # an earlier run.
+        kaggle_row_count = int((combined_results["source"] == "kaggle").sum()) if len(combined_results) else 0
+        jolpica_row_count = int((combined_results["source"] == "jolpica").sum()) if len(combined_results) else 0
+        log_source_load(conn, "kaggle", "combined_results", kaggle_row_count)
+        log_source_load(conn, "jolpica", "combined_results", jolpica_row_count)
+
     print_row_count_diverges_deviations(coverage)
 
-    kaggle_row_count = int((combined_results["source"] == "kaggle").sum()) if len(combined_results) else 0
-    jolpica_row_count = int((combined_results["source"] == "jolpica").sum()) if len(combined_results) else 0
     print(
         f"[build_combined_dataset] combined_results: {len(combined_results)} row(s) "
         f"({kaggle_row_count} kaggle, {jolpica_row_count} jolpica)"

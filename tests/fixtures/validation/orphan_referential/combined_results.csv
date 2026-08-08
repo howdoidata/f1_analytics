@@ -1,0 +1,5 @@
+season,round,race_name,driver_id,driver_name,constructor_id,constructor,grid,position,points,laps,status,time,fastest_lap,fastest_lap_rank,source
+2026,1,Orphan Grand Prix,verstappen,Max Verstappen,red_bull,Red Bull,1,1,25,57,Finished,1:31:44.742,55,1,kaggle
+2026,1,Orphan Grand Prix,ghost_driver,Ghost Driver,red_bull,Red Bull,2,2,18,57,Finished,+5.023,50,3,kaggle
+2026,2,Clean Grand Prix,verstappen,Max Verstappen,red_bull,Red Bull,1,1,25,55,Finished,1:28:12.345,52,1,kaggle
+2026,2,Clean Grand Prix,hamilton,Lewis Hamilton,mercedes,Mercedes,2,2,18,55,Finished,+6.512,48,2,kaggle

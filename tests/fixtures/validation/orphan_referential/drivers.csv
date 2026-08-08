@@ -1,0 +1,3 @@
+driver_id,given_name,family_name,dob,nationality,number,code,url
+verstappen,Max,Verstappen,1997-09-30,Dutch,1,VER,https://example.com/driver/verstappen
+hamilton,Lewis,Hamilton,1985-01-07,British,44,HAM,https://example.com/driver/hamilton

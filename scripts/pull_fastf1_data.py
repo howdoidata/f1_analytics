@@ -10,6 +10,13 @@ stops the remaining races (AD-13). Lands `raw_fastf1_laps`,
 `raw_fastf1_stints`, and `raw_fastf1_weather` via the existing replace-sync
 writer (AD-4); every row carries `driver_id`/`constructor_id` (AD-14).
 
+After writes, runs Story 1.8's advisory null-rate/referential-integrity
+validations against curated + `raw_fastf1_*` tables and logs
+`source_load` rows only for the `raw_fastf1_*` tables this run's own
+writes actually touched -- never a stale row count from a prior run. A
+failing check is printed but never changes this script's exit code
+(AD-8: advisory-and-logged).
+
 Run from the repository root:
 
     uv run scripts/pull_fastf1_data.py
@@ -27,12 +34,32 @@ import pandas as pd
 from f1_analytics.config import DUCKDB_PATH, FASTF1_CACHE_DIR, FASTF1_RAW_DIR
 from f1_analytics.data_sources.fastf1_loader import FastF1RaceLoadError, load_and_map_race
 from f1_analytics.database.duckdb_io import WriteRegressionError, connect_duckdb, write_dataframe
+from f1_analytics.validation.checks import run_validations
+from f1_analytics.validation.runner import load_present_tables, print_validation_findings
+from f1_analytics.validation.store import log_source_load, log_validation_results
 
 
 ROOT = Path(__file__).resolve().parents[1]
 FETCH_SCRIPT_PATH = ROOT / "src" / "f1_analytics" / "data_sources" / "fastf1_fetch.py"
 FETCH_TIMEOUT_SECONDS = 300
 SEASON = 2026
+
+# Curated tables (Story 1.5) plus this run's own raw_fastf1_* extension
+# (Story 1.6) -- exactly what checks.NULL_RATE_CHECKS/REFERENTIAL_CHECKS
+# reference for this script. Any of these absent from the DB this run
+# (e.g. `raw_fastf1_weather` before this run wrote it) is skipped by
+# `load_present_tables`, never a KeyError.
+VALIDATION_TABLES: tuple[str, ...] = (
+    "results",
+    "drivers",
+    "constructors",
+    "final_driver_standings",
+    "races",
+    "circuits",
+    "raw_fastf1_laps",
+    "raw_fastf1_stints",
+    "raw_fastf1_weather",
+)
 
 # Story 1.2's already-verified TARGETS (spike_fastf1_adoption.py), reused verbatim.
 TARGETS: tuple[tuple[str, str], ...] = (
@@ -169,18 +196,24 @@ def pull_race(
     return {"label": label, "status": "pass", "race": race}
 
 
-def write_table_unless_regressed(conn, table_name: str, frame: pd.DataFrame) -> None:
+def write_table_unless_regressed(conn, table_name: str, frame: pd.DataFrame) -> bool:
     """Land `table_name`, refusing a write that would shrink it (AD-13).
 
     A run that lands fewer races than an earlier run (e.g. transient
     per-race failures) must never overwrite a more-complete prior table --
     the prior landed data stays intact and this run's shortfall is named,
     mirroring `load_jolpica_results`'s degrade-without-losing-data posture.
+
+    Returns whether the write actually landed -- callers use this to log
+    `source_load` only for tables this run's own writes actually touched,
+    never a table a refused write left at a prior run's row count.
     """
     try:
         write_dataframe(conn, table_name, frame, refuse_regression=True)
+        return True
     except WriteRegressionError as error:
         print(f"[pull_fastf1_data] {error}; keeping the previously-landed table")
+        return False
 
 
 def main(
@@ -216,13 +249,36 @@ def main(
         else:
             print(f"[pull_fastf1_data] {label}: FAILED at {outcome['stage']} -- {outcome['detail']}")
 
+    # Tracks only the raw_fastf1_* tables THIS run's own write actually
+    # landed (never refused, never skipped for lack of frames) -- the
+    # source_load rows below must reflect this run's writes, never a
+    # table's mere presence from an earlier run (Story 1.8).
+    written_tables: dict[str, int] = {}
+
     with connect_duckdb(db_path) as conn:
         if laps_frames:
-            write_table_unless_regressed(conn, "raw_fastf1_laps", pd.concat(laps_frames, ignore_index=True))
+            laps_frame = pd.concat(laps_frames, ignore_index=True)
+            if write_table_unless_regressed(conn, "raw_fastf1_laps", laps_frame):
+                written_tables["raw_fastf1_laps"] = len(laps_frame)
         if stints_frames:
-            write_table_unless_regressed(conn, "raw_fastf1_stints", pd.concat(stints_frames, ignore_index=True))
+            stints_frame = pd.concat(stints_frames, ignore_index=True)
+            if write_table_unless_regressed(conn, "raw_fastf1_stints", stints_frame):
+                written_tables["raw_fastf1_stints"] = len(stints_frame)
         if weather_frames:
-            write_table_unless_regressed(conn, "raw_fastf1_weather", pd.concat(weather_frames, ignore_index=True))
+            weather_frame = pd.concat(weather_frames, ignore_index=True)
+            if write_table_unless_regressed(conn, "raw_fastf1_weather", weather_frame):
+                written_tables["raw_fastf1_weather"] = len(weather_frame)
+
+        # Advisory validation (Story 1.8, AD-8): runs after this script's
+        # own writes above, whatever their outcome -- a failing check is
+        # printed and logged but never changes this script's exit code.
+        tables = load_present_tables(conn, list(VALIDATION_TABLES))
+        validation_frame = run_validations(tables)
+        log_validation_results(conn, validation_frame)
+        print_validation_findings("pull_fastf1_data", validation_frame)
+
+        for table_name, row_count in written_tables.items():
+            log_source_load(conn, "fastf1", table_name, row_count)
 
     landed = [outcome["label"] for outcome in outcomes if outcome["status"] == "pass"]
     failed = [outcome["label"] for outcome in outcomes if outcome["status"] != "pass"]

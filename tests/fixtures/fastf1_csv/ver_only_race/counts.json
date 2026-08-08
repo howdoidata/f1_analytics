@@ -1,0 +1,9 @@
+{
+  "race_label": "VerOnly",
+  "event": "Solo Grand Prix",
+  "season": 2026,
+  "round": 5,
+  "lap_count": 2,
+  "weather_count": 1,
+  "drivers": ["VER"]
+}

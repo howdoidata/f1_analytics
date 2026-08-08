@@ -21,6 +21,7 @@ from f1_analytics.database.duckdb_io import connect_duckdb, write_dataframe
 
 FASTF1_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "fastf1_csv"
 KAGGLE_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "kaggle_csv"
+VALIDATION_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "validation"
 
 _SCRIPT_PATH = PROJECT_ROOT / "scripts" / "pull_fastf1_data.py"
 _spec = importlib.util.spec_from_file_location("pull_fastf1_data", _SCRIPT_PATH)
@@ -219,3 +220,170 @@ def test_a_later_run_landing_fewer_races_does_not_shrink_the_table(tmp_path: Pat
     captured = capsys.readouterr()
     assert "raw_fastf1_laps" in captured.out
     assert "keeping the previously-landed table" in captured.out
+
+
+# --- Story 1.8: advisory validation + source_load logging ----------------
+
+
+def test_main_logs_a_curated_null_violation_and_still_exits_0(tmp_path: Path, capsys: pytest.CaptureFixture):
+    db_path = tmp_path / "test.duckdb"
+    # null_violation/drivers.csv carries a driver row with a NULL driver_id
+    # (unreachable by the fastf1 fixture's VER/HAM/ALO codes, so it never
+    # participates in id-mapping) -- exercises the drivers.driver_id
+    # null-rate check without disturbing a normal race landing.
+    drivers = pd.read_csv(VALIDATION_FIXTURE_DIR / "null_violation" / "drivers.csv")
+    constructors = pd.read_csv(VALIDATION_FIXTURE_DIR / "null_violation" / "constructors.csv")
+    with connect_duckdb(db_path) as conn:
+        write_dataframe(conn, "drivers", drivers)
+        write_dataframe(conn, "constructors", constructors)
+    fastf1_raw_dir = tmp_path / "fastf1_raw"
+
+    targets = (("Normal", "Test Grand Prix"),)
+    fetch = _fake_fetch({"Normal"}, {"Normal": "normal_race"})
+
+    exit_code = pull_fastf1_data_main(
+        targets=targets, season=2026, fastf1_raw_dir=fastf1_raw_dir, db_path=db_path, fetch=fetch
+    )
+
+    assert exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        findings = conn.execute(
+            "SELECT * FROM validation_results WHERE table_name = 'drivers' AND column_name = 'driver_id'"
+        ).fetch_df()
+        laps_count = conn.execute("SELECT COUNT(*) FROM raw_fastf1_laps").fetchone()[0]
+
+    assert len(findings) == 1
+    assert not findings["passed"].iloc[0]
+    assert findings["null_count"].iloc[0] == 1
+    assert laps_count == 6  # the race itself still landed normally
+
+    captured = capsys.readouterr()
+    assert "validation" in captured.out
+    assert "FAILED" in captured.out
+
+
+def test_main_logs_an_orphan_in_raw_fastf1_laps_reached_through_the_real_mapping_pipeline(
+    tmp_path: Path,
+):
+    """A raw_fastf1_laps orphan can only arise across two runs: within a
+    single run, `map_driver_ids` always resolves against the exact same
+    `drivers` snapshot validation later reads, so nothing can be orphaned
+    yet. Here, run 1 lands a real race (via the actual FastF1
+    fetch->id-map->write pipeline, not a synthetic frame) that includes
+    Alonso; the curated `drivers` roster is then rebuilt without Alonso
+    (as Story 1.5's build script legitimately might); run 2 lands a
+    different, Alonso-free race whose smaller frame trips the
+    write-regression guard, so `raw_fastf1_laps` keeps run 1's rows --
+    including Alonso's, now an orphan against the new `drivers` table.
+    This proves `pull_fastf1_data.py`'s VALIDATION_TABLES/`checks.py`
+    registry wiring actually fires for `raw_fastf1_laps`, not just
+    `run_validations()` in isolation.
+    """
+    db_path = tmp_path / "test.duckdb"
+    _seed_curated_tables(db_path)
+    fastf1_raw_dir = tmp_path / "fastf1_raw"
+
+    first_targets = (("Normal", "Test Grand Prix"),)
+    first_fetch = _fake_fetch({"Normal"}, {"Normal": "normal_race"})
+    first_exit_code = pull_fastf1_data_main(
+        targets=first_targets, season=2026, fastf1_raw_dir=fastf1_raw_dir, db_path=db_path, fetch=first_fetch
+    )
+    assert first_exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        alonso_laps_before = conn.execute(
+            "SELECT COUNT(*) FROM raw_fastf1_laps WHERE driver_id = 'alonso'"
+        ).fetchone()[0]
+    assert alonso_laps_before == 1
+
+    # A curated-roster rebuild (Story 1.5) that drops Alonso -- real FastF1
+    # rows landed under his driver_id in run 1 are now orphaned.
+    drivers_without_alonso = pd.read_csv(KAGGLE_FIXTURE_DIR / "f1_drivers.csv")
+    drivers_without_alonso = drivers_without_alonso[drivers_without_alonso["driver_id"] != "alonso"]
+    with connect_duckdb(db_path) as conn:
+        write_dataframe(conn, "drivers", drivers_without_alonso)
+
+    # A second, Alonso-free race lands cleanly this run (its VER code still
+    # maps fine) -- but its 2-lap frame is smaller than the 6 rows already
+    # landed, so write_table_unless_regressed refuses the write and
+    # raw_fastf1_laps keeps run 1's rows, orphan included.
+    second_targets = (("VerOnly", "Solo Grand Prix"),)
+    second_fetch = _fake_fetch({"VerOnly"}, {"VerOnly": "ver_only_race"})
+    second_exit_code = pull_fastf1_data_main(
+        targets=second_targets, season=2026, fastf1_raw_dir=fastf1_raw_dir, db_path=db_path, fetch=second_fetch
+    )
+
+    assert second_exit_code == 0  # VerOnly landed this run
+    with connect_duckdb(db_path, read_only=True) as conn:
+        laps_count = conn.execute("SELECT COUNT(*) FROM raw_fastf1_laps").fetchone()[0]
+        finding = conn.execute(
+            "SELECT * FROM validation_results "
+            "WHERE table_name = 'raw_fastf1_laps' AND column_name = 'driver_id' "
+            "AND check_type = 'referential_integrity' "
+            "ORDER BY checked_at"
+        ).fetch_df()
+
+    assert laps_count == 6  # the refused write kept run 1's table intact
+    assert len(finding) == 2  # one logged row per run
+    assert finding["passed"].iloc[0]  # run 1: alonso was still a valid driver
+    assert not finding["passed"].iloc[-1]  # run 2: alonso is now orphaned
+    assert finding["orphan_count"].iloc[-1] == 1
+
+
+def test_main_logs_source_load_only_for_tables_this_runs_writes_touched(tmp_path: Path):
+    db_path = tmp_path / "test.duckdb"
+    _seed_curated_tables(db_path)
+    fastf1_raw_dir = tmp_path / "fastf1_raw"
+
+    targets = (("Normal", "Test Grand Prix"),)
+    fetch = _fake_fetch({"Normal"}, {"Normal": "normal_race"})
+
+    exit_code = pull_fastf1_data_main(
+        targets=targets, season=2026, fastf1_raw_dir=fastf1_raw_dir, db_path=db_path, fetch=fetch
+    )
+
+    assert exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        load_log = conn.execute("SELECT * FROM source_load_log").fetch_df()
+
+    assert set(load_log["table_name"]) == {"raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather"}
+    assert (load_log["source_name"] == "fastf1").all()
+    laps_row = load_log[load_log["table_name"] == "raw_fastf1_laps"].iloc[0]
+    assert laps_row["row_count"] == 6
+
+
+def test_a_run_where_every_race_fails_after_a_prior_success_logs_no_stale_source_load_row(
+    tmp_path: Path,
+):
+    db_path = tmp_path / "test.duckdb"
+    _seed_curated_tables(db_path)
+    fastf1_raw_dir = tmp_path / "fastf1_raw"
+
+    good_targets = (("Normal", "Test Grand Prix"),)
+    good_fetch = _fake_fetch({"Normal"}, {"Normal": "normal_race"})
+    first_exit_code = pull_fastf1_data_main(
+        targets=good_targets, season=2026, fastf1_raw_dir=fastf1_raw_dir, db_path=db_path, fetch=good_fetch
+    )
+    assert first_exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        first_load_log_count = conn.execute(
+            "SELECT COUNT(*) FROM source_load_log WHERE table_name = 'raw_fastf1_laps'"
+        ).fetchone()[0]
+    assert first_load_log_count == 1
+
+    # Every race fails this run -- laps_frames stays empty, so the write
+    # (and thus the source_load row) must never happen, even though
+    # raw_fastf1_laps still exists from the prior successful run.
+    failing_fetch = _fake_fetch(set(), {})
+    second_exit_code = pull_fastf1_data_main(
+        targets=good_targets, season=2026, fastf1_raw_dir=fastf1_raw_dir, db_path=db_path, fetch=failing_fetch
+    )
+    assert second_exit_code == 1
+
+    with connect_duckdb(db_path, read_only=True) as conn:
+        load_log = conn.execute("SELECT * FROM source_load_log WHERE table_name = 'raw_fastf1_laps'").fetch_df()
+        laps_count = conn.execute("SELECT COUNT(*) FROM raw_fastf1_laps").fetchone()[0]
+
+    # Still just the one row from the first run -- no stale/duplicate
+    # source_load row was logged for a write that never happened.
+    assert len(load_log) == 1
+    assert laps_count == 6  # the prior run's table is untouched
