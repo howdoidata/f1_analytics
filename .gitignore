@@ -37,7 +37,13 @@ __pycache__/
 
 # Machine-specific BMAD Loop config -- bmad-loop init gitignores this by
 # design so per-machine choices (e.g. mux backend, TUI pane sizes) never
-# travel between teammates or machines.
+# travel between teammates or machines. Investigated tracking it instead
+# (2026-08-08) to surface the project-wide policy it also carries (gates,
+# review, scm, adapter CLI routing); reverted because the installed
+# bmad-loop package unconditionally re-adds this exact line on every `init`
+# run with no suppression flag -- tracking the file would fight the
+# installer forever rather than fix anything. See
+# _bmad-output/planning-artifacts/decisions/track-bmad-loop-policy-2026-08-08.md.
 .bmad-loop/policy.toml
 
 # Installer backup snapshots -- regenerated (and re-backed-up) on every
