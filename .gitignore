@@ -34,3 +34,7 @@ __pycache__/
 # design so per-machine choices (e.g. mux backend, TUI pane sizes) never
 # travel between teammates or machines.
 .bmad-loop/policy.toml
+
+# Installer backup snapshots -- regenerated (and re-backed-up) on every
+# `bmad-method install` run; pure diff noise, never a source of truth.
+_bmad/*.bak
