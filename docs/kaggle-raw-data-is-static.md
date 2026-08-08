@@ -10,4 +10,4 @@ Neither `kaggle_csv.py` nor `build_f1_dataset.py` imports `kagglehub` or touches
 
 The only code that imports `kagglehub`/checks the Kaggle token is the separate, isolated `scripts/spike_fastf1_adoption.py`; per `fastf1-source-adoption-decision-record.md`, only its live Kaggle re-download call fails (unresolved `400 Bad Request`) — the FastF1 spike itself the script exists to run succeeds.
 
-`docs/local_setup.md`'s Kaggle-download-script instructions describe the pre-rebuild (V1) pipeline; that script is gone from the current `scripts/` directory.
+`docs/archive/local_setup-pre-rebuild-2026-07.md`'s Kaggle-download-script instructions describe the pre-rebuild (V1) pipeline; that script is gone from the current `scripts/` directory.
