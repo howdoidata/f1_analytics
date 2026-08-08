@@ -22,3 +22,15 @@
 - Constructor name→id reconciliation (`drop_duplicates(subset=["constructor"])`) would silently keep the first-seen id if one free-text `constructor` name were ever bound to two different `constructor_id`s. Verified zero such collisions in the real dataset today; identical to reference. Hard validation of reconciliation edge cases is explicitly Story 1.8's territory. [src/f1_analytics/data_sources/kaggle_csv.py:82-93]
 - No column-presence validation for malformed CSVs and no merge-fanout guard against duplicate `(season, round)` rows in `races.csv`. Identical to reference; explicitly assigned to Story 1.8 ("Advisory Build Validation, Logged"). [src/f1_analytics/data_sources/kaggle_csv.py]
 - `connect_duckdb()` binds `DUCKDB_PATH` as a mutable default parameter at import time, so patching the config constant after import has no effect on callers relying on the default. Identical to reference. [src/f1_analytics/database/duckdb_io.py:13-14]
+
+## Deferred from: bmad-build multi-goal split (2026-08-08)
+
+- source_spec: none
+  summary: .bmad-loop/policy.toml is entirely gitignored, but it mixes genuinely machine-specific settings ([tui] pane sizes, [mux] backend — the file's own comments justify only these) with project-wide orchestration policy ([gates], [review], [scm], [adapter] CLI routing) that is currently invisible to git and unreviewable by the team.
+  evidence: Split from the gitignore-audit build intent because the fix isn't mechanical — it requires a decision (accept per-machine diff noise by tracking the whole file, or request an upstream bmad-loop change to split machine-local from project-shared config) rather than a code change. Current content read in full (2026-08-08): no credentials, tokens, or personal paths present today, so tracking the whole file carries no secret-exposure risk as of this writing — only future diff noise. Recommend: track the whole file (simplest option, matches this project's memlog-tracking decision on the same day) unless/until an upstream bmad-loop change splits machine-local from project-shared config. [.bmad-loop/policy.toml, .gitignore]
+
+## Deferred from: bmad-build review of gitignore fix (2026-08-08)
+
+- source_spec: none
+  summary: Tracking _bmad-output/**/.memlog.md in git makes concurrent bmad-loop worktree sessions appending to the same logical memlog capable of producing real git merge conflicts — structurally impossible while the file was gitignored.
+  evidence: Surfaced by review of the memlog-tracking decision (track-bmad-workspace-memlogs-2026-08-08.md); not caused by any code in this repo, but a new failure mode this repo can now hit that it couldn't before. No concurrent-worktree memlog collision has occurred yet; no fix designed. [_bmad/scripts/memlog.py, .bmad-loop/policy.toml (scm.isolation = "worktree")]

@@ -11,7 +11,12 @@ outputs/
 _bmad-output/implementation-artifacts/daily-pipeline-run-records.jsonl
 _bmad-output/implementation-artifacts/.daily-pipeline-run-record-lock
 _bmad-output/party-mode/
-_bmad-output/**/.memlog.md
+
+# _bmad-output/**/.memlog.md is intentionally NOT ignored -- BMAD skill
+# memlogs (bmad-prd, bmad-architecture, bmad-brainstorming, etc.) are working
+# memory meant to persist across sessions and survive a lost/wiped local
+# checkout, same rationale as the already-tracked docs/.memlog.md. See
+# _bmad-output/planning-artifacts/decisions/track-bmad-workspace-memlogs-2026-08-08.md.
 
 # Local credentials and environment files
 .env
