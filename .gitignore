@@ -30,10 +30,7 @@ __pycache__/
 .bmad-loop/runs/
 .bmad-loop/cache/
 
-# Installed tool payloads -- not project-owned
-.claude/
-.agents/
-_bmad/*
-!_bmad/custom/
+# Machine-specific BMAD Loop config -- bmad-loop init gitignores this by
+# design so per-machine choices (e.g. mux backend, TUI pane sizes) never
+# travel between teammates or machines.
 .bmad-loop/policy.toml
-_bmad/render/
