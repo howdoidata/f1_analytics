@@ -30,7 +30,15 @@ jobs:
     name: BMAD context bundle
     runs-on: ubuntu-latest
     steps:
+      # sweep resolves each source's "last changed" date via `git log -1 --
+      # -- <path>`. actions/checkout@v4 defaults to a depth-1 (shallow)
+      # clone, which has no parent to diff against -- git log then reports
+      # the single fetched commit's own date for every path in it, so
+      # every source looks "changed today" regardless of real history.
+      # Full history avoids that false positive.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # context.py exits 1 on any finding (kernel budget, frontmatter,
       # dead links, foreign/missing index) -- no extra parsing needed.
