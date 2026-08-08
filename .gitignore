@@ -38,3 +38,4 @@ __pycache__/
 # Installer backup snapshots -- regenerated (and re-backed-up) on every
 # `bmad-method install` run; pure diff noise, never a source of truth.
 _bmad/*.bak
+_bmad/render/
