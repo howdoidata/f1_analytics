@@ -308,10 +308,12 @@ So that trust in the rebuilt data is recorded, not assumed.
 **Given** the curated + combined tables
 **When** any build script completes
 **Then** null-rate checks (results season/round/driver_id/position/points; drivers/constructors ids; the reconciled constructor_id) and referential-integrity checks (results→drivers, results→constructors, races→circuits) run and log one row per check per build to `validation_results`
+**And** when a live-fetched table's write is refused by `write_dataframe`'s regression guard (`refuse_regression`, shipped 2026-08-08), that refusal is logged as a `regression_refused` finding in `validation_results` naming the table, race/season/round, and both row counts — visibility into a guard that already prevented the bad write from landing, per AR-11's advisory-log design
+**And** a standings-reconciliation check compares each `*_standings_by_round` row's `race_points` against the sum of that driver/season/round's `results.points` rows and logs a `race_points_mismatch` finding per disagreement (the defect class verified live against `combined_driver_standings_by_round` on 2026-08-08: 40 pre-2026 rows today, zero in 2026 data)
 **And** `source_registry` and `source_load_log` record every documented source and loaded table (AD-4 metadata class, append-per-build), and a failing check surfaces in script output while the build still completes (advisory, AD-8)
 **And** `validation/` reads only via `database/` and is imported by scripts, never by `analysis/`.
 
-**Verification:** offline test seeds a violation into a fixture table and asserts the logged failure row plus a zero exit code. Governed by: AD-4, AD-8, AR-11.
+**Verification:** offline test seeds a violation into a fixture table and asserts the logged failure row plus a zero exit code, PLUS a fixture asserting a refused-write event lands as a `regression_refused` finding, PLUS a fixture with a duplicate shared-drive result row asserting the `race_points_mismatch` finding. Governed by: AD-4, AD-8, AR-11.
 
 ## Epic 2: The Five Questions, Answered From Sources
 
