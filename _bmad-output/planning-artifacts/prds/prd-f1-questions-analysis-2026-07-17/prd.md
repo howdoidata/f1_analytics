@@ -2,7 +2,7 @@
 title: "2026 F1 Questions Analysis And Backtesting Capability"
 status: final
 created: 2026-07-17
-updated: 2026-07-17
+updated: 2026-08-08
 source_material:
   - "_bmad-output/planning-artifacts/prd-intake/2026-f1-questions-analysis-story-candidates.md"
   - "external/f1-questions/Gmail - 2026 F1 Questions.pdf"
@@ -286,6 +286,29 @@ The system can generate concise explanation text for each scored or unscoreable 
 - Explanation text names the relevant driver/team/race and source limitation without requiring the reader to inspect raw tables.
 - Narrative context, such as the British GP incident/restart note, should live in notebooks or report narrative when possible and cite the target/source status it explains.
 - The report avoids betting/odds framing.
+
+### 4.8 Premise Validation And Intake Validation
+
+**Backfilled 2026-08-08:** FR-19 and FR-20 were added directly to `epics.md`'s Requirements Inventory on 2026-08-06 (post-rebuild) but never traced back into this PRD, so a strict PRD-citation check against epics.md failed for both IDs even though both are real, epic-2-scoped requirements. This section closes that gap.
+
+#### FR-19: Validate question premises before computation
+
+The system can verify a question's declared premises before extraction and, when a premise is factually incorrect, mark the affected component `premise_incorrect` instead of scoring it as a wrong prediction.
+
+**Consequences (testable):**
+- A false premise halts that component's computation and records the failed premise together with its source evidence.
+- The corrected answer under the true premise is captured alongside the `premise_incorrect` finding.
+- `premise_incorrect` components are excluded from wrong-prediction scoring downstream.
+- Added 2026-08-06 from the recorded Q05-class failure; generalized system-wide by spine AD-16.
+
+#### FR-20: Validate user-supplied intake at entry
+
+The system can validate new-question intake batches at entry — schema, entity resolution against known drivers/teams/races, arithmetic consistency of expected answers, and range/sanity checks — before any row reaches the committed catalog.
+
+**Consequences (testable):**
+- Unambiguously determinable input errors are auto-corrected: the correction is applied, the original value is preserved verbatim, and the correction is recorded and surfaced — never silent.
+- Ambiguous errors halt that row with the candidate options rather than guessing.
+- Added 2026-08-06; spine AD-16 intake clause.
 
 ## 5. Cross-Cutting Non-Functional Requirements
 

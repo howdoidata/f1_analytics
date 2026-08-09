@@ -3,7 +3,7 @@ name: "f1_analytics Analyst Outputs"
 description: "Visual contract for local Formula 1 analysis artifacts: Markdown reports, notebooks, CSV-backed tables, Plotly figures, and dashboard-ready exports."
 status: final
 created: 2026-07-22
-updated: 2026-07-23
+updated: 2026-08-08
 sources:
   - "_bmad-output/planning-artifacts/ux-designs/ux-f1_analytics-2026-07-22/UX-INTAKE.md"
   - "_bmad-output/planning-artifacts/prds/prd-f1_analytics-2026-07-17/prd.md"
@@ -34,6 +34,8 @@ colors:
   blocked-red: "#9F1D20"
   info-blue: "#2364AA"
   neutral-gray: "#636A70"
+  premise-teal: "#0B5F58"
+  surface-premise: "#E1F3F1"
 typography:
   title:
     fontFamily: "Inter, system-ui, sans-serif"
@@ -175,6 +177,10 @@ components:
     background: "{colors.surface-muted}"
     foreground: "{colors.neutral-gray}"
     radius: "{rounded.sm}"
+  status-badge-premise-incorrect:
+    background: "{colors.surface-premise}"
+    foreground: "{colors.premise-teal}"
+    radius: "{rounded.sm}"
   discrepancy-panel:
     background: "{colors.surface-discrepancy}"
     foreground: "{colors.ink-primary}"
@@ -201,8 +207,9 @@ The artifacts are meant to be inspected by Antonio, downstream agents, and hirin
 - **Warning Amber** (`{colors.warning-amber}`) means partial, stale, or review-needed coverage.
 - **Blocked Red** (`{colors.blocked-red}`) means the current source set cannot support the requested answer.
 - **Info Blue** (`{colors.info-blue}`) is reserved for links, citations, mode boundaries, and user-manual provenance.
+- **Premise Teal** (`{colors.premise-teal}`) marks `premise_incorrect`: the question's declared premise itself was false, distinct from every other status — it is neither a correct nor an incorrect prediction. (Added 2026-08-08: AD-3's eight-value status vocabulary and Epic 2 Story 2.8 required this token; it did not previously exist despite being referenced as already recorded.)
 
-Contrast target: body text, table text, links, badges, and status panels must meet WCAG 2.2 AA contrast. Load-bearing combinations include `{colors.ink-primary}` on `{colors.surface-base}` and `{colors.surface-raised}`, `{colors.info-blue}` on `{colors.surface-info}` and `{colors.surface-manual}`, `{colors.source-green}` on `{colors.surface-success}`, `{colors.warning-amber}` on `{colors.surface-warning}`, `{colors.blocked-red}` on `{colors.surface-blocked}`, and `{colors.timing-purple}` on `{colors.surface-discrepancy}`. Do not use color alone to communicate answer status; every badge, table row, and report section must include text.
+Contrast target: body text, table text, links, badges, and status panels must meet WCAG 2.2 AA contrast. Load-bearing combinations include `{colors.ink-primary}` on `{colors.surface-base}` and `{colors.surface-raised}`, `{colors.info-blue}` on `{colors.surface-info}` and `{colors.surface-manual}`, `{colors.source-green}` on `{colors.surface-success}`, `{colors.warning-amber}` on `{colors.surface-warning}`, `{colors.blocked-red}` on `{colors.surface-blocked}`, `{colors.timing-purple}` on `{colors.surface-discrepancy}`, and `{colors.premise-teal}` on `{colors.surface-premise}` (contrast ratio 6.55:1, verified). Do not use color alone to communicate answer status; every badge, table row, and report section must include text.
 
 ## Typography
 
@@ -245,7 +252,7 @@ Use small radii. `{rounded.sm}` is for badges and table containers; `{rounded.md
 - **Output Bundle Checklist** - Checklist for report/table/figure/notebook/dashboard-ready exports. Uses `components.output-bundle-checklist`.
 - **Portfolio Summary** - Public-facing summary block for a finished analysis. Uses `components.portfolio-summary`.
 - **Implementation Handoff** - BMAD story-ready block naming acceptance criteria, validation commands, generated artifacts, and unresolved status decisions. Uses `components.implementation-handoff`.
-- **Status Badge** - Compact label for `pending`, `computed`, `partial`, `source_blocked`, `discrepant_needs_review`, `user_manual_option`, and `user_manual_approved`. Badge color comes from the exact matching token: `components.status-badge-pending`, `components.status-badge-computed`, `components.status-badge-partial`, `components.status-badge-source-blocked`, `components.status-badge-discrepant-needs-review`, `components.status-badge-user-manual-option`, or `components.status-badge-user-manual-approved`.
+- **Status Badge** - Compact label for `pending`, `computed`, `partial`, `source_blocked`, `discrepant_needs_review`, `user_manual_option`, `user_manual_approved`, and `premise_incorrect` (eight statuses). Badge color comes from the exact matching token: `components.status-badge-pending`, `components.status-badge-computed`, `components.status-badge-partial`, `components.status-badge-source-blocked`, `components.status-badge-discrepant-needs-review`, `components.status-badge-user-manual-option`, `components.status-badge-user-manual-approved`, or `components.status-badge-premise-incorrect`.
 - **Discrepancy Panel** - Comparison block for source-backed value versus Known Answer Example. Uses `components.discrepancy-panel`.
 
 ## Do's and Don'ts
