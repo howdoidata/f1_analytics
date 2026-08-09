@@ -40,14 +40,16 @@ status: open
 origin: migrated from legacy ledger ("Deferred from: code review of story-1.4 (2026-08-07)"), 2026-08-08
 location: repo-wide
 reason: There is no CI workflow that re-verifies the bare-checkout build claim as the repo changes, so the guarantee holds only as of the manual check. Likely Story 1.8's ("Advisory Build Validation, Logged") territory rather than the scaffolding story's.
-status: open
+status: done 2026-08-08
+resolution: already resolved: .github/workflows/ci.yml's `test` job (added commit 7d55ac0) runs a bare `actions/checkout@v4` then `uv sync` + `uv run pytest` on every push to main and every pull request, so the builds-from-a-bare-checkout claim is now re-verified continuously rather than only as of a manual check.
 
 ### DW-7: `requirements.txt` is an orphaned, contradictory dependency manifest
 
 origin: migrated from legacy ledger ("Deferred from: code review of story-1.4 (2026-08-07)"), 2026-08-08
 location: requirements.txt
 reason: `requirements.txt` lists 6 unpinned packages while `pyproject.toml` declares zero dependencies, so the repo carries two contradictory dependency manifests. Deferred per user decision 2026-08-07: Story 1.5 adds `pandas`/`duckdb`/`kagglehub` as real `pyproject.toml` dependencies (confirmed in epics.md), making `requirements.txt` naturally redundant then, so it should be reconciled or removed as part of that story rather than now.
-status: open
+status: done 2026-08-08
+resolution: already resolved: requirements.txt was deleted in commit 86d43dc and `git ls-files requirements.txt` returns nothing; pyproject.toml now declares pandas>=3.0/duckdb>=1.5/kagglehub>=1.0 as real dependencies, which is exactly the Story 1.5 reconciliation this entry was deferred to.
 
 ### DW-8: `add_standing_rank()` produces dense ranks rather than standard competition ranks after a tie
 
@@ -120,7 +122,8 @@ origin: migrated from legacy ledger ("Deferred from: code review of story-1.7 (2
 location: scripts/build_combined_dataset.py
 source_spec: `_bmad-output/implementation-artifacts/spec-1-7-current-season-combined-tables-and-the-coverage-arbiter.md`
 reason: `write_dataframe` performs `CREATE OR REPLACE TABLE` unconditionally from the current run's in-memory result, including the empty-shaped degrade path, with no merge against what is already durable — so a run whose live fetch degrades or fails can regress previously-landed Jolpica rows. Story 1.6's review log already flagged this regression class and explicitly deferred it "for a Story 1.7/1.8 follow-up"; 1.7 inherited the pattern via the shared AD-4 `write_dataframe` writer its Boundaries required it to use, rather than resolving it.
-status: open
+status: done 2026-08-08
+resolution: already resolved: write_dataframe's refuse_regression guard (src/f1_analytics/database/duckdb_io.py:52-58) is wired into all four live-fetched tables at scripts/build_combined_dataset.py:366-369 (which also re-reads the preserved table so downstream builds use last-known-good data) and scripts/pull_fastf1_data.py:199-216, proven by tests/test_duckdb_io.py:52-81, tests/test_build_combined_dataset.py:357 and tests/test_pull_fastf1_data.py:193.
 
 Update (2026-08-08 correct-course): `write_dataframe()` gained an opt-in `refuse_regression` guard (raises `WriteRegressionError`, leaving the existing table untouched) with no change to its default unguarded behavior, so AD-4's adopted "idempotent CREATE OR REPLACE sync" contract and its existing test stay intact. It was wired into all 4 live-fetched tables: `raw_jolpica_results` (`build_combined_dataset.py`, which also re-reads the preserved table back into memory so `combined_results`/standings are computed from last-known-good data rather than degrading to it) and `raw_fastf1_laps`/`raw_fastf1_stints`/`raw_fastf1_weather` (`pull_fastf1_data.py`). Proven by `tests/test_duckdb_io.py`, `tests/test_build_combined_dataset.py::test_main_reuses_previous_jolpica_data_when_a_later_fetch_regresses`, and `tests/test_pull_fastf1_data.py::test_a_later_run_landing_fewer_races_does_not_shrink_the_table`. Kaggle-sourced tables (Story 1.5) were intentionally excluded — `docs/kaggle-raw-data-is-static.md` confirms they read static local CSVs, not a live fetch, so this regression class cannot occur there.
 
