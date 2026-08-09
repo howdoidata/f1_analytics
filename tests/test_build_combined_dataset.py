@@ -149,6 +149,33 @@ def test_coverage_view_is_the_only_place_the_row_count_comparison_happens(tmp_pa
     }
 
 
+def test_coverage_view_backstop_surfaces_a_round_reported_by_a_source_but_absent_from_races(
+    tmp_path: Path,
+):
+    # Round 3 is jolpica_only (0 Kaggle rows, 2 Jolpica rows) in the normal
+    # fixture; drop it from `races` entirely to simulate a round a source
+    # actually reports rows for but that is somehow missing from the race
+    # calendar. The view's own defensive UNION backstop must still surface
+    # it rather than silently dropping it.
+    db_path = tmp_path / "test.duckdb"
+    jolpica_results = load_and_map_season_results(
+        JOLPICA_DUMP_DIR / "normal_season", _drivers(), _constructors(), season=2026
+    )
+    races_missing_round_3 = _races()[_races()["round"] != 3]
+
+    with connect_duckdb(db_path) as conn:
+        write_dataframe(conn, "results", _kaggle_results())
+        write_dataframe(conn, "races", races_missing_round_3)
+        write_dataframe(conn, "raw_jolpica_results", jolpica_results)
+        conn.execute(COVERAGE_VIEW_SQL_PATH.read_text())
+        coverage = conn.execute("SELECT * FROM kaggle_jolpica_coverage ORDER BY round").fetch_df()
+
+    assert 3 in coverage["round"].tolist()
+    row3 = coverage[coverage["round"] == 3].iloc[0]
+    assert row3["status"] == "jolpica_only"
+    assert row3["jolpica_row_count"] == 2
+
+
 # --- build_combined_results()/build_combined_standings(): function-level
 # construction tests against the same fixtures.
 

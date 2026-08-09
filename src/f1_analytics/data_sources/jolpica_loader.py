@@ -130,7 +130,9 @@ def verify_completeness(results: pd.DataFrame, counts: dict) -> None:
     season = counts.get("season", "season")
     expected_row_count = counts.get("row_count")
     landed_row_count = len(results)
-    if expected_row_count is not None and landed_row_count != expected_row_count:
+    if expected_row_count is None:
+        raise IncompleteJolpicaDataError(f"season {season}: counts sidecar is missing 'row_count'")
+    if landed_row_count != expected_row_count:
         raise IncompleteJolpicaDataError(
             f"season {season}: landed {landed_row_count} row(s), fetch reported {expected_row_count}"
         )

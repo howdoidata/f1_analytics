@@ -190,7 +190,9 @@ def fetch_all_race_result_pages(
         pages.append(page)
         page_index += 1
 
-    total_expected = int(pages[0].total_results) if pages else None
+    # `pages` always has at least `first_page`; the real "zero rounds"
+    # signal is `total_results` itself being `None`, not an empty list.
+    total_expected = int(pages[0].total_results) if pages[0].total_results is not None else None
 
     frames = []
     for page in pages:
@@ -244,12 +246,11 @@ def fetch_season_results(
         result.update({"status": "preflight_failed", "exception": exception_summary(error)})
         return result
 
-    # Reassert the mandatory managed cache immediately before every fetch
-    # (AD-13): a second run against already-cached pages must show zero
-    # fresh HTTP requests.
-    fastf1.Cache.enable_cache(str(cache_dir))
-
     try:
+        # Reassert the mandatory managed cache immediately before every fetch
+        # (AD-13): a second run against already-cached pages must show zero
+        # fresh HTTP requests.
+        fastf1.Cache.enable_cache(str(cache_dir))
         frames, landed_row_count, total_expected = fetch_all_race_result_pages(fastf1, season)
     except Exception as error:  # Live services raise diverse public failure types.
         result.update({"status": "failed", "exception": exception_summary(error)})
@@ -280,12 +281,15 @@ def fetch_season_results(
     import pandas as pd
 
     combined = pd.concat(frames, ignore_index=True)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    combined.to_csv(output_dir / "race_results.csv", index=False)
-
     rounds = sorted(int(value) for value in combined["round"].dropna().unique())
     counts = {"season": season, "row_count": len(combined), "rounds": rounds}
-    (output_dir / "counts.json").write_text(json.dumps(counts, indent=2, sort_keys=True))
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        combined.to_csv(output_dir / "race_results.csv", index=False)
+        (output_dir / "counts.json").write_text(json.dumps(counts, indent=2, sort_keys=True))
+    except OSError as error:
+        result.update({"status": "failed", "exception": exception_summary(error)})
+        return result
 
     result.update({"status": "pass", "row_count": len(combined), "rounds": rounds})
     return result
@@ -303,7 +307,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     result = fetch_season_results(args.season, args.cache_dir, args.output_dir)
     print(json.dumps(result, indent=2, sort_keys=True, default=str))
-    return 0 if result.get("status") == "pass" else 1
+    return 0 if result.get("status") in ("pass", "empty") else 1
 
 
 if __name__ == "__main__":

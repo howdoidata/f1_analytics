@@ -66,6 +66,9 @@ FETCH_TIMEOUT_SECONDS = 300
 SEASON = 2026
 
 REQUIRED_CURATED_TABLES = ("results", "races", "drivers", "constructors")
+# Columns build_combined_standings() merges from races -- table existence
+# alone (require_curated_tables) doesn't guarantee these are present.
+REQUIRED_RACES_COLUMNS = ("season", "round", "date", "time", "circuit_id", "url")
 
 # Curated tables (Story 1.5) plus this run's own combined_results
 # extension (Story 1.7) -- exactly what checks.NULL_RATE_CHECKS/
@@ -104,6 +107,19 @@ def require_curated_tables(conn, db_path: Path) -> None:
             f"Missing curated table(s) in {db_path}: {missing_list}. "
             "Run scripts/build_f1_dataset.py (Story 1.5) first."
         )
+
+
+def require_races_columns(races: pd.DataFrame, db_path: Path) -> None:
+    """Fail fast with a named error if `races` is missing columns `build_combined_standings` needs.
+
+    Table-existence alone (`require_curated_tables`) doesn't guarantee
+    schema -- a present-but-incomplete `races` table must still fail before
+    any write, not surface as a raw `KeyError` from deep inside a merge.
+    """
+    missing = [column for column in REQUIRED_RACES_COLUMNS if column not in races.columns]
+    if missing:
+        missing_list = ", ".join(missing)
+        raise RuntimeError(f"races table in {db_path} is missing column(s): {missing_list}.")
 
 
 def run_fetch_subprocess(season: int, cache_dir: Path, output_dir: Path) -> dict:
@@ -146,7 +162,7 @@ def run_fetch_subprocess(season: int, cache_dir: Path, output_dir: Path) -> dict
             "status": "failed",
             "exception": f"TimeoutExpired: fetch exceeded {FETCH_TIMEOUT_SECONDS}s",
         }
-    except OSError as error:
+    except Exception as error:  # Live-subprocess invocation can raise diverse failure types.
         return {"season": season, "status": "failed", "exception": f"{type(error).__name__}: {error}"}
 
     try:
@@ -196,7 +212,11 @@ def load_jolpica_results(
     (absent from `combined_results`, per the I/O matrix -- not a corrupted
     or guessed row).
     """
-    if fetch_result.get("status") != "pass":
+    status = fetch_result.get("status")
+    if status == "empty":
+        print(f"[build_combined_dataset] Jolpica reports season {season} has zero rows so far (not a failure)")
+        return empty_shaped_results()
+    if status != "pass":
         detail = fetch_result.get("exception", fetch_result)
         print(f"[build_combined_dataset] Jolpica fetch did not land season {season} data: {detail}")
         return empty_shaped_results()
@@ -310,6 +330,7 @@ def load_curated_tables(db_path: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.D
             races = conn.execute("SELECT * FROM races").fetch_df()
             drivers = conn.execute("SELECT * FROM drivers").fetch_df()
             constructors = conn.execute("SELECT * FROM constructors").fetch_df()
+            require_races_columns(races, db_path)
     except duckdb.Error as error:
         raise RuntimeError(
             f"Cannot read curated tables from {db_path}: {error}. "

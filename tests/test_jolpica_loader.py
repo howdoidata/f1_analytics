@@ -90,6 +90,19 @@ def test_verify_completeness_raises_named_error_when_rows_overcount_sidecar():
     assert str(deflated_counts["row_count"]) in str(excinfo.value)
 
 
+def test_verify_completeness_raises_named_error_when_row_count_key_missing():
+    # A counts sidecar missing its own row_count key is just as much "not
+    # verified against the source's own published total" (AD-13) as a
+    # mismatched count -- must never be silently accepted as close enough.
+    results, counts = read_season_dump(JOLPICA_DUMP_DIR / "normal_season")
+    counts_without_row_count = {key: value for key, value in counts.items() if key != "row_count"}
+
+    with pytest.raises(IncompleteJolpicaDataError) as excinfo:
+        verify_completeness(results, counts_without_row_count)
+
+    assert "row_count" in str(excinfo.value)
+
+
 def test_shape_results_maps_ergast_columns_to_curated_results_columns():
     results, _ = read_season_dump(JOLPICA_DUMP_DIR / "normal_season")
 
