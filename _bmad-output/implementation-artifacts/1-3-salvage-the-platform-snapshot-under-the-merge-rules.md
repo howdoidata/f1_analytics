@@ -115,7 +115,7 @@ Do not create `data/processed/f1_analytics.duckdb`, `src/f1_analytics/__init__.p
 
 - Story 1.2 (FastF1 Adoption Spike, done) established: the current branch `main` is the clean rebuild lineage; AD-10 demotes all prior artifacts (including this snapshot's V1 code) to reference material, never a binding contract; commands and results belong in the active story's Dev Agent Record per `AGENTS.md`, not `docs/run_log.md` (frozen); preserve the recovery constraints (no `git gc`/`prune`/`repack`/`restore`).
 - Story 1.2 also left `data/raw/fastf1_cache/` populated from its own live spike run — unrelated to this story's Jolpica/Kaggle salvage; do not move, merge, or clean it up here.
-- No dedicated story file exists on disk for Story 1.1 under its current-era key (`1-1-record-the-loss-and-gain-offsite-protection`); its work is recorded directly in commits `ec5e725` and `4ecf563`. The file `1-1-confirm-deletion-authorization-and-evidence-path.md` in this folder is a pre-loss historical artifact for a different, superseded plan — do not reuse its content, paths, or claimed completion.
+- No dedicated story file exists on disk for Story 1.1 under its current-era key (`1-1-record-the-loss-and-gain-offsite-protection`); its work is recorded directly in commits `ec5e725` and `4ecf563`. The file `1-1-confirm-deletion-authorization-and-evidence-path.md` (archived 2026-08-08 to `pre-rebuild-archive/`) is a pre-loss historical artifact for a different, superseded plan — do not reuse its content, paths, or claimed completion.
 
 ### References
 

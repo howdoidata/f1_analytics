@@ -16,7 +16,7 @@ inputDocuments:
 
 ## Overview
 
-This document provides the complete epic and story breakdown for f1_analytics, decomposing the requirements from the PRD, the partial UX Design contract (DESIGN.md; EXPERIENCE.md lost 2026-08-01), and the 2026-08-06 Architecture Spine into implementable stories. This is a post-data-loss rebuild: no prior epic or story is treated as done (spine AD-10); prior artifacts inform, they do not bind.
+This document provides the complete epic and story breakdown for f1_analytics, decomposing the requirements from the PRD, the partial UX Design contract (DESIGN.md; EXPERIENCE.md lost 2026-08-01), and the 2026-08-06 Architecture Spine into implementable stories. This is a post-data-loss rebuild: no prior epic or story is treated as done (spine AD-10); prior artifacts inform — they do not bind.
 
 **Process enforcement:** after story creation, `bmad-sprint-planning` emits `sprint-status.yaml` and implementation runs through the `bmad-loop` orchestrator — story lifecycle, review cycles, retrospectives, and the deferred-work ledger are enforced mechanically, not by session discipline. This is the structural answer to the prior project's phases-never-closed failure; Epic 1's loss-recording commit is also what turns `bmad-loop validate` green.
 
@@ -172,7 +172,7 @@ Antonio can rebuild the complete local dataset from a fresh clone with one docum
 **FRs covered:** none directly — enables the sources for FR-4..FR-11. Carries AR-1, AR-3, AR-11, AR-12, AR-13.
 
 ### Epic 2: The Five Questions, Answered From Sources
-Antonio records the five PDF questions in the committed catalog (`catalog/question_catalog.yaml`) and runs one orchestration command that extracts source-backed Actual Answer Components for all five — results-based, lap-based, and the British GP multi-part via FastF1 stint data — persisted append-only under a registered build, with honest statuses and the seed-answer discipline (source-vs-known disagreement renders `discrepant_needs_review`, never a picked value). The one orchestration command populates **both** target tables — answer components and the feature-availability contract (FR-14/FR-15, boundaries from the catalog's `analysis_boundary` field) — coherently under one `build_id` (AD-4). Catalog → extraction → persisted store lands as one wired vertical slice. **Story ordering rule (first light):** the epic's first thread takes ONE results-based question (simplest extraction path) end-to-end — catalog row → extractor → registered build → visible output — before any breadth across the other four; momentum over completeness. **External dependency (reconciliation only):** catalog rows may carry `known_answer_example: null` with an honest status, so extraction and persistence never wait on the lost PDF's answers — only the AD-12 reconciliation stories gate on Antonio supplying the five Known Answer Examples (surviving in PRD text: Melbourne `1:23.590`, Barcelona lap 60).
+Antonio records the five PDF questions in the committed catalog (`catalog/question_catalog.yaml`) and runs one orchestration command that extracts source-backed Actual Answer Components for all five — results-based, lap-based, and the British GP multi-part via FastF1 stint data — persisted append-only under a registered build, with honest statuses and the seed-answer discipline (source-vs-known disagreement renders `discrepant_needs_review`, never a picked value). The one orchestration command populates **both** target tables — answer components and the feature-availability contract (FR-14/FR-15, boundaries from the catalog's `analysis_boundary` field) — coherently under one `build_id` (AD-4). Catalog → extraction → persisted store lands as one wired vertical slice. **Story ordering rule (first light):** the epic's first thread takes ONE results-based question (simplest extraction path) end-to-end — catalog row → extractor → registered build → visible output — before any breadth across the other four; momentum over completeness. **External dependency (reconciliation only):** catalog rows may carry `known_answer_example: null` with an honest status, so extraction and persistence never wait on the original PDF's answer key (lost in the 2026-08-01 event; only the values quoted directly in PRD text survive) — only the AD-12 reconciliation story gates on Antonio supplying the five Known Answer Examples (surviving in PRD text: Melbourne `1:23.590`, Barcelona lap 60).
 **FRs covered:** FR-1..FR-12, FR-14, FR-15, FR-19, FR-20. Carries AR-2, AR-4, AR-5, AR-6, AR-7, AR-9.
 
 ### Epic 3: Scored Backtests And Portfolio-Ready Reports
@@ -217,7 +217,7 @@ So that AD-6's source-role binding rests on evidence rather than documentation.
 
 **Verification:** the decision record exists in `decisions/` with all five PRD §9 fields; spike script named and runnable. Governed by: AD-6, AD-13, AR-3.
 
-### Story 1.3: Salvage The Platform Snapshot Under The Merge Rules
+### Story 1.3: Salvage The Platform Snapshot Under The Standing Constraints
 
 As Antonio,
 I want the snapshot's recoverable assets restored without regressing corrected data,
@@ -308,8 +308,8 @@ So that trust in the rebuilt data is recorded, not assumed.
 **Given** the curated + combined tables
 **When** any build script completes
 **Then** null-rate checks (results season/round/driver_id/position/points; drivers/constructors ids; the reconciled constructor_id) and referential-integrity checks (results→drivers, results→constructors, races→circuits) run and log one row per check per build to `validation_results`
-**And** when a live-fetched table's write is refused by `write_dataframe`'s regression guard (`refuse_regression`, shipped 2026-08-08), that refusal is logged as a `regression_refused` finding in `validation_results` naming the table, race/season/round, and both row counts — visibility into a guard that already prevented the bad write from landing, per AR-11's advisory-log design
-**And** a standings-reconciliation check compares each `*_standings_by_round` row's `race_points` against the sum of that driver/season/round's `results.points` rows and logs a `race_points_mismatch` finding per disagreement (the defect class verified live against `combined_driver_standings_by_round` on 2026-08-08: 40 pre-2026 rows today, zero in 2026 data)
+**And** when a live-fetched table's write is refused by `write_dataframe`'s regression guard (`refuse_regression`), that refusal is logged as a `regression_refused` finding in `validation_results` naming the table, race/season/round, and both row counts — visibility into a guard that already prevented the bad write from landing, per AR-11's advisory-log design (Added 2026-08-08: guard shipped in commit `2d6d24b`)
+**And** a standings-reconciliation check compares each `*_standings_by_round` row's `race_points` against the sum of that driver/season/round's `results.points` rows and logs a `race_points_mismatch` finding per disagreement (Added 2026-08-08: defect class verified live against `combined_driver_standings_by_round` — 40 pre-2026 rows, zero in 2026 data)
 **And** `source_registry` and `source_load_log` record every documented source and loaded table (AD-4 metadata class, append-per-build), and a failing check surfaces in script output while the build still completes (advisory, AD-8)
 **And** `validation/` reads only via `database/` and is imported by scripts, never by `analysis/`.
 
@@ -380,9 +380,10 @@ So that Q01 and Q04 carry source-backed components.
 **When** the orchestration runs
 **Then** the coverage check classifies fastest-lap-time, fastest-lap-number, and per-lap availability per question BEFORE extraction, emitting `source_blocked`/`partial` where rows are missing (FR-7, AD-16)
 **And** Q01 returns the fastest Williams lap at Melbourne (normalized units, display text, timing provenance; ties and retirements handled explicitly — FR-8) and Q04 returns Sainz's personal fastest lap number at Barcelona, distinguished from the race-fastest lap, as INTEGER (FR-9)
-**And** extraction never silently substitutes a result-level field for lap-level timing without recording which path produced the value.
+**And** extraction never silently substitutes a result-level field for lap-level timing without recording which path produced the value
+**And** before extracting Q04, Barcelona's leg of the 1.2 spike decision record is re-verified live — if the 2026-09-13 session still hasn't occurred (or `raw_fastf1_laps` otherwise carries no real Barcelona rows), Q04 renders `source_blocked` naming the future date, never a stale cache or partial substitute passed off as complete (AD-13's "never a shorter table"; the Q04 failure class AD-12 exists to prevent, per the pre-rebuild Jolpica-pagination lesson it was written from).
 
-**Verification:** offline tests: tie case, missing-laps case, personal-vs-race distinction fixture. Governed by: AD-6, AD-8, AD-13, AD-16.
+**Verification:** offline tests: tie case, missing-laps case, personal-vs-race distinction fixture, Barcelona-not-yet-occurred fixture asserting `source_blocked` over a stale/partial cache. Governed by: AD-6, AD-8, AD-12, AD-13, AD-16.
 
 ### Story 2.5: The Coverage Matrix And The British GP Multi-Part
 
@@ -402,7 +403,7 @@ So that the question that was source-blocked for the entire prior project finall
 
 ### Story 2.6: The Feature Contract, Written By The Same Build
 
-As a future modeling epic,
+As the future modeling epic's owner,
 I want feature-group availability evaluated and persisted in the same build as the answers,
 So that the leakage boundary is data, not discipline.
 
@@ -450,7 +451,7 @@ So that a wrongly-premised question fails early with the truth attached instead 
 
 ## Epic 3: Scored Backtests And Portfolio-Ready Reports
 
-Antonio compares leakage-safe baseline predictions against the persisted actuals and gets the full backtest report — scoring, baselines, explanations, badges, workflow surfaces, and the now-unblocked Track-2 review surfaces — with publication gating hardened before the first portfolio-ready render.
+Antonio compares leakage-safe baseline predictions against the persisted actuals and gets the full backtest report — scoring, baselines, explanations, badges, workflow surfaces, and the now-unblocked Track-2 review surfaces (the UX-DR13/14/15 surfaces deferred pending the target store) — with publication gating hardened before the first portfolio-ready render.
 
 ### Story 3.1: Scoring Rules Over One Complete Build
 
@@ -460,10 +461,10 @@ So that scores are reproducible and mispairing is impossible.
 
 **Acceptance Criteria:**
 
-**Given** a complete build in the registry and prediction inputs
+**Given** a complete build in the registry and Prediction Inputs
 **When** scoring runs
 **Then** each answer type applies its rule — configurable absolute-error for lap times (official timing only), exact/absolute-error for lap numbers and positions, controlled categorical for compounds, component + combined scores for multi-part (FR-13)
-**And** every prediction↔actual pairing asserts `(question_id, component_key)` equality before comparison (AD-8/DW-32, AD-16), comparisons normalize types first (no float-promotion fabrications), and unscoreable targets report unscoreable-with-reason — `premise_incorrect` components are excluded from wrong-prediction scoring as their own reason class (FR-19)
+**And** every prediction↔actual pairing asserts `(question_id, component_key)` equality before comparison (AD-8, AD-16), comparisons normalize types first (no float-promotion fabrications), and unscoreable targets report unscoreable-with-reason — `premise_incorrect` components are excluded from wrong-prediction scoring as their own reason class (FR-19)
 **And** scoring reads exactly one `build_id` and stamps it on every score row.
 
 **Verification:** offline tests per answer type + the mispairing rejection + the premise-excluded case. Governed by: AD-3, AD-5, AD-8, AD-16.
@@ -495,7 +496,7 @@ So that the flagship deliverable finally answers what it exists to answer.
 **Given** scored components (3.1) and the build registry
 **When** `uv run scripts/build_backtest_report.py` runs
 **Then** the report renders one row per Question ID — prediction, actual, score, tolerance, source, explanation — covering all five supplied questions (FR-17), each row showing its AD-3 status and the single `build_id`
-**And** "prediction wrong" and "actual unscoreable" are visually and semantically distinct, `discrepant_needs_review` rows show both values near the answer, and `premise_incorrect` rows show the premise correction with the corrected answer
+**And** "prediction-wrong" and "actual-unscoreable" are visually and semantically distinct, `discrepant_needs_review` rows show both values near the answer, and `premise_incorrect` rows show the premise correction with the corrected answer
 **And** `portfolio_ready` derives from validation status AND the mode boundary; `user_manual_approved` rows are excluded from computed-success counts with provenance shown on every aggregate (AD-8).
 
 **Verification:** offline golden-file test of the rendered report from fixture store rows covering every status. Governed by: AD-3, AD-5, AD-8, AD-12.
@@ -592,7 +593,7 @@ So that the producer can be built without reading a repo AD-9 forbids reading.
 
 **Acceptance Criteria:**
 
-**Given** the channel authority packet (`gatherer-handoff-spec-item-set-declaration-2026-07-30.md`) — never a cross-repo read
+**Given** the channel declaration packet (`gatherer-handoff-spec-item-set-declaration-2026-07-30.md`) — never a cross-repo read
 **When** the companion doc is authored under `docs/`
 **Then** it inlines the 11 evidence-delivery key names with one-line obligations, the three packet classes with their selection tests, the correction rules (frontmatter-only supersession, authority statement, total restatement of the receiver-owned 14-item Q05 set), the packet-standing vocabulary including `current`, and the envelope frontmatter contract with `authored_at` semantics
 **And** the spine's `[ASSUMPTION]` on the sourcing-packet restatement column is resolved against the authority packet's three-column form and recorded
@@ -619,7 +620,7 @@ So that gatherer's Epic 4 sequencing unblocks and the leaky channel gets fixed o
 ### Story 4.3: The Insight-Package Producer, Rebuilt To v2
 
 As Antonio,
-I want insight packages generated from a single cited build with all eleven required properties,
+I want insight packages generated from a single cited build with all 11 required properties,
 So that what f1 hands gatherer is mechanically conforming before it moves.
 
 **Acceptance Criteria:**
