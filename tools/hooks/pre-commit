@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Blocks a commit that stages sprint-status.yaml or an implementation-artifacts
+# spec file without the two of them agreeing. tools/artifact-status-assertions.sh
+# is CI-enforced (ci.yml "Planning records" job) but nothing stops a commit from
+# reaching that CI red. This hook moves the same check to commit time, before push.
+#
+# Installed via: git config core.hooksPath tools/hooks   (see README.md)
+#
+# Scope: only runs when a staged file matches the patterns
+# artifact-status-assertions.sh actually reads, so commits outside the BMad
+# tracking surface pay nothing.
+#
+# Ported from howdoidata/manalink's tools/hooks/pre-commit, where the rationale
+# was measured: "agent edits tracking artifacts, CI catches the drift, a follow-up
+# commit fixes it reactively" repeated well over a dozen times before the hook landed.
+
+set -u -o pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)" || exit 0
+cd "$REPO_ROOT" || exit 0
+
+staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+if ! printf '%s\n' "$staged" | grep -Eq '^_bmad-output/implementation-artifacts/(sprint-status\.yaml|spec-[0-9]+-[0-9]+-.*\.md)$'; then
+  exit 0
+fi
+
+echo "pre-commit: sprint-status.yaml or a spec file is staged — running tools/artifact-status-assertions.sh"
+
+if bash tools/artifact-status-assertions.sh; then
+  exit 0
+fi
+
+echo "" >&2
+echo "pre-commit: artifact-status-assertions.sh failed (see STATUS CONTRADICTION lines above)." >&2
+echo "This is the same check ci.yml's \"Planning records\" job runs — fix the board/spec" >&2
+echo "mismatch before committing, or commit with --no-verify if you have a documented" >&2
+echo "reason to defer it (rare; the CI gate will still catch it on push)." >&2
+exit 1

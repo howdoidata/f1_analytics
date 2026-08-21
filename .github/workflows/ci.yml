@@ -6,6 +6,32 @@ on:
   pull_request:
 
 jobs:
+  planning-records:
+    name: Planning records
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add uv to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # Schema of each record in isolation: the board (delegated to
+      # sprint_plan.py's own validator), the DW ledger format the sweep
+      # partitions on, and spec frontmatter `status:` that bmad-build routes on.
+      - name: Validate planning records
+        run: uv run .github/scripts/validate-records.py
+
+      # The cross-artifact half. A board and a spec can each be individually
+      # well-formed and still contradict each other -- Story 1.8 read `done` in
+      # its spec while the board still said `review` (2026-08-20), which is
+      # exactly the class the step above cannot see. Offline bash, sub-second,
+      # and self-proving: it asserts its own fixture cases go red first.
+      - name: Artifact status contract
+        run: bash tools/artifact-status-assertions.sh
+
   test:
     name: Test suite
     runs-on: ubuntu-latest
