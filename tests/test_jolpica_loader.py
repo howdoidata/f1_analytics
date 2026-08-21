@@ -16,6 +16,7 @@ import pandas as pd
 import pytest
 
 from f1_analytics.data_sources.jolpica_loader import (
+    NUMERIC_FLOAT_COLUMNS,
     NUMERIC_INT_COLUMNS,
     RESULTS_COLUMNS,
     IncompleteJolpicaDataError,
@@ -133,6 +134,50 @@ def test_shape_results_casts_numeric_columns_to_nullable_integer_dtype():
 
     for column in NUMERIC_INT_COLUMNS:
         assert str(shaped[column].dtype) == "Int64", f"{column} dtype is {shaped[column].dtype}, expected Int64"
+
+
+def test_shape_results_preserves_half_points_rather_than_failing_the_whole_season():
+    # F1 awards half points when a race is stopped early (2021 Spa is the most
+    # recent of 8 fractional-points rounds in the curated data). `points` was
+    # once cast to Int64 alongside the other numerics, which raised on such a
+    # value -- and because `shape_results` shapes a whole season at once and
+    # `build_combined_dataset.load_jolpica_results` degrades any
+    # `JolpicaResultsLoadError` to an empty frame, ONE half-points race
+    # silently emptied the entire season's gap-fill while the build exited 0.
+    # This pins the fractional value surviving, not merely the dtype: an
+    # Int64 regression would truncate 12.5 to 12 or raise, and both fail here.
+    results, _ = read_season_dump(JOLPICA_DUMP_DIR / "normal_season")
+    results = results.copy()
+    results["points"] = results["points"].astype(float)
+    round_one = results["round"] == 1
+    results.loc[round_one, "points"] = results.loc[round_one, "points"] / 2
+
+    shaped = shape_results(results)
+
+    assert len(shaped) == len(results), "a fractional points value must not drop rows"
+    half_pointed = shaped[shaped["round"] == 1].sort_values("position")
+    assert half_pointed["points"].tolist() == [12.5, 9.0]
+    # Rounds that were never fractional must be untouched -- the old failure
+    # took these with it.
+    assert shaped[shaped["round"] == 3]["points"].tolist() == [25.0, 18.0]
+
+
+def test_points_is_fractional_safe_and_stays_out_of_the_integer_cast_list():
+    # Guards the two lists directly, so a future edit that moves `points` back
+    # into NUMERIC_INT_COLUMNS fails here with a pointed message rather than
+    # only surfacing as a silently emptied season in a live build.
+    assert "points" not in NUMERIC_INT_COLUMNS, (
+        "points must not be Int64-cast: half-points races are legitimate and an "
+        "Int64 cast empties the whole season's gap-fill via the degrade path"
+    )
+    assert "points" in NUMERIC_FLOAT_COLUMNS
+
+    results, _ = read_season_dump(JOLPICA_DUMP_DIR / "normal_season")
+    shaped = shape_results(results)
+
+    # Float64 (nullable), matching curated `results.points` (DOUBLE), so a
+    # concat with Kaggle rows neither upcasts to object nor loses precision.
+    assert str(shaped["points"].dtype) == "Float64"
 
 
 def test_empty_shaped_results_matches_a_populated_frames_numeric_dtypes():

@@ -311,6 +311,12 @@ def test_main_degrades_gracefully_when_jolpica_fetch_fails(tmp_path: Path, capsy
     # A live Jolpica fetch failure must never abort the build: it degrades
     # to zero Jolpica rows for this run, and the coverage view still tags
     # correctly from whatever landed (never a guessed/fabricated row).
+    #
+    # The DATA contract above is unchanged. What changed (decision 2026-08-20)
+    # is the REPORTED outcome: the run now exits 1, so a cron/CI wrapper can
+    # tell a failed fetch from a clean build. Degrading the tables and
+    # reporting the run as clean are two different promises; only the first
+    # one is "never blocks the rest".
     db_path = tmp_path / "test.duckdb"
     _seed_curated_tables(db_path)
     fetch = _fake_fetch("failed", None)
@@ -319,7 +325,7 @@ def test_main_degrades_gracefully_when_jolpica_fetch_fails(tmp_path: Path, capsy
         season=2026, db_path=db_path, jolpica_raw_dir=tmp_path / "jolpica_raw", fetch=fetch
     )
 
-    assert exit_code == 0
+    assert exit_code == 1
     with connect_duckdb(db_path, read_only=True) as conn:
         coverage = conn.execute("SELECT * FROM kaggle_jolpica_coverage ORDER BY round").fetch_df()
         combined_results = conn.execute("SELECT * FROM combined_results").fetch_df()
@@ -490,10 +496,16 @@ def test_main_logs_a_combined_results_orphan_violation_and_still_exits_0(
     tmp_path: Path, capsys: pytest.CaptureFixture
 ):
     # orphan_referential/results.csv carries a "ghost_driver" row absent
-    # from drivers.csv. With the Jolpica fetch degraded (kaggle_only for
+    # from drivers.csv. With no Jolpica rows landing (kaggle_only for
     # this round), that Kaggle row flows straight into combined_results
     # unchanged -- so the orphan must surface as a failing validation row
     # for BOTH `results` and `combined_results`, not curated alone.
+    #
+    # The subject here is AD-8: a FAILING VALIDATION never changes the exit
+    # code. The fetch is `empty` (a legitimate no-races-yet season), not
+    # `failed`, so the two concerns stay separate -- since 2026-08-20 a
+    # genuinely failed fetch does exit 1, which would otherwise mask what
+    # this test is actually pinning.
     db_path = tmp_path / "test.duckdb"
     scenario_dir = VALIDATION_FIXTURE_DIR / "orphan_referential"
     with connect_duckdb(db_path) as conn:
@@ -501,7 +513,7 @@ def test_main_logs_a_combined_results_orphan_violation_and_still_exits_0(
         write_dataframe(conn, "races", pd.read_csv(scenario_dir / "races.csv"))
         write_dataframe(conn, "drivers", pd.read_csv(scenario_dir / "drivers.csv"))
         write_dataframe(conn, "constructors", pd.read_csv(scenario_dir / "constructors.csv"))
-    fetch = _fake_fetch("failed", None)
+    fetch = _fake_fetch("empty", None)
 
     exit_code = build_combined_dataset_main(
         season=2026, db_path=db_path, jolpica_raw_dir=tmp_path / "jolpica_raw", fetch=fetch
@@ -622,3 +634,124 @@ def test_run_fetch_subprocess_degrades_gracefully_on_a_mkdir_oserror(
 
     assert result["status"] == "failed"
     assert "Permission denied" in result["exception"]
+
+
+def test_main_raises_named_error_when_races_is_present_but_missing_a_required_column(
+    tmp_path: Path,
+):
+    # `require_races_columns` is the entire remediation for a prior review
+    # round's partial-write finding, and had no test: neutering it turned the
+    # failure back into a bare `KeyError: "['date'] not in index"` from inside
+    # the standings merge, with the full suite still green. Table EXISTENCE is
+    # already covered by the three tests above; this pins the column check, and
+    # that it fires before any write.
+    db_path = tmp_path / "test.duckdb"
+    _seed_curated_tables(db_path)
+    with connect_duckdb(db_path) as conn:
+        races_without_date = _races().drop(columns=["date"])
+        write_dataframe(conn, "races", races_without_date)
+
+    fetch = _fake_fetch("pass", "normal_season")
+
+    with pytest.raises(RuntimeError) as excinfo:
+        build_combined_dataset_main(
+            season=2026, db_path=db_path, jolpica_raw_dir=tmp_path / "jolpica_raw", fetch=fetch
+        )
+
+    assert "date" in str(excinfo.value)
+    assert "missing column" in str(excinfo.value)
+    # Fail-fast means fail BEFORE any write -- neither combined table may exist.
+    with connect_duckdb(db_path, read_only=True) as conn:
+        tables = {row[0] for row in conn.execute("SHOW TABLES").fetchall()}
+    assert "combined_results" not in tables
+    assert "combined_driver_standings_by_round" not in tables
+
+
+def test_build_combined_results_raises_on_a_status_outside_the_ad2_vocabulary():
+    # The five-status vocabulary is declared twice with no shared source: the
+    # SQL CASE in kaggle_jolpica_coverage.sql and this script's constants. A
+    # rename on either side previously made the tag filters match nothing, so
+    # affected rounds vanished from combined_results and the standings with no
+    # error -- indistinguishable from a legitimate no_data round.
+    coverage = pd.DataFrame(
+        {
+            "season": [2026, 2026],
+            "round": [1, 2],
+            "status": ["match", "TYPO_diverges"],
+        }
+    )
+
+    empty_jolpica = _kaggle_results().iloc[0:0].copy()
+
+    with pytest.raises(RuntimeError) as excinfo:
+        _build_combined_dataset.build_combined_results(coverage, _kaggle_results(), empty_jolpica)
+
+    assert "TYPO_diverges" in str(excinfo.value)
+    assert "AD-2 vocabulary" in str(excinfo.value)
+
+
+def test_main_writes_empty_standings_tables_when_every_round_is_no_data(tmp_path: Path):
+    # Pre-season / first-run state: curated `results` is empty and Jolpica
+    # lands nothing, so every round tags no_data and combined_results is empty.
+    # That previously reached compute_cumulative_standings and raised
+    # `ValueError: Cannot set a DataFrame with multiple columns to the single
+    # column standing_rank` -- AFTER raw_jolpica_results and combined_results
+    # were written, leaving the two standings tables missing.
+    db_path = tmp_path / "test.duckdb"
+    _seed_curated_tables(db_path)
+    with connect_duckdb(db_path) as conn:
+        conn.execute("DELETE FROM results")
+
+    exit_code = build_combined_dataset_main(
+        season=2026,
+        db_path=db_path,
+        jolpica_raw_dir=tmp_path / "jolpica_raw",
+        fetch=_fake_fetch("empty", None),
+    )
+
+    assert exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        tables = {row[0] for row in conn.execute("SHOW TABLES").fetchall()}
+        assert "combined_driver_standings_by_round" in tables
+        assert "combined_constructor_standings_by_round" in tables
+        assert conn.execute("SELECT COUNT(*) FROM combined_driver_standings_by_round").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM combined_results").fetchone()[0] == 0
+
+
+def test_main_refuses_to_republish_stale_jolpica_rows_when_a_later_fetch_fails(tmp_path: Path):
+    # Decision 2026-08-20 (Antonio): fail loud rather than paper over a broken
+    # run with stale data. Run 1 lands 7 Jolpica rows. Run 2's fetch fails, so
+    # the 0-row write is refused by refuse_regression and the previous rows
+    # remain in the table. Previously the run then re-read and republished them
+    # under `source = "jolpica"`, so a totally failed run looked identical to a
+    # clean one and reported current-season coverage it never obtained.
+    #
+    # Contrast test_main_reuses_previous_jolpica_data_when_a_later_fetch_regresses:
+    # there the fetch SUCCEEDS and merely lands fewer rows, so the source was
+    # reached and reuse is honest. Only an outright failure raises here.
+    db_path = tmp_path / "test.duckdb"
+    _seed_curated_tables(db_path)
+    jolpica_raw_dir = tmp_path / "jolpica_raw"
+
+    first_exit_code = build_combined_dataset_main(
+        season=2026,
+        db_path=db_path,
+        jolpica_raw_dir=jolpica_raw_dir,
+        fetch=_fake_fetch("pass", "normal_season"),
+    )
+    assert first_exit_code == 0
+    with connect_duckdb(db_path, read_only=True) as conn:
+        landed = conn.execute("SELECT COUNT(*) FROM raw_jolpica_results").fetchone()[0]
+    assert landed > 0
+
+    with pytest.raises(RuntimeError) as excinfo:
+        build_combined_dataset_main(
+            season=2026,
+            db_path=db_path,
+            jolpica_raw_dir=jolpica_raw_dir,
+            fetch=_fake_fetch("failed", None),
+        )
+
+    message = str(excinfo.value)
+    assert "no new Jolpica evidence" in message
+    assert "silently republished" in message

@@ -150,13 +150,26 @@ def _driver_name(results: pd.DataFrame) -> pd.Series:
 # the rest as float64 would make `combined_results`/combined standings'
 # dtype for these columns shift depending on whether a given round's rows
 # came from Kaggle (already integer-typed) or Jolpica -- `pd.concat`
-# upcasts a mixed int/float column to float64 for the whole table. `points`
-# is included here too, matching this fix's scope; a genuinely fractional
-# points value (half-points races are rare but real in F1 history) would
-# raise on the `.astype("Int64")` below rather than silently truncating --
-# a loud, named failure being preferable to silently wrong data, per this
-# epic's fail-early discipline (AD-16).
-NUMERIC_INT_COLUMNS = ["season", "round", "grid", "position", "points", "laps", "fastest_lap", "fastest_lap_rank"]
+# upcasts a mixed int/float column to float64 for the whole table.
+#
+# `points` is deliberately NOT in this list: F1 awards half points when a
+# race is stopped early (2021 Spa is the most recent of 8 fractional-points
+# rounds in the curated data), so `12.5` is a legitimate value, and the
+# curated Kaggle `results.points` column is itself DOUBLE. An earlier
+# revision did cast it here, reasoning that a fractional value raising was
+# preferable to silent truncation. The raise was real but its blast radius
+# was not what that reasoning assumed: `shape_results` shapes a whole season
+# at once, `load_and_map_season_results` wraps the entire pipeline in one
+# `JolpicaResultsLoadError`, and `build_combined_dataset.load_jolpica_results`
+# degrades that to `empty_shaped_results()`. So one half-points race silently
+# emptied the ENTIRE season's gap-fill -- every genuinely `jolpica_only` round
+# re-tagged `no_data` -- while the build printed "all passed" and exited 0.
+# Verified end-to-end 2026-08-20: 7 landed rows -> 0 from one race's points.
+NUMERIC_INT_COLUMNS = ["season", "round", "grid", "position", "laps", "fastest_lap", "fastest_lap_rank"]
+# Fractional-safe, matching curated `results.points` (DOUBLE). Float64 (not
+# float64) keeps it nullable, so it concatenates with Kaggle rows without an
+# object upcast -- the same dtype-stability concern the int list above exists for.
+NUMERIC_FLOAT_COLUMNS = ["points"]
 
 
 def shape_results(results: pd.DataFrame) -> pd.DataFrame:
@@ -207,6 +220,8 @@ def shape_results(results: pd.DataFrame) -> pd.DataFrame:
 
     for column in NUMERIC_INT_COLUMNS:
         shaped[column] = shaped[column].astype("Int64")
+    for column in NUMERIC_FLOAT_COLUMNS:
+        shaped[column] = shaped[column].astype("Float64")
     return shaped
 
 
