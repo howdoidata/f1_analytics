@@ -228,3 +228,12 @@ source_spec: `_bmad-output/implementation-artifacts/spec-dw-27-untrack-render-gi
 severity: low
 reason: DW-27 traded the nested `_bmad/render/.gitignore` defense-in-depth guard for a clean `bmad-loop validate`, leaving the top-level `.gitignore`'s `_bmad/render/` line as the only thing preventing the ephemeral rendered-workflow cache from ever being committed — exactly the failure mode DW-27's own reasoning named as the accepted risk. Not fixed inline because designing a compensating check (test, CI step, or lint rule) is new scope beyond DW-27's narrow "which property to keep" decision. Partially mitigated today: `bmad_loop/install.py`'s `init` step unconditionally re-adds this exact line whenever it's missing, so the guard self-heals on any project that re-runs `bmad-loop-setup` — but nothing enforces it between such runs, so a manually-edited or accidentally-shrunk `.gitignore` would go unnoticed until the next install/upgrade.
 status: open
+
+### DW-29: The standings enrichment merge silently renames the races calendar `time` to `time_race`, and nothing consumes it
+
+origin: code review of spec-1-7-current-season-combined-tables-and-the-coverage-arbiter.md (round 2), 2026-08-20
+source_spec: _bmad-output/implementation-artifacts/spec-1-7-current-season-combined-tables-and-the-coverage-arbiter.md
+location: scripts/build_combined_dataset.py:285-290
+severity: low
+reason: `combined_results` already carries a `time` column (race classification time), so the enrichment merge against `races` with `suffixes=("", "_race")` renames the races calendar's own `time` to `time_race`. Nothing downstream reads `time_race` — `compute_cumulative_standings` groups on `date` only — yet `REQUIRED_RACES_COLUMNS` lists `time` as a required column, so the build fails fast on a `races` table missing a column it then discards. Deferred rather than patched: the behavior mirrors `kaggle_csv.build_curated_tables` exactly, so changing it here alone would make the combined path inconsistent with the curated path, and the column-set question is entangled with DW-18's unresolved decision about what format `combined_results.time` should carry at all. Resolve alongside DW-18 rather than in isolation.
+status: open

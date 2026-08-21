@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 08-20-2026 21:53
-last_updated: 08-20-2026 21:53
+last_updated: 08-20-2026 22:55
 project: f1_analytics
 project_key: NOKEY
 tracking_system: file-system
@@ -42,7 +42,7 @@ development_status:
   1-4-project-foundation-that-survives-a-fresh-clone: done
   1-5-kaggle-curated-layer-rebuilt: done
   1-6-fastf1-facts-landed-with-rate-discipline: done
-  1-7-current-season-combined-tables-and-the-coverage-arbiter: review
+  1-7-current-season-combined-tables-and-the-coverage-arbiter: done
   1-8-advisory-build-validation-logged: done
   epic-1-retrospective: optional
 
