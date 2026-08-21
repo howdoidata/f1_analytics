@@ -1,60 +1,39 @@
-# generated: 2026-08-06 19:17:36 -0500
-# last_updated: 2026-08-07 14:56:00 -0500
-# project: f1_analytics
-# project_key: NOKEY
-# tracking_system: file-system
-# story_location: {project-root}/_bmad-output/implementation-artifacts
-
 # STATUS DEFINITIONS:
 # ==================
 # Epic Status:
 #   - backlog: Epic not yet started
 #   - in-progress: Epic actively being worked on
 #   - done: All stories in epic completed
-#
-# Epic Status Transitions:
-#   - backlog → in-progress: Automatically when first story is created (via create-story)
-#   - in-progress → done: Manually when all stories reach 'done' status
-#
+
 # Story Status:
 #   - backlog: Story only exists in epic file
-#   - ready-for-dev: Story file created in stories folder
+#   - ready-for-dev: Story file created, ready for development
 #   - in-progress: Developer actively working on implementation
-#   - review: Ready for code review (via Dev's code-review workflow)
+#   - review: Implementation complete, ready for review
 #   - done: Story completed
-#
+
 # Retrospective Status:
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
-#
+
 # Action Item Status:
 #   - open: Committed during a retrospective, not yet addressed
 #   - in-progress: Actively being worked on
 #   - done: Completed
-#
+
 # WORKFLOW NOTES:
 # ===============
-# - Epic transitions to 'in-progress' automatically when first story is created
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
 # - Stories can be worked in parallel if team capacity allows
-# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
-# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
-#
-# REBUILD NOTE (2026-08-06):
-# ==========================
-# This file replaces the sprint-status.yaml lost in the 2026-08-01 data event.
-# It tracks the post-loss rebuild plan (epics.md, 2026-08-06): no prior work is
-# treated as done (spine AD-10). Old story keys from the pre-loss numbering do
-# NOT exist here; surviving old story files in this folder are historical
-# reference only.
-
-generated: 2026-08-06 19:17:36 -0500
-last_updated: 08-08-2026 12:30
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 08-20-2026 21:53
+last_updated: 08-20-2026 21:53
 project: f1_analytics
 project_key: NOKEY
 tracking_system: file-system
-story_location: "{project-root}/_bmad-output/implementation-artifacts"
-
+story_location: _bmad-output/implementation-artifacts
 development_status:
   epic-1: in-progress
   1-1-record-the-loss-and-gain-offsite-protection: done
@@ -63,8 +42,8 @@ development_status:
   1-4-project-foundation-that-survives-a-fresh-clone: done
   1-5-kaggle-curated-layer-rebuilt: done
   1-6-fastf1-facts-landed-with-rate-discipline: done
-  1-7-current-season-combined-tables-and-the-coverage-arbiter: in-progress
-  1-8-advisory-build-validation-logged: review
+  1-7-current-season-combined-tables-and-the-coverage-arbiter: review
+  1-8-advisory-build-validation-logged: done
   epic-1-retrospective: optional
 
   epic-2: backlog
