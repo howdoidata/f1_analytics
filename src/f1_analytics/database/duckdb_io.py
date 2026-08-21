@@ -25,8 +25,16 @@ class WriteRegressionError(Exception):
 
 
 def _existing_row_count(conn: duckdb.DuckDBPyConnection, table_name: str) -> int | None:
+    # Scoped to `main` BASE TABLEs deliberately. Unqualified, the probe matches
+    # a same-named object in ANY schema (and matches VIEWs as well as tables),
+    # while the COUNT(*) below resolves only against the search path -- so a
+    # table existing solely as `other.combined_results` made the probe truthy
+    # and the very next line raise CatalogException, and a same-named view
+    # could have supplied the row count the regression guard compares against.
     exists = conn.execute(
-        "SELECT 1 FROM information_schema.tables WHERE table_name = ?", [table_name]
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_name = ? AND table_schema = 'main' AND table_type = 'BASE TABLE'",
+        [table_name],
     ).fetchone()
     if exists is None:
         return None

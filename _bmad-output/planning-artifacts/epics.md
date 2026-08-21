@@ -116,7 +116,7 @@ From the Architecture Spine (architecture-f1_analytics-2026-08-06, status: final
 - AR-11: Build validation module — advisory null-rate/referential checks logged to `validation_results`, never halting a build (AD-4/AD-8).
 - AR-12: Offline test suite — recorded fixtures cut from cached payloads; zero network in pytest (AD-11).
 - AR-13: Repo recovery operations under Standing Constraints — the record-the-loss commit (206 `git rm`s + `.bmad-loop/policy.toml` untrack), selective restore from the platform snapshot (code/docs yes; the 7 post-fix Jolpica cache files always win; July-9 DuckDB never restored as truth); never `git gc`/`prune`/`repack`.
-- AR-14: Universal fail-early discipline per AD-16 — every unit verifies its preconditions before doing work; a failed precondition halts that unit with an explicit finding (statused value in the core, named fast failure in shells, typed rejection at storage, pairing assertion at scoring, conformance self-check before any packet is delivered); where the true state is determinable, the finding records the corrected fact. Binds every story in every epic.
+- AR-14: Universal fail-early discipline per AD-16 — every unit verifies its preconditions before doing work; a failed precondition halts that unit with an explicit finding (statused value in the core, named fast failure in shells, typed rejection at storage, pairing assertion at scoring, conformance self-check before any packet is delivered); where the true state is determinable, the finding records the corrected fact. Binds every story in every epic — this blanket rule applies regardless of whether a given story's own "Governed by" line names AD-16 locally. A local AD-16 citation marks that *this specific story* introduces a new named fail-early mechanism worth pointing at; its absence is not a signal that fail-early discipline doesn't apply there.
 
 ### UX Design Requirements
 
@@ -133,7 +133,7 @@ From DESIGN.md (status: final) + UX-INTAKE.md. **Partial contract:** EXPERIENCE.
 - UX-DR9: Output Bundle Checklist — checklist for report/table/figure/notebook exports (`components.output-bundle-checklist`).
 - UX-DR10: Portfolio Summary — public-facing summary block for a finished analysis (`components.portfolio-summary`).
 - UX-DR11: Implementation Handoff — BMAD story-ready block: acceptance criteria, validation commands, artifacts, unresolved statuses (`components.implementation-handoff`).
-- UX-DR12: Status Badge — compact label for all seven answer statuses; badge color from the exact matching token; text plus color, never color alone; WCAG 2.2 AA contrast on the enumerated pairs (`components.status-badge-*`).
+- UX-DR12: Status Badge — compact label for all eight answer statuses (including `premise_incorrect`, DESIGN.md `premise-teal`/`surface-premise`); badge color from the exact matching token; text plus color, never color alone; WCAG 2.2 AA contrast on the enumerated pairs (`components.status-badge-*`).
 - UX-DR13: Discrepancy Panel — source-backed value vs Known Answer Example comparison (`components.discrepancy-panel`). Blocked until the target store is populated (spine Deferred).
 - UX-DR14: Target Store Review — Actual Answer Components + provenance + validation review surface (`components.target-store-review`). Blocked until the target store is populated.
 - UX-DR15: Scoring and Baseline Review — Prediction Inputs vs Actual Answers vs scoreability table (`components.scoring-and-baseline-review`). Blocked until the target store is populated.
@@ -161,7 +161,7 @@ FR-16: Epic 3 - Leakage-safe baseline Prediction Inputs
 FR-17: Epic 3 - Question-level backtest report rows for all five questions
 FR-18: Epic 3 - Portfolio-ready explanation text
 FR-19: Epic 2 - Premise validation with corrected-answer capture (Story 2.8); Epic 3 inherits its scoring/rendering discipline
-FR-20: Epic 2 - Intake validation with auto-correction of determinable input errors (Story 2.2)
+FR-20: Epic 2 - Intake validation with auto-correction of determinable input errors (Story 2.2a)
 
 Additional-requirement placement: Epic 1 carries AR-1, AR-3, AR-11, AR-12, AR-13; Epic 2 carries AR-2, AR-4, AR-5, AR-6, AR-7, AR-9; Epic 3 carries AR-8 and UX-DR1..17 rendering; Epic 4 carries AR-10. AR-14 (fail-early, AD-16) binds every story in every epic.
 
@@ -348,9 +348,25 @@ So that every downstream story consumes one identity authority.
 **Then** all five questions exist as rows with every AD-15 field (`known_answer_example: null` permitted pending Antonio's input), the British GP question is ONE row with two components minted here (compound; first-change lap), and ≥5 extension slots exist without extractor obligations (FR-1, NFR-7)
 **And** the taxonomy covers the seven MVP answer types plus the recordable future categories, each declaring required fields and `extraction_support_status` (FR-2), and the remaining controlled vocabularies (coverage availability, feature availability, feature groups) are defined once in `analysis/` (AD-3 #2–4)
 **And** each row carries its `analysis_boundary` (FR-14) and a schema-invalid catalog fails the loader with named errors, never a partial parse (AD-16)
-**And** intake batches (`catalog/intake/*.yaml`) are validated at entry — schema, entity resolution against known drivers/teams/races, arithmetic consistency of expected answers (e.g. P9+P10=19), range/sanity checks — with unambiguously determinable input errors auto-corrected (correction applied, original preserved verbatim, correction recorded and surfaced) and ambiguous ones halted with options (FR-20, AD-16 intake clause).
 
-**Verification:** offline tests: round-trip load, five rows + slots, invalid-catalog rejection, vocabulary imports from one module, intake auto-correction with preserved original, ambiguous-input halt. Governed by: AD-3, AD-7, AD-15, AD-16.
+**Verification:** offline tests: round-trip load, five rows + slots, invalid-catalog rejection, vocabulary imports from one module. Governed by: AD-3, AD-7, AD-15, AD-16.
+
+### Story 2.2a: Intake Validation With Auto-Correction
+
+As Antonio,
+I want new-question intake batches validated and unambiguous errors auto-corrected at entry,
+So that a bad intake row is caught before it ever reaches the committed catalog.
+
+**Acceptance Criteria:**
+
+**Given** an intake batch (`catalog/intake/*.yaml`) targeting the 2.2 catalog schema
+**When** the intake validator runs
+**Then** each row is checked against schema, entity resolution against known drivers/teams/races, arithmetic consistency of expected answers (e.g. P9+P10=19), and range/sanity checks (FR-20)
+**And** unambiguously determinable input errors are auto-corrected — the correction applied, the original value preserved verbatim, and the correction recorded and surfaced, never silent — while ambiguous errors halt that row with the candidate options (AD-16 intake clause).
+
+**Verification:** offline tests: schema-valid pass-through, entity-resolution failure, arithmetic-consistency auto-correction with preserved original, ambiguous-input halt. Governed by: AD-16, FR-20.
+
+**Split note (2026-08-08, sprint-planning readiness pass):** originally a fourth "And"-clause on Story 2.2, matching the exact density pattern (≥3 "And"-clauses) that forced Story 1.8 into a mid-build spec split. Pulled out now, pre-build, to avoid repeating that split live. No decision content changed — the acceptance criteria text is unedited, only relocated.
 
 ### Story 2.3: Results-Based Extraction — Miami And Canada Complete
 

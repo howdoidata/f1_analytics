@@ -20,6 +20,13 @@ etc.) is reported by name and degrades to zero Jolpica rows for this run
 rather than aborting the build -- the coverage view still tags every
 season/round correctly from whatever landed, mirroring
 `pull_fastf1_data.py`'s "one source's failure never blocks the rest"
+posture -- but the run EXITS 1, so a caller can distinguish it from a
+clean build. The one case that does abort: if a failed fetch would leave
+a previously-landed `raw_jolpica_results` in place (`refuse_regression`
+declining the 0-row write), the run raises rather than silently
+republishing those stale rows as this run's current-season data. A
+merely PARTIAL fetch still reuses the better previous table, since there
+the source was actually reached. Decisions recorded 2026-08-20.
 posture. Only a genuinely MISSING curated prerequisite table
 (`results`/`races`/`drivers`/`constructors`) is a hard, pre-write failure
 (mirrors `require_curated_tables()` in `pull_fastf1_data.py`).
@@ -90,6 +97,29 @@ VALIDATION_TABLES: tuple[str, ...] = (
 KAGGLE_WINS_STATUSES = ("match", "kaggle_only", "row_count_diverges")
 JOLPICA_FILLS_STATUS = "jolpica_only"
 DIVERGES_STATUS = "row_count_diverges"
+NO_DATA_STATUS = "no_data"
+# The complete AD-2 vocabulary, asserted against what the view actually emits.
+# The five statuses are declared twice with no shared source of truth -- as SQL
+# string literals in `kaggle_jolpica_coverage.sql`'s CASE, and as the Python
+# constants above. A rename on either side would make the tag filters below
+# match nothing and silently drop whole rounds from `combined_results` and the
+# standings -- exactly the silent resolution this story's own posture forbids.
+# Checking here converts that drift from silent data loss into a named failure.
+KNOWN_COVERAGE_STATUSES = frozenset(KAGGLE_WINS_STATUSES) | {JOLPICA_FILLS_STATUS, NO_DATA_STATUS}
+
+# Output columns of the two standings tables, used only to shape the
+# zero-row frames the empty-combined_results path returns, so a degenerate
+# build still writes tables with the same schema a populated one produces.
+EMPTY_DRIVER_STANDINGS_COLUMNS = [
+    "season", "round", "race_name", "date", "driver_id", "driver_name",
+    "race_points", "race_wins", "cumulative_points", "cumulative_wins",
+    "standing_rank", "source",
+]
+EMPTY_CONSTRUCTOR_STANDINGS_COLUMNS = [
+    "season", "round", "race_name", "date", "constructor_id", "constructor",
+    "race_points", "race_wins", "cumulative_points", "cumulative_wins",
+    "standing_rank", "source",
+]
 
 FetchFn = Callable[[int, Path], dict]
 
@@ -247,6 +277,15 @@ def build_combined_results(
     "Retired"), and merging two same-named columns would otherwise silently
     rename them to `status_x`/`status_y` instead of raising.
     """
+    unknown_statuses = sorted(set(coverage["status"].dropna()) - KNOWN_COVERAGE_STATUSES)
+    if unknown_statuses:
+        raise RuntimeError(
+            f"kaggle_jolpica_coverage emitted status(es) outside the AD-2 vocabulary: "
+            f"{', '.join(unknown_statuses)}. Expected one of: {', '.join(sorted(KNOWN_COVERAGE_STATUSES))}. "
+            "The view's CASE and this script's status constants have drifted apart; "
+            "rounds carrying an unrecognized tag would otherwise be dropped silently."
+        )
+
     round_status = coverage[["season", "round", "status"]].rename(columns={"status": "coverage_status"})
 
     tagged_kaggle = kaggle_results.merge(round_status, on=["season", "round"], how="inner")
@@ -281,6 +320,24 @@ def build_combined_standings(combined_results: pd.DataFrame, races: pd.DataFrame
     whole round to one source), so it is safe to merge back onto the
     per-round standings rows afterward.
     """
+    # A fully-empty `combined_results` (every round `no_data`: curated
+    # `results` empty and Jolpica landed nothing -- a realistic pre-season or
+    # first-run state) cannot go through `compute_cumulative_standings`: the
+    # empty-frame `groupby(...).apply(...)` in `add_standing_rank` returns a
+    # DataFrame rather than a Series and raises `ValueError: Cannot set a
+    # DataFrame with multiple columns to the single column standing_rank`.
+    # That raise landed AFTER `raw_jolpica_results` and `combined_results`
+    # were already written, leaving the two standings tables missing -- the
+    # partial-write-then-crash class this script's fail-fast discipline
+    # exists to prevent. Typing the empty frame's columns does not avoid it
+    # (verified), so the empty case is answered here instead of pushing a
+    # degenerate frame through the shared standings function.
+    if combined_results.empty:
+        return (
+            pd.DataFrame(columns=EMPTY_DRIVER_STANDINGS_COLUMNS),
+            pd.DataFrame(columns=EMPTY_CONSTRUCTOR_STANDINGS_COLUMNS),
+        )
+
     enriched = combined_results.merge(
         races[["season", "round", "date", "time", "circuit_id", "url"]],
         on=["season", "round"],
@@ -365,6 +422,22 @@ def main(
         try:
             write_dataframe(conn, "raw_jolpica_results", jolpica_results, refuse_regression=True)
         except WriteRegressionError as error:
+            # Reuse is only honest when the fetch actually SUCCEEDED and simply
+            # landed fewer rows (a partial/incomplete pagination): the source
+            # was reached, so the previously-landed table is still the better
+            # answer for this run. When the fetch FAILED outright there is no
+            # new evidence at all, and silently re-publishing the previous
+            # run's rows under `source = "jolpica"` makes a broken run
+            # indistinguishable from a clean one -- the run reports current
+            # -season coverage it did not actually obtain. Decision 2026-08-20
+            # (Antonio): fail loud rather than paper over it with stale data.
+            if fetch_result.get("status") == "failed":
+                raise RuntimeError(
+                    f"Jolpica fetch failed and the previously-landed raw_jolpica_results "
+                    f"({error}) would be silently republished as this run's current-season "
+                    f"data. Refusing: this run obtained no new Jolpica evidence. Re-run once "
+                    f"the source is reachable, or drop raw_jolpica_results to rebuild without it."
+                ) from error
             print(f"[build_combined_dataset] {error}; reusing the previously-landed table for this run")
             jolpica_results = conn.execute("SELECT * FROM raw_jolpica_results").fetch_df()
 
@@ -404,6 +477,22 @@ def main(
         f"[build_combined_dataset] combined_driver_standings_by_round: {len(driver_standings)} row(s); "
         f"combined_constructor_standings_by_round: {len(constructor_standings)} row(s)"
     )
+
+    # Decision 2026-08-20 (Antonio): a failed Jolpica fetch exits non-zero.
+    # The build still degrades rather than aborting -- combined tables are
+    # rebuilt from whatever landed, so "one source's failure never blocks the
+    # rest" still holds for the DATA -- but the run is no longer reported as
+    # clean. Previously this returned a bare 0, so a cron/CI wrapper could not
+    # tell a failed fetch from a good one. Mirrors `pull_fastf1_data.main`'s
+    # `0 if landed else 1`. `empty` is a legitimate outcome (a season with no
+    # races yet), not a failure; per AD-8 advisory validation findings still
+    # never affect the exit code.
+    if fetch_result.get("status") == "failed":
+        print(
+            "[build_combined_dataset] exiting 1: the Jolpica fetch failed. Combined tables were "
+            "rebuilt from whatever landed, but this run did not obtain current-season Jolpica data."
+        )
+        return 1
     return 0
 
 
