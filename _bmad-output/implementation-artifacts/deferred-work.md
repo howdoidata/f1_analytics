@@ -1,9 +1,18 @@
 # Deferred Work
 
+Each entry is a `### DW-<n>:` block. Fields appear in this order:
+
+`origin` · `location` · `source_spec` (if any) · `severity` (if any) · `reason` · `status` · `last_verified` (open entries) · `resolution` (done entries) · `decision` (if any)
+
+- **`location`** cites file and, where useful, line numbers. Line numbers rot: seven entries were found in 2026-08-21's audit pointing at comment blocks after the code moved out from under them. When correcting one, keep the original reference in parentheses so the entry stays traceable to what it described.
+- **`last_verified`** is a date plus what was actually checked. Entries carry point-in-time claims ("confirmed 2026-08-08 that…") that read as current long after they stop being true — DW-23 asserted a 40-row defect that measured 0 when re-run 13 days later. Anything acted on should be re-verified against the code or data first, and the result recorded here.
+- **`status`** is `open` or `done <date>`. A `done` entry must carry a `resolution` stating what was built or why it was closed, with evidence (file:line, commit, or a measurement).
+- Architecture decisions referenced as **AD-<n>** live in `_bmad-output/planning-artifacts/architecture/architecture-f1_analytics-2026-08-06/ARCHITECTURE-SPINE.md`. Decision records named bare (e.g. `track-bmad-workspace-memlogs-2026-08-08.md`) live in `_bmad-output/planning-artifacts/decisions/`.
+
 ### DW-1: `docs/decisions.md` carries an undefined `TARGET_DIR` placeholder, out-of-order entries, and unflagged abandoned-initiative content
 
 origin: migrated from legacy ledger ("Deferred from: code review of story-1.3 (2026-08-07)"), 2026-08-08
-location: docs/decisions.md
+location: docs/archive/decisions-pre-rebuild-2026-07.md (moved verbatim from `docs/decisions.md` by commit 46bf0a6, 2026-08-08; the entry's original path no longer exists)
 reason: The restored historical document has 3 undefined `TARGET_DIR` placeholder occurrences (e.g. "Direct verification against `TARGET_DIR` (2026-07-10) confirms..."), non-chronological entry ordering (two 2026-07-07 entries interleaved between the 07-08/07-09 blocks), and unflagged content about an abandoned "multi-project platform bootstrap" initiative that is inconsistent with the current single-repo rebuild direction. Deferred because these are pre-existing characteristics of a verbatim-restored salvaged document: this story's own precedent (AD-10, and its explicit decision not to fix trailing-blank-line formatting in `recovery/reference/`) argues against editing salvaged content, and a future doc-hygiene pass could annotate or redact if `docs/decisions.md` ever becomes actively referenced.
 status: open
 
@@ -13,6 +22,7 @@ origin: migrated from legacy ledger ("Deferred from: code review of story-1.4 (2
 location: tests/conftest.py:15-16
 reason: The network-blocking fixture makes `connect_ex` raise, but production `connect_ex` never raises — it returns an errno int — so code written against the real contract would see the wrong failure mode under test. Currently unreachable: no code in the repo calls `connect_ex`.
 status: open
+last_verified: 2026-08-21 — reproduces. `tests/conftest.py:15-16` `_blocked_connect_ex` is annotated `-> int` over a body whose only statement is `raise RuntimeError`. Still no caller of `connect_ex` in the repo.
 
 ### DW-3: The network-blocking fixture does not cover connectionless UDP sends
 
@@ -20,6 +30,7 @@ origin: migrated from legacy ledger ("Deferred from: code review of story-1.4 (2
 location: tests/conftest.py:19-27
 reason: The fixture only patches `connect`/`connect_ex`, so a connectionless UDP socket's `sendto`/`send` would escape the guard and reach the network. Currently unreachable: no UDP usage exists in the repo.
 status: open
+last_verified: 2026-08-21 — reproduces. The fixture patches only `connect`/`connect_ex`; `sendto`/`send`/`sendall` and `socket.create_connection` are unpatched. Still no UDP usage in the repo.
 
 ### DW-4: A spawned `multiprocessing` or `subprocess` child escapes the socket monkeypatch guard
 
@@ -27,11 +38,12 @@ origin: migrated from legacy ledger ("Deferred from: code review of story-1.4 (2
 location: tests/conftest.py:19-27
 reason: A `multiprocessing` (spawn) worker or a `subprocess` re-imports `socket` fresh in a new interpreter and never sees the `monkeypatch` guard, leaving that child free to open network connections during a test run. No test spawns child processes today.
 status: open
+last_verified: 2026-08-21 — reproduces, and exposure has grown: `scripts/pull_fastf1_data.py:106`, `scripts/build_combined_dataset.py:186` and `scripts/spike_fastf1_adoption.py:71` now genuinely shell out for live fetches. No test spawns a child only because every test injects a `fetch=` seam or monkeypatches `subprocess.run`, so isolation rests on test-authoring discipline rather than on the fixture.
 
 ### DW-5: README's open-ended "uv 0.12+" may conflict with the `uv_build<0.13` build-backend pin
 
 origin: migrated from legacy ledger ("Deferred from: code review of story-1.4 (2026-08-07)"), 2026-08-08
-location: README.md:7, pyproject.toml:11
+location: README.md:7, pyproject.toml:15 (the entry's original `:11` is now `[dependency-groups]`; the `uv_build>=0.12.2,<0.13` pin sits at :15)
 reason: README states "uv 0.12+" (open-ended) while `pyproject.toml` pins the build backend to `uv_build<0.13`, a potential mismatch for a reader who installs a newer `uv`. Not confirmed to actually break `uv sync`.
 status: open
 
@@ -54,29 +66,40 @@ resolution: already resolved: requirements.txt was deleted in commit 86d43dc and
 ### DW-8: `add_standing_rank()` produces dense ranks rather than standard competition ranks after a tie
 
 origin: migrated from legacy ledger ("Deferred from: code review of story-1.5 (2026-08-07)"), 2026-08-08
-location: src/f1_analytics/data_sources/standings.py:24-29
-reason: Ranks come out 1,2,2,3 instead of 1,2,2,4 after a tie — verified against the real dataset (1956 round 4). Left as-is because the function is byte-identical to the salvaged reference this story was directed to adapt from, not redesign; a future story should decide the intended ranking convention for per-round standings questions and, if standard ranking is wanted, fix it in the one shared function. Not currently blocking: confirmed 2026-08-08 that none of Epic 2/3's five target questions read per-round rank (only points/position from results-level status fields) — re-check this entry if a future question ever keys on rank.
-status: open
-decision: 2026-08-08 Switch to standard competition ranking — Replace the cumsum-of-tie-changes with a standard competition rank over cumulative points then wins within each season/round group, so the position after a tie skips (1, 2, 2, 4). Update tests/test_standings.py to pin the skip behavior explicitly, and verify the 1956 round 4 case now ranks as expected. The change lands in the one shared function, so both curated and combined standings tables inherit it.
+location: src/f1_analytics/data_sources/standings.py:42-50 (rank computation; the entry's original `:24-29` predates commit df106a1 and now points at comment text)
+reason: Ranks come out 1,2,2,3 instead of 1,2,2,4 after a tie — verified against the real dataset (1956 round 4). Left as-is because the function was byte-identical to the salvaged reference this story was directed to adapt from, not redesign; a future story should decide the intended ranking convention for per-round standings questions and, if standard ranking is wanted, fix it in the one shared function. Not currently blocking: confirmed 2026-08-08 that none of Epic 2/3's five target questions read per-round rank (only points/position from results-level status fields) — re-check this entry if a future question ever keys on rank.
+status: done 2026-08-21
+resolution: Implemented the recorded decision. `add_standing_rank` now derives `standing_rank` from each row's `cumcount()` position within its already-sorted group, with tied rows taking the smallest position in their run of equal totals, so a tie consumes the positions it spans and the next row skips (1,2,2,4). Verified live on the cited case: 1956 round 4 now ranks Collins and Moss joint 1st on 11.0, Fangio **3rd** on 10.5 (position 2 consumed by the tie) and Behra 4th, with the same skip visible at 7,7,9 and 10,10,10. Invariants hold across all 25,850 `race_results_enriched` rows — every (season, round) group starts at rank 1, no rank exceeds its group size, zero nulls.
+
+The deferral rationale above was already void before this fix: commit df106a1 (2026-08-20) replaced the `groupby(...).apply(...)` implementation with a vectorized one, so the function had not been byte-identical to the salvaged reference since that date even though the defect itself survived it.
+
+Two test defects were found and fixed while closing this, both of which had let wrong implementations pass:
+- `tests/test_standings.py`'s two-driver fixture put its tie in both rows of its group, leaving no row *after* the tie — the only place dense and standard ranking differ. It therefore could not distinguish them, and a mutation swapping one convention for the other passed all 157 tests. The new 4-driver `_tie_with_a_driver_below_fixture` places the tie mid-table; the same mutation now fails.
+- An interim fix using `rank(method="min")` per column and combining the results ranked the two cumulative columns independently rather than ordering on the pair, giving a driver on 50 points and one on 40 the same rank while leaving rank 1 unassigned. Caught by direct probing, not by the suite; now pinned by `test_more_points_outranks_more_wins` and `test_wins_break_a_tie_on_equal_points`.
+
+Suite: 161 passed (was 157).
 
 ### DW-9: Tie-detection in `add_standing_rank()` is not NaN-safe
 
 origin: migrated from legacy ledger ("Deferred from: code review of story-1.5 (2026-08-07)"), 2026-08-08
-location: src/f1_analytics/data_sources/standings.py:25-26
-reason: `group.ne(group.shift())` relies on equality comparison, and `NaN != NaN` in pandas, so consecutive NaN values would be scored as distinct rather than tied. Not triggered by any real or fixture data today; identical to the salvaged reference.
-status: open
+location: src/f1_analytics/data_sources/standings.py:42-50 (tie detection; the entry's original `:25-26` predates commit df106a1 and now points at comment text)
+reason: Tie detection relied on equality comparison, and `NaN != NaN` in pandas, so consecutive NaN values would be scored as distinct rather than tied. Not triggered by any real or fixture data today. The entry cited the expression as `group.ne(group.shift())`; commit df106a1 (2026-08-20) rewrote it to `totals.ne(totals.shift())` over a two-column frame, which changed the mechanism's spelling but not the NaN behaviour.
+status: done 2026-08-21
+resolution: Fixed alongside DW-8 in the same rewrite of `add_standing_rank`. Tie equality is now tested on a copy whose missing totals are filled with `_TIED_NAN_SENTINEL` (-1.0), a value no real cumulative points or wins total can take since both are non-negative counts, so two rows equally placed on a missing total compare as tied instead of distinct. Reproduced before the fix at the `add_standing_rank` level — two drivers both on NaN received ranks 2 and 3 — and pinned by `test_drivers_tied_on_missing_cumulative_points_share_a_rank`.
+
+That test deliberately calls `add_standing_rank` directly rather than `compute_cumulative_standings`: the latter's `race_points=("points", "sum")` aggregation turns an all-NaN group into 0.0, so no NaN can reach `cumulative_points` by that route. A first version of the test built from raw `points` passed against the unfixed code for exactly that reason — it was vacuous, and would have recorded this entry as fixed without ever exercising the defect.
 
 ### DW-10: `write_dataframe()` leaves `source_df` registered on the connection when the write raises
 
 origin: migrated from legacy ledger ("Deferred from: code review of story-1.5 (2026-08-07)"), 2026-08-08
-location: src/f1_analytics/database/duckdb_io.py:28-30
+location: src/f1_analytics/database/duckdb_io.py:67-69 (the entry's original `:28-30` now points at the `_existing_row_count` comment block)
 reason: There is no `try`/`finally` around the registration, so a raising `conn.execute` leaves the temporary `source_df` view bound to the connection for the rest of its life. Identical to the salvaged reference.
 status: open
 
 ### DW-11: `write_dataframe()` interpolates `table_name` into raw SQL with no identifier quoting
 
 origin: migrated from legacy ledger ("Deferred from: code review of story-1.5 (2026-08-07)"), 2026-08-08
-location: src/f1_analytics/database/duckdb_io.py:29
+location: src/f1_analytics/database/duckdb_io.py:68 (the entry's original `:29` now points at comment text)
 reason: The table name is interpolated unescaped into the statement text rather than being quoted as an identifier. Not reachable today (every call site passes a hardcoded literal); identical to the salvaged reference.
 status: open
 
@@ -86,6 +109,7 @@ origin: migrated from legacy ledger ("Deferred from: code review of story-1.5 (2
 location: src/f1_analytics/data_sources/kaggle_csv.py:82-93
 reason: `drop_duplicates(subset=["constructor"])` keeps the first row, so one free-text `constructor` name ever bound to two different `constructor_id`s would silently lose the second mapping. Verified zero such collisions in the real dataset today; identical to the salvaged reference, and hard validation of reconciliation edge cases is explicitly Story 1.8's territory.
 status: open
+last_verified: 2026-08-21 — reproduces at `kaggle_csv.py:82-93` (location still exact). Zero such collisions in the current dataset.
 
 ### DW-13: No column-presence validation for malformed CSVs and no merge-fanout guard on `races.csv`
 
@@ -127,7 +151,7 @@ location: scripts/build_combined_dataset.py
 source_spec: `_bmad-output/implementation-artifacts/spec-1-7-current-season-combined-tables-and-the-coverage-arbiter.md`
 reason: `write_dataframe` performs `CREATE OR REPLACE TABLE` unconditionally from the current run's in-memory result, including the empty-shaped degrade path, with no merge against what is already durable — so a run whose live fetch degrades or fails can regress previously-landed Jolpica rows. Story 1.6's review log already flagged this regression class and explicitly deferred it "for a Story 1.7/1.8 follow-up"; 1.7 inherited the pattern via the shared AD-4 `write_dataframe` writer its Boundaries required it to use, rather than resolving it.
 status: done 2026-08-08
-resolution: already resolved: write_dataframe's refuse_regression guard (src/f1_analytics/database/duckdb_io.py:52-58) is wired into all four live-fetched tables at scripts/build_combined_dataset.py:366-369 (which also re-reads the preserved table so downstream builds use last-known-good data) and scripts/pull_fastf1_data.py:199-216, proven by tests/test_duckdb_io.py:52-81, tests/test_build_combined_dataset.py:357 and tests/test_pull_fastf1_data.py:193.
+resolution: already resolved: write_dataframe's refuse_regression guard (src/f1_analytics/database/duckdb_io.py:52-58) is wired into all four live-fetched tables at scripts/build_combined_dataset.py:423 (cited as :366-369 when written; that range is now the `row_count_diverges` print loop) (which also re-reads the preserved table so downstream builds use last-known-good data) and scripts/pull_fastf1_data.py:199-216, proven by tests/test_duckdb_io.py:52-81, tests/test_build_combined_dataset.py:357 and tests/test_pull_fastf1_data.py:193.
 
 Update (2026-08-08 correct-course): `write_dataframe()` gained an opt-in `refuse_regression` guard (raises `WriteRegressionError`, leaving the existing table untouched) with no change to its default unguarded behavior, so AD-4's adopted "idempotent CREATE OR REPLACE sync" contract and its existing test stay intact. It was wired into all 4 live-fetched tables: `raw_jolpica_results` (`build_combined_dataset.py`, which also re-reads the preserved table back into memory so `combined_results`/standings are computed from last-known-good data rather than degrading to it) and `raw_fastf1_laps`/`raw_fastf1_stints`/`raw_fastf1_weather` (`pull_fastf1_data.py`). Proven by `tests/test_duckdb_io.py`, `tests/test_build_combined_dataset.py::test_main_reuses_previous_jolpica_data_when_a_later_fetch_regresses`, and `tests/test_pull_fastf1_data.py::test_a_later_run_landing_fewer_races_does_not_shrink_the_table`. Kaggle-sourced tables (Story 1.5) were intentionally excluded — `docs/kaggle-raw-data-is-static.md` confirms they read static local CSVs, not a live fetch, so this regression class cannot occur there.
 
@@ -170,18 +194,27 @@ status: open
 origin: migrated from legacy ledger ("Deferred from: bmad-build multi-goal split of story-1.8 (2026-08-08)"), 2026-08-08
 location: src/f1_analytics/validation/, src/f1_analytics/data_sources/standings.py
 source_spec: `_bmad-output/implementation-artifacts/spec-1-8-advisory-build-validation-logged.md`
-reason: Compare each `*_standings_by_round` row's `race_points` against summed `results.points` for that driver/season/round and log a finding per disagreement. Split from Story 1.8's spec for the same token-budget reason as the `regression_refused` entry, and also a 2026-08-08 correct-course addition on top of that story's original scope. This is the tracked follow-up for the live-verified defect (40 pre-2026 `race_points` mismatches, 0 in 2026 data) recorded separately in this ledger; that entry's tracking note should be updated once this check ships.
+reason: Compare each `*_standings_by_round` row's `race_points` against summed `results.points` for that driver/season/round and log a finding per disagreement. Split from Story 1.8's spec for the same token-budget reason as the `regression_refused` entry, and also a 2026-08-08 correct-course addition on top of that story's original scope.
 status: open
+
+Premise correction (2026-08-21): this entry described itself as "the tracked follow-up for the live-verified defect (40 pre-2026 `race_points` mismatches, 0 in 2026 data)" recorded as DW-23. **That defect does not reproduce** — re-measurement found 0 mismatches across 25,850 joined rows in both standings tables, and DW-23 is now closed as not reproducible. So this check has no known failing case to surface, and building it cannot be justified as fixing a live defect.
+
+It may still be worth building as a *regression guard*: the summing behaviour DW-23's decision deliberately kept ("keep summing; let the new check surface each case") is currently correct but unpinned by any test or check, so nothing would catch a future change that broke it. That is a genuinely weaker rationale than the one this entry was filed under, and it is a scope call rather than a defect fix — decide before building. Epic 1's retro action item 2 (build DW-21/DW-22 or amend epics.md to move those ACs out of Story 1.8) is satisfied either way, since amending is an accepted outcome.
 
 ### DW-23: `compute_cumulative_standings()`'s `race_points` disagrees with raw `results.points` for 40 1950s rows
 
 origin: migrated from legacy ledger ("Deferred from: live traceability check of story-1.7 (2026-08-08)"), 2026-08-08
 location: src/f1_analytics/data_sources/standings.py
 reason: Verified live against the real database: `driver_standings_by_round` (Story 1.5, Kaggle-only) and `combined_driver_standings_by_round` (Story 1.7) show the identical 40 mismatches, all from 1950s shared-drive entries where one driver has two `results` rows for the same season/round (one carrying the finishing points, one carrying 0) — e.g. Fangio, 1950 round 7, has `results` rows with `points` 0.0 and 1.0 for the same key while the standings table's `race_points` is 1.0. Byte-identical behavior in both tables confirms this is pre-existing in the shared `compute_cumulative_standings()`/`add_standing_rank()` function (untouched by Story 1.7, per its Boundaries) rather than something 1.7 introduced; zero mismatches exist in 2026 data. Likely the same class of issue as the deferred dense-vs-standard ranking convention, and a future story should decide how shared-drive entries net into per-round points before `combined_driver_standings_by_round` is trusted for a question keyed on 1950s-era results.
-status: open
+status: done 2026-08-21
+resolution: closed as not reproducible — the headline claim is false against the current database. Re-measured 2026-08-21 by joining each standings row to `SUM(points)` over its `(season, round, driver_id)` group in `results`: **0 mismatches across 25,850 joined rows in `driver_standings_by_round`, and 0 across 25,850 in `combined_driver_standings_by_round`** (tolerance 1e-9). The 83 standings rows sitting over duplicated `(season, round, driver_id)` keys are real and were re-confirmed, but `race_points` agrees with the summed value in all 83.
+
+The entry's own Fangio example is accurate in its raw facts and wrong in its conclusion: `results` does hold two 1950 round 7 rows for `fangio` carrying 0.0 and 1.0, but `driver_standings_by_round.race_points` for that key is **1.0 — which equals their sum**, not a disagreement. `compute_cumulative_standings` sums shared-drive entries correctly.
+
+Either the original 2026-08-08 measurement used a different comparison (plausibly against `MAX(points)` rather than `SUM`, which does disagree for 3 of the 83 rows) or a later change corrected it; the ledger carries no evidence to distinguish those, and no commit between the origin date and today touches the aggregation. Closed rather than rewritten because there is no longer a defect here to defer. Note that an earlier automated triage (2026-08-21) confirmed the 83 duplicate-key rows and read that as corroborating the entry — it verified the duplicates exist but not whether the sums actually disagree.
 decision: 2026-08-08 Keep summing; let the new check surface each case
 
-Follow-up tracking (2026-08-08): a `race_points_mismatch` validation check was added to Story 1.8's scope via correct-course, then split back out to its own follow-up entry under "bmad-build multi-goal split of story-1.8" (Story 1.8 shipped only the null-rate/referential-integrity/source-registry base). It will surface every such disagreement in `validation_results` once that follow-up ships. Still not blocking Epic 2/3, since there are zero mismatches in 2026 data.
+Follow-up tracking (2026-08-08, superseded 2026-08-21): a `race_points_mismatch` validation check was added to Story 1.8's scope via correct-course, then split back out to its own follow-up entry (DW-22) under "bmad-build multi-goal split of story-1.8" (Story 1.8 shipped only the null-rate/referential-integrity/source-registry base). That follow-up has not shipped. Since the disagreement this entry describes does not reproduce, DW-22 can no longer justify itself as the tracked fix for a live defect — see the premise note added to DW-22.
 
 ### DW-24: A NULL `*_id` checked by `REFERENTIAL_CHECKS` but not `NULL_RATE_CHECKS` is invisible to both check types
 
@@ -190,6 +223,7 @@ location: src/f1_analytics/validation/checks.py
 source_spec: `_bmad-output/implementation-artifacts/spec-1-8-advisory-build-validation-logged.md`
 reason: `check_referential_integrity`'s `child_values = child_frame[child_column].dropna()` deliberately treats a NULL foreign key as a null-rate concern rather than an orphan (by design, per its own test `test_check_referential_integrity_ignores_nulls_in_the_child_column`), so any `*_id` column registered in `REFERENTIAL_CHECKS` but absent from `NULL_RATE_CHECKS` has that null-rate concern never actually checked either. Confirmed for `results.constructor_id` and `races.circuit_id` (original scope) plus `combined_results.constructor_id`, `raw_fastf1_laps.constructor_id`, and `raw_fastf1_stints.constructor_id` (added when the review-loop amendment extended the registries to combined/raw tables, 2026-08-08 round 2). Not fixed inline because closing the gap is a scope decision (whether to add these five columns to `NULL_RATE_CHECKS`) rather than a defect in what was built.
 status: open
+last_verified: 2026-08-21 — reproduces. `constructor_id` and `circuit_id` appear in `REFERENTIAL_CHECKS` (`checks.py:37-44`) but `NULL_RATE_CHECKS` (`:24-28`) covers only `constructors`/`final_driver_standings`.
 decision: 2026-08-08 Add the five columns to NULL_RATE_CHECKS — Register results.constructor_id, races.circuit_id, combined_results.constructor_id, raw_fastf1_laps.constructor_id and raw_fastf1_stints.constructor_id in NULL_RATE_CHECKS so every referential-checked id also gets null-rate coverage, closing the both-blind gap. Findings stay advisory per AD-8 — new failures print and log but never fail a build — and the existing referential behavior is unchanged.
 
 `NULL_RATE_CHECKS` checks only season/round/driver_id/position/points for `results`/`combined_results` and season/round/driver_id for `raw_fastf1_laps`/`raw_fastf1_stints` — `constructor_id` was never in scope for null-rate checking on any of them. The curated-`results` shape matches epics.md's Story 1.8 AC and the salvaged `recovery/reference/.../checks.py` registry verbatim, and the combined/raw entries were modeled on that same shape.
@@ -201,6 +235,7 @@ location: src/f1_analytics/validation/checks.py, scripts/build_combined_dataset.
 source_spec: `_bmad-output/implementation-artifacts/spec-1-8-advisory-build-validation-logged.md`
 reason: Story 1.7's live-fetched, `refuse_regression`-guarded raw table gets no null-rate or referential-integrity coverage at all, even though `epic-1-context.md`'s Storage paragraph groups it with `raw_fastf1_laps`/`stints`/`weather` as "every live-fetched raw table" under the write-regression guard; only the FastF1 trio got registry entries in the review-loop amendment, because round 1 flagged just `combined_results` and the FastF1 tables as loaded-but-unchecked and `raw_jolpica_results` was not loaded for validation by either script. Partially mitigated: `combined_results` (which is checked) absorbs `raw_jolpica_results`' rows verbatim for every `jolpica_only` round per Story 1.7's precedence rule, giving substantial but incomplete transitive coverage — a `raw_jolpica_results` row excluded or transformed before landing in `combined_results` (e.g. a `row_count_diverges` round, where Kaggle rows win and the Jolpica row never surfaces at all) would still be invisible to every check.
 status: open
+last_verified: 2026-08-21 — reproduces. `raw_jolpica_results` appears in neither script's `VALIDATION_TABLES` and has no `checks.py` registry entry.
 
 ### DW-26: `log_source_load()` writes a `source_registry` row per call instead of once per source per build
 
@@ -232,8 +267,8 @@ status: open
 ### DW-29: The standings enrichment merge silently renames the races calendar `time` to `time_race`, and nothing consumes it
 
 origin: code review of spec-1-7-current-season-combined-tables-and-the-coverage-arbiter.md (round 2), 2026-08-20
-source_spec: _bmad-output/implementation-artifacts/spec-1-7-current-season-combined-tables-and-the-coverage-arbiter.md
-location: scripts/build_combined_dataset.py:285-290
+location: scripts/build_combined_dataset.py:341-346 (the entry's original `:285-290` now points at an unrelated AD-2 status-vocabulary error message)
+source_spec: `_bmad-output/implementation-artifacts/spec-1-7-current-season-combined-tables-and-the-coverage-arbiter.md`
 severity: low
 reason: `combined_results` already carries a `time` column (race classification time), so the enrichment merge against `races` with `suffixes=("", "_race")` renames the races calendar's own `time` to `time_race`. Nothing downstream reads `time_race` — `compute_cumulative_standings` groups on `date` only — yet `REQUIRED_RACES_COLUMNS` lists `time` as a required column, so the build fails fast on a `races` table missing a column it then discards. Deferred rather than patched: the behavior mirrors `kaggle_csv.build_curated_tables` exactly, so changing it here alone would make the combined path inconsistent with the curated path, and the column-set question is entangled with DW-18's unresolved decision about what format `combined_results.time` should carry at all. Resolve alongside DW-18 rather than in isolation.
 status: open

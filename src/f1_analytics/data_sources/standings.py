@@ -4,6 +4,12 @@ from __future__ import annotations
 
 import pandas as pd
 
+# Stands in for a missing cumulative total when testing rows for a tie. Points
+# and wins are counts, so no real total is negative and nothing genuine can
+# collide with this value — it only ever makes two missing totals compare
+# equal to each other.
+_TIED_NAN_SENTINEL = -1.0
+
 
 def add_standing_rank(
     df: pd.DataFrame,
@@ -31,22 +37,36 @@ def add_standing_rank(
     # both `build_f1_dataset.py` and `build_combined_dataset.py` inherited the
     # crash (the latter's empty-frame guard caught only the zero-row case).
     #
-    # The vectorized form below is shape-stable at every group count: a row
-    # starts a new rank when it differs from the previous row on either
-    # cumulative column, OR when it is the first row of its group. That
-    # "first row" test uses a group-wise `cumcount()` rather than
-    # `group_columns.shift()`, because on the frame's very first row every
-    # `.shift()` is NaN and `.ne()` answers False on both comparisons — that
-    # row would start no rank at all, leaving its group 0-based while every
-    # later group was 1-based (reproduced live as 1950 round 1).
-    is_first_in_group = ranked.groupby(group_columns, dropna=False).cumcount() == 0
+    # Standard competition ranking ("1224"): a row's rank is one plus the
+    # number of rows strictly ahead of it, so two drivers tied for 2nd consume
+    # positions 2 and 3 and the next driver is 4th.
+    #
+    # That rank is derived from each row's position within its already-sorted
+    # group, NOT from `rank()` over the two cumulative columns: ranking the
+    # columns independently and combining the results is not the same as
+    # ordering on the pair, and gave two drivers on different points totals
+    # (50 and 40) the same rank while leaving rank 1 unassigned. Deriving it
+    # from position also stays shape-stable at every group count, including
+    # the single-group case described above.
+    #
+    # `cumcount()` is that position, 0-based. Tied rows then take the smallest
+    # position in their run of equal totals, which both produces the "1224"
+    # skip and makes the count of skipped positions exactly the number of rows
+    # tied above. Equality is computed on a NaN-filled copy so that two rows
+    # equally placed on a missing total compare as tied — under raw `.ne()`,
+    # NaN != NaN scored them as distinct and handed them different ranks.
+    position_in_group = ranked.groupby(group_columns, dropna=False).cumcount()
     totals = ranked[["cumulative_points", "cumulative_wins"]]
-    breaks_tie = totals.ne(totals.shift()).any(axis=1)
+    filled_totals = totals.fillna(_TIED_NAN_SENTINEL)
+    is_first_in_group = position_in_group == 0
+    breaks_tie = filled_totals.ne(filled_totals.shift()).any(axis=1)
+    starts_new_rank = breaks_tie | is_first_in_group
     ranked["standing_rank"] = (
-        (breaks_tie | is_first_in_group)
+        position_in_group.where(starts_new_rank)
         .groupby([ranked[column] for column in group_columns], dropna=False)
-        .cumsum()
+        .ffill()
         .astype("int64")
+        + 1
     )
     return ranked.sort_values(group_columns + ["standing_rank"] + id_columns).reset_index(drop=True)
 
