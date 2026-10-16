@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Isolated-env-only FastF1 fetch worker (Story 1.6, AD-13).
 
-This module runs ONLY inside the pandas-<3.0 exploratory environment the
-FastF1 source-adoption decision record established -- never inside the
-project's own pandas-3 environment:
+This module runs ONLY inside an isolated pandas-<3.0 environment (FastF1
+pins pandas<3.0) -- never inside the project's own pandas-3 environment:
 
     uv run --isolated --python 3.13 --with fastf1==3.8.3 python \\
         src/f1_analytics/data_sources/fastf1_fetch.py \\

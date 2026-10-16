@@ -76,8 +76,8 @@ FetchFn = Callable[[str, str, Path], dict]
 def run_fetch_subprocess(label: str, event: str, season: int, cache_dir: Path, output_dir: Path) -> dict:
     """Invoke fastf1_fetch.py in the isolated pandas-<3.0 environment.
 
-    FastF1 pins `pandas>=2.1.1,<3.0.0`; the 1.2 decision record's fallback
-    is this isolated subprocess, never a project-wide pandas downgrade.
+    FastF1 pins `pandas>=2.1.1,<3.0.0`, so it runs in this isolated
+    subprocess, never via a project-wide pandas downgrade.
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(parents=True, exist_ok=True)

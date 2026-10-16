@@ -3,9 +3,8 @@
 
 Two-phase, mirroring `pull_fastf1_data.py`: subprocess-invoke the isolated
 pandas-<3.0 `jolpica_fetch.py` half to pull the season's Jolpica race
-results (the FastF1 3.8.3 Ergast-compatible client, per the source-adoption
-decision record), then hand its dumped CSV to the main-env
-`jolpica_loader.py` half to shape and id-validate it. Creates the
+results (the FastF1 3.8.3 Ergast-compatible client), then hand its dumped
+CSV to the main-env `jolpica_loader.py` half to shape and id-validate it. Creates the
 `kaggle_jolpica_coverage` view (the single AD-2 arbiter, sql/), builds
 `combined_results` by applying its status tags -- Kaggle rows win every
 season/round except `jolpica_only` -- and builds combined driver/
