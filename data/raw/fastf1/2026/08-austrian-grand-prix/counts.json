@@ -1,0 +1,32 @@
+{
+  "drivers": [
+    "ALB",
+    "ALO",
+    "ANT",
+    "BEA",
+    "BOR",
+    "BOT",
+    "COL",
+    "GAS",
+    "HAD",
+    "HAM",
+    "HUL",
+    "LAW",
+    "LEC",
+    "LIN",
+    "NOR",
+    "OCO",
+    "PER",
+    "PIA",
+    "RUS",
+    "SAI",
+    "STR",
+    "VER"
+  ],
+  "event": "Austrian Grand Prix",
+  "lap_count": 1338,
+  "race_label": "08-austrian-grand-prix",
+  "round": 8,
+  "season": 2026,
+  "weather_count": 149
+}
