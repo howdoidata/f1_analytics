@@ -81,7 +81,7 @@ REQUIRED_RACES_COLUMNS = ("season", "round", "date", "time", "circuit_id", "url"
 # extension (Story 1.7) -- exactly what checks.NULL_RATE_CHECKS/
 # REFERENTIAL_CHECKS reference for this script. Deliberately excludes
 # combined_driver_standings_by_round/combined_constructor_standings_by_round
-# -- no registry entry checks them (see deferred-work.md).
+# -- no registry entry checks them yet.
 VALIDATION_TABLES: tuple[str, ...] = (
     "results",
     "drivers",

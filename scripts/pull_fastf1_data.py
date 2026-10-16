@@ -61,7 +61,7 @@ VALIDATION_TABLES: tuple[str, ...] = (
     "raw_fastf1_weather",
 )
 
-# Story 1.2's already-verified TARGETS (spike_fastf1_adoption.py), reused verbatim.
+# Sessions already verified to load cleanly through FastF1.
 TARGETS: tuple[tuple[str, str], ...] = (
     ("Melbourne", "Australian Grand Prix"),
     ("Miami", "Miami Grand Prix"),

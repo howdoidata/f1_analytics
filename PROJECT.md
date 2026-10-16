@@ -70,16 +70,3 @@ Version 1 should avoid:
 * Heavy infrastructure
 
 The initial build should stay lightweight, locally runnable, and focused on proving the end-to-end workflow from data ingestion to reusable tables, basic analysis, and one clear insight story.
-
-## Additional Project Context
-
-Detailed project standards, output expectations, audience notes, evolution model, and future considerations are summarized in:
-
-* `_bmad-output/project-context.md`
-
-Current active BMAD planning workflow is maintained in:
-
-* `_bmad-output/planning-artifacts/prds/prd-f1-questions-analysis-2026-07-17/prd.md` (current PRD)
-* `_bmad-output/planning-artifacts/architecture/architecture-f1_analytics-2026-07-17/ARCHITECTURE-SPINE.md`
-* `_bmad-output/planning-artifacts/epics.md`
-* `_bmad-output/planning-artifacts/decisions/` (all records — dataset precedence, cross-repo write discipline, doc-retirement follow-ups, and any added since)

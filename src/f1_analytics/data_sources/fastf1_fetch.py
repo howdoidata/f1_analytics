@@ -25,8 +25,7 @@ session's own total lap count and driver roster) for the offline-testable
 main-env half (`fastf1_loader.py`) to verify completeness against.
 
 Reports its outcome as one JSON document on stdout (fastf1's own logging
-goes to stderr, per its `logging.StreamHandler()` default), mirroring
-`spike_fastf1_adoption.py`'s evidence-document convention so the
+goes to stderr, per its `logging.StreamHandler()` default), so the
 orchestrating `scripts/pull_fastf1_data.py` can parse a subprocess's result
 without depending on any file existing.
 """
