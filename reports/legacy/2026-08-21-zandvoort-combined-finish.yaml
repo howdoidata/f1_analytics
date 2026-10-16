@@ -1,0 +1,50 @@
+# Filled from Antonio's input, 2026-08-21 — second intake batch.
+# Adds one forward-looking question; does NOT supersede the 2026-08-06 batch.
+# Nothing here is ever used as a computed answer (AD-12); premises are checked
+# before computation (FR-19/AD-16).
+
+intake:
+  batch_name: "zandvoort-combined-finish"
+  submitted_by: "Antonio"
+  submitted_at: "2026-08-21"
+  source_artifact: "Antonio, in-session 2026-08-21 — new question supplied directly, not from the lost PDF batch"
+  replaces: null
+
+questions:
+  - prompt: "What will be the combined finishing position total for Williams Racing (1st and 2nd place = 3, 4th and 5th = 9) in the upcoming Zandvoort race?"
+    intent: answer
+    season: 2026
+    grand_prix: "Dutch Grand Prix (Zandvoort)"
+    session: race
+    team_scope: "Williams Racing"
+    driver_scope: null
+    answer_type: combined_finishing_position
+    expected_answer: null
+    premises:
+      - statement: "Williams fields two cars that are both CLASSIFIED in the final result"
+        if_incorrect: "If a car is unclassified (no classified position at all), the total is undefined for that entry and must be reported as such"
+    components: []
+    notes: >
+      Asked BEFORE the race — no expected answer exists yet, so intent is
+      `answer`, not `verify`. Same answer_type as Q02 (Miami): FR-6 requires the
+      output to record each contributing position plus the combined value, so
+      the per-driver split must be reported alongside the sum.
+
+      SUMMATION CONVENTION (Antonio, 2026-08-21): plain sum of the two
+      CLASSIFIED finishing positions; lower total is better. Worked examples
+      given: P1 + P2 = 3, P4 + P5 = 9. (The prompt's "= 9th" is shorthand for
+      the total 9, not an ordinal; recorded as integer 9.)
+
+      DNF/DNS HANDLING — a retired or non-starting car is still CLASSIFIED and
+      its classified position counts normally. No exclusion, no penalty, no
+      premise failure. Confirmed by Antonio 2026-08-21. Precedent in the same
+      season: R2 China Albon DNS classified P22 (total 31); R5 Canada Albon
+      retired classified P21 (total 30). Only a car with NO classified position
+      at all makes the total undefined.
+
+      SOURCE STATUS AT INTAKE: the Dutch Grand Prix IS in the `races` table as
+      2026 round 12, dated 2026-08-23 (two days after intake). Results are
+      complete through round 11 (Hungary). This question therefore resolves as
+      soon as round 12 results land via the Jolpica/Kaggle path that already
+      supplies the other 2026 rounds — no FastF1 lap data is required, since
+      finishing position is a results-based fact.

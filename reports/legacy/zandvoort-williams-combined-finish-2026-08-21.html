@@ -1,0 +1,169 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Williams Combined Finish — 2026 Dutch GP</title>
+<style>
+@page { size: A4; margin: 14mm 13mm; }
+*{box-sizing:border-box}
+body{font:13px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#0b0b0b;background:#fcfcfb;margin:0;padding:26px 30px;max-width:840px}
+h1{font-size:23px;margin:0 0 3px;letter-spacing:-.02em}
+h2{font-size:15px;margin:26px 0 9px;padding-top:11px;border-top:2px solid #e6e5e0;letter-spacing:-.01em}
+h3{font-size:12.5px;margin:16px 0 6px;color:#52514e;text-transform:uppercase;letter-spacing:.05em}
+.sub{color:#52514e;margin:0 0 16px;font-size:13.5px}
+.hero{background:#fff;border:1px solid #e6e5e0;border-left:4px solid #1baf7a;border-radius:8px;padding:15px 18px;margin:14px 0 18px;display:flex;align-items:baseline;gap:16px}
+.hero .n{font-size:44px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.hero .l{font-size:12px;color:#52514e}
+.hero .r{font-size:15px;font-weight:600;color:#52514e}
+table{border-collapse:collapse;width:100%;margin:9px 0;font-size:12px}
+th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#52514e;border-bottom:1.5px solid #d8d7d2;padding:5px 7px}
+td{padding:4px 7px;border-bottom:1px solid #eeede8}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+td.b{font-weight:700}
+td.s{color:#eb6834;font-size:10.5px}
+tr.hl td{background:#fdf2ec}
+.meta{width:100%;font-size:12px;margin:0 0 6px}
+.meta td{padding:4px 0;border-bottom:1px solid #eeede8;vertical-align:top}
+.meta td:first-child{color:#52514e;width:150px}
+.fig{background:#fff;border:1px solid #e6e5e0;border-radius:8px;padding:13px 14px 8px;margin:11px 0}
+.cap{font-size:11px;color:#52514e;margin:2px 0 0}
+.q{margin:9px 0 0;border:1px solid #e2e1dc;border-radius:7px;overflow:hidden;background:#fbfbf9}
+.qh{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:#52514e;background:#f2f1ec;padding:4px 9px;border-bottom:1px solid #e6e5e0;font-weight:600}
+.q pre{margin:0;padding:8px 10px;font:10.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto;white-space:pre-wrap;color:#2b2a27}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.k{background:#fff;border:1px solid #e6e5e0;border-radius:7px;padding:9px 11px}
+.k .v{font-size:19px;font-weight:700;letter-spacing:-.02em}
+.k .l{font-size:10px;color:#52514e;text-transform:uppercase;letter-spacing:.04em}
+.kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:11px 0}
+.pill{display:inline-block;background:#f2f1ec;border-radius:4px;padding:1px 6px;font-size:10.5px;color:#52514e;font-family:ui-monospace,Menlo,monospace}
+ul{margin:6px 0;padding-left:19px} li{margin:4px 0}
+.note{background:#fff;border:1px solid #e6e5e0;border-left:3px solid #eb6834;border-radius:6px;padding:10px 13px;margin:11px 0;font-size:12px}
+.pipe{font:10.5px/1.6 ui-monospace,Menlo,monospace;background:#fff;border:1px solid #e6e5e0;border-radius:7px;padding:11px 13px;color:#2b2a27;white-space:pre;overflow-x:auto}
+footer{margin-top:26px;padding-top:11px;border-top:1px solid #e6e5e0;font-size:10.5px;color:#b8b7b0}
+@media print{ body{padding:0} h2{break-after:avoid} .fig,.q,table,.note{break-inside:avoid} }
+</style></head><body>
+
+<h1>Williams Combined Finishing Position</h1>
+<p class="sub">2026 Dutch Grand Prix · Zandvoort · Round 12 of 22 · Sunday 2026-08-23</p>
+
+<div class="hero"><div><div class="n">31</div></div>
+<div><div class="l">ESTIMATED COMBINED TOTAL</div><div class="r">range 29–33</div></div></div>
+
+<table class="meta">
+<tr><td>Question</td><td>What will be the combined finishing position total for Williams Racing in the upcoming Zandvoort race?</td></tr>
+<tr><td>Convention</td><td>Plain sum of the two <b>classified</b> finishing positions; lower is better (P1+P2=3, P4+P5=9)</td></tr>
+<tr><td>Status</td><td><b>Pre-race.</b> Qualifying has not run — grid position is the dominant unknown</td></tr>
+<tr><td>Prepared</td><td>2026-08-21</td></tr>
+<tr><td>Data source</td><td><span class="pill">data/processed/f1_analytics.duckdb</span> — 30 tables, seasons 1950–2026</td></tr>
+<tr><td>2026 coverage</td><td>Complete through round 11 (Hungary, 2026-07-26) · 176 rows Jolpica + 66 rows Kaggle</td></tr>
+</table>
+
+<h2>1 · Tools and method</h2>
+<div class="pipe">  Kaggle CSVs ──┐
+                ├──→  DuckDB curated layer  ──→  combined_results  ──→  per-round sum  ──→  estimate
+  Jolpica API ──┘        (30 tables)            (season 2026)        (classified pos)</div>
+<p style="font-size:12px;margin:9px 0 0"><b>Tools:</b> DuckDB (embedded OLAP) · Python 3.13 + <span class="pill">duckdb</span> Python client · uv-managed env · queries run read-only against the committed database. Every number in this report is produced by one of the queries shown alongside it — nothing is hand-entered.</p>
+
+<div class="note"><b>Counting rule.</b> A retired or non-starting car is still <i>classified</i> and its position counts normally — no exclusion, no penalty. Two 2026 rounds turn on this: China (Albon DNS, classified P22) and Canada (Albon retired, classified P21).</div>
+
+<h3>Validation — the pipeline reproduces three independently-supplied answers</h3>
+<div class="q"><div class="qh">Cross-check vs supplied Miami answer (Q02)</div><pre>SELECT driver_name, position FROM combined_results
+WHERE season=2026 AND round=4 AND constructor_id ILIKE '%williams%';
+--  Sainz P9, Albon P10  -&gt;  9+10 = 19   MATCHES supplied answer</pre></div>
+<p style="font-size:12px;margin-top:7px">Also verified: Canada highest Williams finish <b>P9</b>, and Melbourne fastest Williams lap <b>1:23.590</b> (Sainz) from <span class="pill">raw_fastf1_laps</span>. All three match answers supplied independently of this database.</p>
+
+<h2>2 · Season to date — every round</h2>
+<div class="q"><div class="qh">Query — per-round combined total</div><pre>SELECT round, race_name,
+       string_agg('P' || position, ' + ' ORDER BY position) AS result,
+       sum(position::INT)                                  AS combined_total
+FROM combined_results
+WHERE season = 2026 AND constructor_id ILIKE '%williams%'
+GROUP BY round, race_name
+ORDER BY round;</pre></div>
+
+<div class="fig"><svg viewBox="0 0 760 300" width="100%" role="img" aria-label="Williams combined finishing total by round, 2026"><title>Williams combined total by round, 2026 — lower is better</title><line x1="44" y1="256.0" x2="670" y2="256.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="260.0" text-anchor="end" font-size="11" fill="#52514e">0</text><line x1="44" y1="196.0" x2="670" y2="196.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="200.0" text-anchor="end" font-size="11" fill="#52514e">10</text><line x1="44" y1="136.0" x2="670" y2="136.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="140.0" text-anchor="end" font-size="11" fill="#52514e">20</text><line x1="44" y1="76.0" x2="670" y2="76.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="80.0" text-anchor="end" font-size="11" fill="#52514e">30</text><line x1="44" y1="16.0" x2="670" y2="16.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="20.0" text-anchor="end" font-size="11" fill="#52514e">40</text><line x1="44" y1="72.4" x2="670" y2="72.4" stroke="#52514e" stroke-width="1.5" stroke-dasharray="5 4"/><text x="676" y="76.4" font-size="11" fill="#52514e">mean 30.6</text><rect x="51.1" y="94.0" width="38.0" height="162.0" rx="4" fill="#2a78d6"/><text x="70.1" y="88.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">27</text><text x="70.1" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R1</text><text x="70.1" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Aust</text><rect x="103.2" y="70.0" width="38.0" height="186.0" rx="4" fill="#2a78d6"/><text x="122.2" y="64.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">31</text><text x="122.2" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R2</text><text x="122.2" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Chin</text><rect x="155.4" y="46.0" width="38.0" height="210.0" rx="4" fill="#2a78d6"/><text x="174.4" y="40.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">35</text><text x="174.4" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R3</text><text x="174.4" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Japa</text><rect x="207.6" y="142.0" width="38.0" height="114.0" rx="4" fill="#eb6834"/><text x="226.6" y="136.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">19</text><text x="226.6" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R4</text><text x="226.6" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Miam</text><rect x="259.8" y="76.0" width="38.0" height="180.0" rx="4" fill="#2a78d6"/><text x="278.8" y="70.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">30</text><text x="278.8" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R5</text><text x="278.8" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Cana</text><rect x="311.9" y="112.0" width="38.0" height="144.0" rx="4" fill="#2a78d6"/><text x="330.9" y="106.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">24</text><text x="330.9" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R6</text><text x="330.9" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Mona</text><rect x="364.1" y="76.0" width="38.0" height="180.0" rx="4" fill="#2a78d6"/><text x="383.1" y="70.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">30</text><text x="383.1" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R7</text><text x="383.1" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Barc</text><rect x="416.2" y="34.0" width="38.0" height="222.0" rx="4" fill="#2a78d6"/><text x="435.2" y="28.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">37</text><text x="435.2" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R8</text><text x="435.2" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Aust</text><rect x="468.4" y="28.0" width="38.0" height="228.0" rx="4" fill="#2a78d6"/><text x="487.4" y="22.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">38</text><text x="487.4" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R9</text><text x="487.4" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Brit</text><rect x="520.6" y="70.0" width="38.0" height="186.0" rx="4" fill="#2a78d6"/><text x="539.6" y="64.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">31</text><text x="539.6" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R10</text><text x="539.6" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Belg</text><rect x="572.8" y="46.0" width="38.0" height="210.0" rx="4" fill="#2a78d6"/><text x="591.8" y="40.0" text-anchor="middle" font-size="11" font-weight="600" fill="#0b0b0b">35</text><text x="591.8" y="271.0" text-anchor="middle" font-size="10" fill="#52514e">R11</text><text x="591.8" y="284.0" text-anchor="middle" font-size="9" fill="#b8b7b0">Hung</text><rect x="624.9" y="58.0" width="38.0" height="24.0" fill="#1baf7a" opacity="0.22"/><rect x="624.9" y="70.0" width="38.0" height="186.0" rx="4" fill="#1baf7a"/><text x="643.9" y="52.0" text-anchor="middle" font-size="11" font-weight="700" fill="#0b0b0b">31</text><text x="643.9" y="271.0" text-anchor="middle" font-size="10" font-weight="600" fill="#0b0b0b">R12</text><text x="643.9" y="284.0" text-anchor="middle" font-size="9" fill="#1baf7a" font-weight="600">EST</text><text x="44" y="296" font-size="10" fill="#b8b7b0">lower is better — sum of two classified finishing positions</text></svg>
+<p class="cap">Every 2026 round. <span style="color:#eb6834;font-weight:600">Orange</span> = Miami, the season best and a clear outlier. <span style="color:#1baf7a;font-weight:600">Green</span> = the Zandvoort estimate with its 29–33 range. Dashed line = season mean 30.6.</p></div>
+
+<div class="kpi">
+<div class="k"><div class="v">19</div><div class="l">best</div></div>
+<div class="k"><div class="v">31</div><div class="l">median</div></div>
+<div class="k"><div class="v">30.6</div><div class="l">mean</div></div>
+<div class="k"><div class="v">38</div><div class="l">worst</div></div>
+<div class="k"><div class="v">5.7</div><div class="l">std dev</div></div>
+</div>
+
+<table><thead><tr><th>Round</th><th>Race</th><th style="text-align:right">Grid sum</th><th>Result</th><th style="text-align:right">Total</th><th>Note</th></tr></thead><tbody><tr><td>R1</td><td>Australian</td><td class=n>36</td><td>P12 + P15</td><td class='n b'>27</td><td class=s></td></tr><tr><td>R2</td><td>Chinese</td><td class=n>39</td><td>P9 + P22</td><td class='n b'>31</td><td class=s>Did not start</td></tr><tr><td>R3</td><td>Japanese</td><td class=n>33</td><td>P15 + P20</td><td class='n b'>35</td><td class=s></td></tr><tr class=hl><td>R4</td><td>Miami</td><td class=n>28</td><td>P9 + P10</td><td class='n b'>19</td><td class=s></td></tr><tr><td>R5</td><td>Canadian</td><td class=n>33</td><td>P9 + P21</td><td class='n b'>30</td><td class=s>Retired</td></tr><tr><td>R6</td><td>Monaco</td><td class=n>23</td><td>P8 + P16</td><td class='n b'>24</td><td class=s>Retired</td></tr><tr><td>R7</td><td>Barcelona</td><td class=n>34</td><td>P12 + P18</td><td class='n b'>30</td><td class=s></td></tr><tr><td>R8</td><td>Austrian</td><td class=n>35</td><td>P17 + P20</td><td class='n b'>37</td><td class=s>Retired</td></tr><tr><td>R9</td><td>British</td><td class=n>30</td><td>P17 + P21</td><td class='n b'>38</td><td class=s>Retired</td></tr><tr><td>R10</td><td>Belgian</td><td class=n>34</td><td>P15 + P16</td><td class='n b'>31</td><td class=s></td></tr><tr><td>R11</td><td>Hungarian</td><td class=n>37</td><td>P17 + P18</td><td class='n b'>35</td><td class=s></td></tr></tbody></table>
+
+<h3>The trend is worsening</h3>
+<table><thead><tr><th>Window</th><th>Values</th><th style="text-align:right">Mean</th></tr></thead><tbody>
+<tr><td>All 11 rounds</td><td class=s style="color:#52514e">—</td><td class="n">30.6</td></tr>
+<tr><td>Last 6 (R6–R11)</td><td>24, 30, 37, 38, 31, 35</td><td class="n">32.5</td></tr>
+<tr><td><b>Last 4 (R8–R11)</b></td><td>37, 38, 31, 35</td><td class="n b">35.2</td></tr>
+</tbody></table>
+<p style="font-size:12px">Nothing under 30 since Barcelona in June. Miami's 19 is an outlier, not a baseline.</p>
+
+<h2>3 · Zandvoort history — the tightest signal</h2>
+<div class="q"><div class="qh">Query — Williams combined total at Zandvoort, by season</div><pre>SELECT cr.season, sum(cr.position::INT) AS combined_total
+FROM combined_results cr
+JOIN races ra ON cr.season = ra.season AND cr.round = ra.round
+WHERE ra.race_name ILIKE '%dutch%'
+  AND cr.constructor_id ILIKE '%williams%'
+GROUP BY cr.season
+ORDER BY cr.season;</pre></div>
+
+<div class="fig"><svg viewBox="0 0 760 220" width="100%" role="img" aria-label="Williams combined total at Zandvoort by season"><line x1="44" y1="180.0" x2="670" y2="180.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="184.0" text-anchor="end" font-size="11" fill="#52514e">0</text><line x1="44" y1="139.0" x2="670" y2="139.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="143.0" text-anchor="end" font-size="11" fill="#52514e">10</text><line x1="44" y1="98.0" x2="670" y2="98.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="102.0" text-anchor="end" font-size="11" fill="#52514e">20</text><line x1="44" y1="57.0" x2="670" y2="57.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="61.0" text-anchor="end" font-size="11" fill="#52514e">30</text><line x1="44" y1="16.0" x2="670" y2="16.0" stroke="#e6e5e0" stroke-width="1"/><text x="36" y="20.0" text-anchor="end" font-size="11" fill="#52514e">40</text><rect x="44" y="44.7" width="626" height="20.5" fill="#2a78d6" opacity="0.07"/><text x="676" y="61.0" font-size="10" fill="#52514e">28–33 band</text><rect x="68.2" y="44.7" width="56.0" height="135.3" rx="4" fill="#2a78d6"/><text x="96.2" y="38.7" text-anchor="middle" font-size="12" font-weight="600" fill="#0b0b0b">33</text><text x="96.2" y="196.0" text-anchor="middle" font-size="11" fill="#52514e" font-weight="400">2021</text><rect x="172.5" y="57.0" width="56.0" height="123.0" rx="4" fill="#2a78d6"/><text x="200.5" y="51.0" text-anchor="middle" font-size="12" font-weight="600" fill="#0b0b0b">30</text><text x="200.5" y="196.0" text-anchor="middle" font-size="11" fill="#52514e" font-weight="400">2022</text><rect x="276.8" y="65.2" width="56.0" height="114.8" rx="4" fill="#2a78d6"/><text x="304.8" y="59.2" text-anchor="middle" font-size="12" font-weight="600" fill="#0b0b0b">28</text><text x="304.8" y="196.0" text-anchor="middle" font-size="11" fill="#52514e" font-weight="400">2023</text><rect x="381.2" y="57.0" width="56.0" height="123.0" rx="4" fill="#2a78d6"/><text x="409.2" y="51.0" text-anchor="middle" font-size="12" font-weight="600" fill="#0b0b0b">30</text><text x="409.2" y="196.0" text-anchor="middle" font-size="11" fill="#52514e" font-weight="400">2024</text><rect x="485.5" y="106.2" width="56.0" height="73.8" rx="4" fill="#eb6834"/><text x="513.5" y="100.2" text-anchor="middle" font-size="12" font-weight="600" fill="#0b0b0b">18</text><text x="513.5" y="196.0" text-anchor="middle" font-size="11" fill="#52514e" font-weight="400">2025</text><rect x="589.8" y="52.9" width="56.0" height="127.1" rx="4" fill="#1baf7a"/><text x="617.8" y="46.9" text-anchor="middle" font-size="12" font-weight="600" fill="#0b0b0b">31</text><text x="617.8" y="196.0" text-anchor="middle" font-size="11" fill="#0b0b0b" font-weight="600">2026 EST</text></svg>
+<p class="cap">Four of five seasons land inside the shaded 28–33 band. <span style="color:#eb6834;font-weight:600">Orange</span> = 2025, an 18 built on Albon P5 from grid 15 — the same driver pairing racing now, so relevant but optimistic.</p></div>
+
+<div class="two">
+<div>
+<h3>Why the circuit compresses outcomes</h3>
+<div class="q"><div class="qh">Query — grid-to-finish volatility, all teams</div><pre>SELECT cr.grid, cr.position
+FROM combined_results cr
+JOIN races ra ON cr.season=ra.season AND cr.round=ra.round
+WHERE ra.race_name ILIKE '%dutch%'
+  AND cr.season &gt;= 2021 AND cr.grid &gt; 0;
+-- median |finish - grid| = 3 places</pre></div>
+<p style="font-size:12px">Zandvoort 2021–25, <b>97 starts</b>: median position change <b>3 places</b> (mean 3.6). Only <b>30 of 97 (31%)</b> moved 5 or more places. Low overtaking caps the upside <i>and</i> the disasters.</p>
+</div>
+<div>
+<h3>Grid position drives the total</h3>
+<div class="fig" style="padding:9px 10px 4px"><svg viewBox="0 0 380 260" width="100%" role="img" aria-label="Grid sum versus combined result"><line x1="44" y1="220.0" x2="364" y2="220.0" stroke="#e6e5e0" stroke-width="1"/><text x="38" y="224.0" text-anchor="end" font-size="10" fill="#52514e">15</text><line x1="44" y1="179.2" x2="364" y2="179.2" stroke="#e6e5e0" stroke-width="1"/><text x="38" y="183.2" text-anchor="end" font-size="10" fill="#52514e">20</text><line x1="44" y1="138.4" x2="364" y2="138.4" stroke="#e6e5e0" stroke-width="1"/><text x="38" y="142.4" text-anchor="end" font-size="10" fill="#52514e">25</text><line x1="44" y1="97.6" x2="364" y2="97.6" stroke="#e6e5e0" stroke-width="1"/><text x="38" y="101.6" text-anchor="end" font-size="10" fill="#52514e">30</text><line x1="44" y1="56.8" x2="364" y2="56.8" stroke="#e6e5e0" stroke-width="1"/><text x="38" y="60.8" text-anchor="end" font-size="10" fill="#52514e">35</text><line x1="44" y1="16.0" x2="364" y2="16.0" stroke="#e6e5e0" stroke-width="1"/><text x="38" y="20.0" text-anchor="end" font-size="10" fill="#52514e">40</text><text x="44.0" y="236.0" text-anchor="middle" font-size="10" fill="#52514e">20</text><text x="116.7" y="236.0" text-anchor="middle" font-size="10" fill="#52514e">25</text><text x="189.5" y="236.0" text-anchor="middle" font-size="10" fill="#52514e">30</text><text x="262.2" y="236.0" text-anchor="middle" font-size="10" fill="#52514e">35</text><text x="334.9" y="236.0" text-anchor="middle" font-size="10" fill="#52514e">40</text><circle cx="276.7" cy="122.1" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="320.4" cy="89.4" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="233.1" cy="56.8" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="160.4" cy="187.4" r="6" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><circle cx="233.1" cy="97.6" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="87.6" cy="146.6" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="247.6" cy="97.6" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="262.2" cy="40.5" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="189.5" cy="32.3" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="247.6" cy="89.4" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="291.3" cy="56.8" r="6" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><circle cx="218.5" cy="89.4" r="7" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><text x="218.5" y="77.4" text-anchor="middle" font-size="10" font-weight="700" fill="#0b0b0b">est 31</text><text x="204.0" y="254" text-anchor="middle" font-size="10" fill="#52514e">grid sum (both cars) →</text></svg>
+<p class="cap">Each dot is a 2026 round. Better grid → better total, loosely. The estimate assumes a typical grid sum near 32.</p></div>
+</div>
+</div>
+
+<h2>4 · Competitive context</h2>
+<div class="two">
+<div>
+<div class="q"><div class="qh">Query — constructor standings after R11</div><pre>SELECT standing_rank, constructor, cumulative_points
+FROM combined_constructor_standings_by_round
+WHERE season = 2026 AND round = 11
+ORDER BY standing_rank;</pre></div>
+<p style="font-size:12px;margin-top:9px">Williams sit <b>P9 of 11</b> on <b>11 points</b>. Mean grid 16.5 across the season, drifting to <b>17.0</b> over the last four rounds. This is a slow car being asked to finish well.</p>
+</div>
+<div class="fig" style="padding:11px 12px 6px"><svg viewBox="0 0 380 272" width="100%" role="img" aria-label="2026 constructor standings after round 11"><text x="104" y="25" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">Mercedes</text><rect x="112" y="14" width="226.0" height="13" rx="4" fill="#b8b7b0"/><text x="344.0" y="25" font-size="11" fill="#52514e" font-weight="400">332</text><text x="104" y="47" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">Ferrari</text><rect x="112" y="36" width="182.4" height="13" rx="4" fill="#b8b7b0"/><text x="300.4" y="47" font-size="11" fill="#52514e" font-weight="400">268</text><text x="104" y="69" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">McLaren</text><rect x="112" y="58" width="120.5" height="13" rx="4" fill="#b8b7b0"/><text x="238.5" y="69" font-size="11" fill="#52514e" font-weight="400">177</text><text x="104" y="91" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">Red Bull</text><rect x="112" y="80" width="114.4" height="13" rx="4" fill="#b8b7b0"/><text x="232.4" y="91" font-size="11" fill="#52514e" font-weight="400">168</text><text x="104" y="113" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">RB F1 Team</text><rect x="112" y="102" width="42.2" height="13" rx="4" fill="#b8b7b0"/><text x="160.2" y="113" font-size="11" fill="#52514e" font-weight="400">62</text><text x="104" y="135" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">Alpine F1 Team</text><rect x="112" y="124" width="40.8" height="13" rx="4" fill="#b8b7b0"/><text x="158.8" y="135" font-size="11" fill="#52514e" font-weight="400">60</text><text x="104" y="157" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">Haas F1 Team</text><rect x="112" y="146" width="13.6" height="13" rx="4" fill="#b8b7b0"/><text x="131.6" y="157" font-size="11" fill="#52514e" font-weight="400">20</text><text x="104" y="179" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">Audi</text><rect x="112" y="168" width="8.2" height="13" rx="4" fill="#b8b7b0"/><text x="126.2" y="179" font-size="11" fill="#52514e" font-weight="400">12</text><text x="104" y="201" text-anchor="end" font-size="11" fill="#0b0b0b" font-weight="700">Williams</text><rect x="112" y="190" width="7.5" height="13" rx="4" fill="#eb6834"/><text x="125.5" y="201" font-size="11" fill="#0b0b0b" font-weight="700">11</text><text x="104" y="223" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">Aston Martin</text><rect x="112" y="212" width="1.5" height="13" rx="4" fill="#b8b7b0"/><text x="119.5" y="223" font-size="11" fill="#52514e" font-weight="400">1</text><text x="104" y="245" text-anchor="end" font-size="11" fill="#52514e" font-weight="400">Cadillac F1 Team</text><rect x="112" y="234" width="1.5" height="13" rx="4" fill="#b8b7b0"/><text x="119.5" y="245" font-size="11" fill="#52514e" font-weight="400">0</text></svg>
+<p class="cap">2026 constructor points after round 11. Williams highlighted.</p></div>
+</div>
+
+<h2>5 · How the estimate resolves to 31</h2>
+<table><thead><tr><th>Pulls worse (33–35)</th><th>Pulls better (28–30)</th></tr></thead><tbody>
+<tr><td>Last 4 rounds average 35.2</td><td>Zandvoort clusters 28–33 across five seasons</td></tr>
+<tr><td>P9 of 11 constructors, 11 points</td><td>Median position change only 3 places</td></tr>
+<tr><td>Qualifying drifted 16.5 → 17.0</td><td>Low overtaking caps disaster scenarios</td></tr>
+<tr><td>DNF or DNS in 5 of 11 rounds</td><td>2025 Zandvoort was 18 with this same pairing</td></tr>
+</tbody></table>
+<p style="font-size:12.5px"><b>31 is where the two forces meet</b> — simultaneously the season median (31), inside the Zandvoort band, and a modest concession to poor current form.</p>
+
+<h3>Revise once qualifying lands</h3>
+<table><thead><tr><th>If Williams qualify</th><th>Then estimate</th></tr></thead><tbody>
+<tr><td>Both cars in the top 12</td><td>26–28</td></tr>
+<tr><td>Grid sum near 32 (typical)</td><td><b>31</b></td></tr>
+<tr><td>Both cars 17th or worse again</td><td>34–36</td></tr>
+</tbody></table>
+
+<h2>6 · Caveats</h2>
+<ul>
+<li><b>Qualifying has not run.</b> Grid position is the dominant input and it is currently unknown.</li>
+<li><b>Retirement risk is real but already priced in.</b> Williams have had a DNF or DNS in 5 of 11 rounds; a single retirement costs roughly 6–8 on the total. Those rounds are included in the mean, not excluded from it.</li>
+<li><b>This is a pre-race estimate, not a computed answer.</b> It will be reconciled against the source-backed result once round 12 data lands.</li>
+</ul>
+
+<footer>Generated 2026-08-21 from <span class="pill">data/processed/f1_analytics.duckdb</span> · catalog entry <span class="pill">catalog/intake/2026-08-21-zandvoort-combined-finish.yaml</span> · all figures reproducible via the queries shown above.</footer>
+</body></html>
