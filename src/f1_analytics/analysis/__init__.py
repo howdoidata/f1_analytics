@@ -1,2 +1,1 @@
-"""Catalog loading, extractors, coverage, scoring, and reporting logic."""
-
+"""Analysis functions that take DataFrames and return DataFrames or dicts."""

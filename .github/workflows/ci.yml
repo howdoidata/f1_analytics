@@ -6,32 +6,6 @@ on:
   pull_request:
 
 jobs:
-  planning-records:
-    name: Planning records
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Add uv to PATH
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      # Schema of each record in isolation: the board (delegated to
-      # sprint_plan.py's own validator), the DW ledger format the sweep
-      # partitions on, and spec frontmatter `status:` that bmad-build routes on.
-      - name: Validate planning records
-        run: uv run .github/scripts/validate-records.py
-
-      # The cross-artifact half. A board and a spec can each be individually
-      # well-formed and still contradict each other -- Story 1.8 read `done` in
-      # its spec while the board still said `review` (2026-08-20), which is
-      # exactly the class the step above cannot see. Offline bash, sub-second,
-      # and self-proving: it asserts its own fixture cases go red first.
-      - name: Artifact status contract
-        run: bash tools/artifact-status-assertions.sh
-
   test:
     name: Test suite
     runs-on: ubuntu-latest
@@ -47,53 +21,7 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      # tests/conftest.py blocks all network access (AD-11) -- this suite
+      # tests/conftest.py blocks all network access -- this suite
       # never needs Kaggle/FastF1 credentials to run.
       - name: Run tests
         run: uv run pytest -v
-
-  bmad-context:
-    name: BMAD context bundle
-    runs-on: ubuntu-latest
-    steps:
-      # sweep resolves each source's "last changed" date via `git log -1 --
-      # -- <path>`. actions/checkout@v4 defaults to a depth-1 (shallow)
-      # clone, which has no parent to diff against -- git log then reports
-      # the single fetched commit's own date for every path in it, so
-      # every source looks "changed today" regardless of real history.
-      # Full history avoids that false positive.
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      # context.py exits 1 on any finding (kernel budget, frontmatter,
-      # dead links, foreign/missing index) -- no extra parsing needed.
-      - name: Validate context bundle
-        run: python3 _bmad/scripts/context.py validate --json
-
-      # sweep never exits non-zero on its own (it's a report, not a gate),
-      # so the stale/missing counts are checked here instead.
-      - name: Sweep for stale or missing sources
-        run: |
-          python3 _bmad/scripts/context.py sweep --json | tee sweep.json
-          if [ "$(jq '(.stale | length) + (.missing | length)' sweep.json)" != "0" ]; then
-            echo "::error::context.py sweep found stale or missing entries -- see output above"
-            exit 1
-          fi
-
-  bmad-skill-parity:
-    name: BMAD skill surface parity
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # .claude/skills and .agents/skills are two installed copies of the
-      # same BMAD skill set (claude-code and codex surfaces). They must
-      # never silently drift -- a skill edited on one surface and not the
-      # other is exactly the failure mode this check exists to catch.
-      - name: Diff .claude/skills against .agents/skills
-        run: |
-          if ! diff -rq .claude/skills .agents/skills; then
-            echo "::error::.claude/skills and .agents/skills have drifted -- reinstall/sync both surfaces"
-            exit 1
-          fi

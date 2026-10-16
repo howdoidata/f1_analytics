@@ -1,12 +1,10 @@
 """Null-rate and referential-integrity checks for curated, combined, and raw FastF1 tables.
 
-Pure functions only -- no DB access here (Story 1.8's Boundaries). Each
-check returns a finding-row dict; `store.py` (a separate module) is the
-only thing that persists them. Mirrors the salvaged
-`recovery/reference/src/f1_analytics/validation/checks.py` pattern
-(`check_id`/`checked_at` envelope), expanded from curated-only tables to
-also cover `combined_results` (Story 1.7) and `raw_fastf1_laps`/
-`raw_fastf1_stints`/`raw_fastf1_weather` (Story 1.6).
+Pure functions only -- no DB access here. Each check returns a
+finding-row dict with a `check_id`/`checked_at` envelope; `store.py` (a
+separate module) is the only thing that persists them. Covers the curated
+tables, `combined_results`, and `raw_fastf1_laps`/`raw_fastf1_stints`/
+`raw_fastf1_weather`.
 """
 
 from __future__ import annotations

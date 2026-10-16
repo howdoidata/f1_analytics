@@ -8,15 +8,6 @@ data/processed/
 data/.run_marker
 data/.run.lock
 outputs/
-_bmad-output/implementation-artifacts/daily-pipeline-run-records.jsonl
-_bmad-output/implementation-artifacts/.daily-pipeline-run-record-lock
-_bmad-output/party-mode/
-
-# _bmad-output/**/.memlog.md is intentionally NOT ignored -- BMAD skill
-# memlogs (bmad-prd, bmad-architecture, bmad-brainstorming, etc.) are working
-# memory meant to persist across sessions and survive a lost/wiped local
-# checkout, same rationale as the already-tracked docs/.memlog.md. See
-# _bmad-output/planning-artifacts/decisions/track-bmad-workspace-memlogs-2026-08-08.md.
 
 # Local credentials and environment files
 .env
@@ -32,21 +23,3 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ipynb_checkpoints/
-.bmad-loop/runs/
-.bmad-loop/cache/
-
-# Machine-specific BMAD Loop config -- bmad-loop init gitignores this by
-# design so per-machine choices (e.g. mux backend, TUI pane sizes) never
-# travel between teammates or machines. Investigated tracking it instead
-# (2026-08-08) to surface the project-wide policy it also carries (gates,
-# review, scm, adapter CLI routing); reverted because the installed
-# bmad-loop package unconditionally re-adds this exact line on every `init`
-# run with no suppression flag -- tracking the file would fight the
-# installer forever rather than fix anything. See
-# _bmad-output/planning-artifacts/decisions/track-bmad-loop-policy-2026-08-08.md.
-.bmad-loop/policy.toml
-
-# Installer backup snapshots -- regenerated (and re-backed-up) on every
-# `bmad-method install` run; pure diff noise, never a source of truth.
-_bmad/*.bak
-_bmad/render/

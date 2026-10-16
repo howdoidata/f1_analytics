@@ -125,9 +125,8 @@ def test_check_referential_integrity_fails_and_counts_orphans():
 
 
 def test_check_referential_integrity_ignores_nulls_in_the_child_column():
-    # A NULL foreign key is a null-rate concern, not an orphan -- matches
-    # the salvaged recovery reference exactly (see deferred-work.md's
-    # "code review of story-1.8" entry: a scope decision, not a defect).
+    # A NULL foreign key is a null-rate concern, not an orphan. This is a
+    # deliberate scope decision, not a defect.
     child = pd.DataFrame({"driver_id": ["verstappen", None]})
     parent = pd.DataFrame({"driver_id": ["verstappen"]})
     finding = check_referential_integrity(child, "results", "driver_id", parent, "drivers", "driver_id")

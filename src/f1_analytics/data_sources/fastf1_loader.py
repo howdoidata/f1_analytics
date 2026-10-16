@@ -25,8 +25,7 @@ LAPS_FILENAME = "laps.csv"
 WEATHER_FILENAME = "weather.csv"
 COUNTS_FILENAME = "counts.json"
 
-# Second sanctioned name->id reconciliation under AD-14, per
-# fastf1-constructor-name-reconciliation-decision-record.md: exactly these
+# Second sanctioned name->id reconciliation under AD-14: exactly these
 # four 2026 FastF1 `Team` strings don't exactly match their curated
 # `constructors.name`. Resolution order in map_constructor_ids(): (1) exact
 # name match, (2) this alias table, (3) UnmappedFastF1NameError -- never a
@@ -38,8 +37,7 @@ FASTF1_TEAM_TO_CONSTRUCTOR_ID_ALIASES = {
     "Red Bull Racing": "red_bull",
 }
 
-# Third sanctioned name->id reconciliation under AD-14, per
-# fastf1-driver-code-reconciliation-decision-record.md: these curated
+# Third sanctioned name->id reconciliation under AD-14: these curated
 # `drivers.code` values are ambiguous (each matches two curated driver_id
 # rows -- F1 codes are reused across eras). Consulted only when a code is
 # ambiguous; resolution order in map_driver_ids(): (1) unique code match,
@@ -104,8 +102,7 @@ def map_driver_ids(laps: pd.DataFrame, drivers: pd.DataFrame) -> pd.Series:
     A 3-letter code that matches more than one curated `driver_id` (real
     F1 codes are reused across eras, e.g. `VER` is both Jean-Éric Vergne
     and Max Verstappen) resolves via the sanctioned
-    `FASTF1_AMBIGUOUS_DRIVER_CODE_OVERRIDES` table
-    (fastf1-driver-code-reconciliation-decision-record.md); if it's
+    `FASTF1_AMBIGUOUS_DRIVER_CODE_OVERRIDES` table; if it's
     ambiguous and not in that table, raises
     `AmbiguousFastF1DriverCodeError` naming the code, rather than silently
     keeping an arbitrary curated row.
@@ -134,7 +131,7 @@ def map_driver_ids(laps: pd.DataFrame, drivers: pd.DataFrame) -> pd.Series:
 def map_constructor_ids(laps: pd.DataFrame, constructors: pd.DataFrame) -> pd.Series:
     """Map FastF1 `Team` names (e.g. 'Red Bull') to curated `constructor_id`.
 
-    Resolution order (fastf1-constructor-name-reconciliation-decision-record.md):
+    Resolution order:
     (1) exact match against `constructors.name`; (2) fall back to the
     sanctioned `FASTF1_TEAM_TO_CONSTRUCTOR_ID_ALIASES` table; (3) still
     unresolved -> `UnmappedFastF1NameError` naming the exact string --

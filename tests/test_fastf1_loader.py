@@ -115,8 +115,7 @@ def test_map_driver_ids_raises_named_error_for_an_ambiguous_code_with_no_sanctio
 
 
 def test_map_driver_ids_resolves_an_ambiguous_code_via_the_sanctioned_override_table():
-    # VER matches both vergne and max_verstappen in the curated table
-    # (fastf1-driver-code-reconciliation-decision-record.md); it must
+    # VER matches both vergne and max_verstappen in the curated table; it must
     # resolve to the sanctioned override, never an arbitrary curated row.
     assert FASTF1_AMBIGUOUS_DRIVER_CODE_OVERRIDES["VER"] == "max_verstappen"
     ambiguous_drivers = pd.DataFrame(
@@ -167,8 +166,7 @@ def test_map_constructor_ids_resolves_by_exact_name_match(constructors: pd.DataF
 
 def test_map_constructor_ids_falls_back_to_the_sanctioned_alias_table(constructors: pd.DataFrame):
     # "Red Bull Racing" has no exact constructors.name match (curated name
-    # is "Red Bull"); resolves via FASTF1_TEAM_TO_CONSTRUCTOR_ID_ALIASES per
-    # fastf1-constructor-name-reconciliation-decision-record.md.
+    # is "Red Bull"); resolves via FASTF1_TEAM_TO_CONSTRUCTOR_ID_ALIASES.
     assert "Red Bull Racing" in FASTF1_TEAM_TO_CONSTRUCTOR_ID_ALIASES
     laps = pd.DataFrame({"Team": ["Red Bull Racing"]})
 
@@ -206,8 +204,7 @@ def test_map_constructor_ids_raises_named_error_for_a_nan_team_value_instead_of_
 
 
 def test_map_constructor_ids_resolves_all_four_sanctioned_aliases_against_real_curated_names():
-    # Real curated constructors.name spellings from the decision record's
-    # evidence table -- deliberately not the shared kaggle_csv fixture,
+    # Real curated constructors.name spellings -- deliberately not the shared kaggle_csv fixture,
     # which happens to already spell "Alpine" without the "F1 Team" suffix
     # (so it resolves via the exact-match branch there) and doesn't carry
     # cadillac/rb at all. This exercises every alias-fallback row for real.
