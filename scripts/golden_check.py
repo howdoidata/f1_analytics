@@ -383,7 +383,7 @@ SINGAPORE_ROUNDS = [
 ALBON_AT_SINGAPORE = [
     # season, grid, finish, change, note
     (2019, 6, 6, 0, ""),
-    (2022, 18, 17, 1, ""),
+    (2022, 18, 17, 1, "Collision damage"),
     (2023, 14, 11, 3, ""),
     (2024, 11, 20, -9, "Retired"),
     (2025, 20, 14, 6, ""),
