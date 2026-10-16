@@ -29,13 +29,13 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 08-20-2026 21:53
-last_updated: 08-20-2026 22:55
+last_updated: 08-20-2026 23:40
 project: f1_analytics
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 development_status:
-  epic-1: in-progress
+  epic-1: done
   1-1-record-the-loss-and-gain-offsite-protection: done
   1-2-fastf1-adoption-spike: done
   1-3-salvage-the-platform-snapshot-under-the-standing-constraints: done
@@ -44,7 +44,7 @@ development_status:
   1-6-fastf1-facts-landed-with-rate-discipline: done
   1-7-current-season-combined-tables-and-the-coverage-arbiter: done
   1-8-advisory-build-validation-logged: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   epic-2: backlog
   2-1-one-question-end-to-end-first-light: backlog
@@ -75,3 +75,74 @@ development_status:
   4-3-the-insight-package-producer-rebuilt-to-v2: backlog
   4-4-first-conforming-delivery: backlog
   epic-4-retrospective: optional
+action_items:
+  - id: "epic-1-retro-item-1-fix-the-one-group-valueerror-in-add_stan"
+    epic: 1
+    action: "Fix the one-group ValueError in add_standing_rank and the 0-based rank
+      base, with regression tests (DONE in retro)"
+    owner: "Antonio"
+    status: done
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
+  - id: "epic-1-retro-item-2-reconcile-story-1-8-build-dw-21-dw-22-or"
+    epic: 1
+    action: "Reconcile Story 1.8: build DW-21/DW-22 or amend epics.md to move those
+      two ACs out of Story 1.8"
+    owner: "Antonio"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
+  - id: "epic-1-retro-item-3-backport-story-1-7-run_fetch_subprocess"
+    epic: 1
+    action: "Backport Story 1.7 run_fetch_subprocess hardenings into pull_fastf1_data.py
+      (isinstance guard, mkdir-in-try, honor status empty)"
+    owner: "Antonio"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
+  - id: "epic-1-retro-item-4-type-the-empty-standings-frames-so-a-deg"
+    epic: 1
+    action: "Type the empty standings frames so a degenerate build writes the same
+      schema as a populated one"
+    owner: "Antonio"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
+  - id: "epic-1-retro-item-5-make-verify_completeness-treat-a-missing"
+    epic: 1
+    action: "Make verify_completeness treat a missing lap_count/weather_count key
+      as a failure, not a pass"
+    owner: "Antonio"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
+  - id: "epic-1-retro-item-6-extend-column-level-precondition-checks"
+    epic: 1
+    action: "Extend column-level precondition checks to drivers/constructors, not
+      just races"
+    owner: "Antonio"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
+  - id: "epic-1-retro-item-7-amend-epics-md-story-1-4-ac-3-to-match-t"
+    epic: 1
+    action: "Amend epics.md Story 1.4 AC-3 to match the shipped README: Kaggle needs
+      no credential"
+    owner: "Antonio"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
+  - id: "epic-1-retro-item-8-drop-kagglehub-from-project-dependencies"
+    epic: 1
+    action: "Drop kagglehub from project dependencies, or record why a spike-only
+      package is a runtime dependency"
+    owner: "Antonio"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
+  - id: "epic-1-retro-item-9-decide-whether-build_f1_dataset-py-shoul"
+    epic: 1
+    action: "Decide whether build_f1_dataset.py should run advisory validation (epics.md
+      says any build script; spec says two)"
+    owner: "Antonio"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
+  - id: "epic-1-retro-item-10-triage-the-24-open-deferred-work-entries"
+    epic: 1
+    action: "Triage the 24 open deferred-work entries before Epic 2 consumes this
+      data layer"
+    owner: "Antonio"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-20.md"
