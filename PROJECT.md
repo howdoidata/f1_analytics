@@ -32,7 +32,7 @@ Version 1 is successful when the project has:
 
 ## Initial Data Direction
 
-Version 1 will start from a free, accessible Formula 1 dataset, with the current expected starting dataset being the Kaggle Formula 1 complete dataset covering 1950 to 2026.
+Version 1 uses free, accessible Formula 1 data: a committed dump of the Jolpica (Ergast-compatible) API covering 1950 to the latest round, kept current with `uv run refresh`, plus FastF1 lap and weather extracts. `uv run build` turns `data/raw/` into the local DuckDB file.
 
 Exact ingestion, storage, refresh, and modeling choices will be decided during project setup. The project should not lock into a data architecture before the dataset structure, quality, and downstream use cases are reviewed.
 

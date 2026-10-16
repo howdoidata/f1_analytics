@@ -1,0 +1,30 @@
+{
+  "drivers": [
+    "ALB",
+    "ALO",
+    "ANT",
+    "BEA",
+    "BOR",
+    "BOT",
+    "COL",
+    "GAS",
+    "HAD",
+    "HAM",
+    "LAW",
+    "LEC",
+    "LIN",
+    "NOR",
+    "OCO",
+    "PER",
+    "RUS",
+    "SAI",
+    "STR",
+    "VER"
+  ],
+  "event": "Australian Grand Prix",
+  "lap_count": 1003,
+  "race_label": "Melbourne",
+  "round": 1,
+  "season": 2026,
+  "weather_count": 148
+}

@@ -34,8 +34,7 @@ def add_standing_rank(
     # with multiple columns to the single column standing_rank`. That is
     # reachable in normal operation — the first race weekend of a season, or a
     # single-round CSV extract — and it raised from this shared function, so
-    # both `build_f1_dataset.py` and `build_combined_dataset.py` inherited the
-    # crash (the latter's empty-frame guard caught only the zero-row case).
+    # every standings build inherited the crash.
     #
     # Standard competition ranking ("1224"): a row's rank is one plus the
     # number of rows strictly ahead of it, so two drivers tied for 2nd consume
@@ -75,27 +74,49 @@ def compute_cumulative_standings(
     results: pd.DataFrame,
     id_column: str,
     name_column: str,
+    *,
+    races: pd.DataFrame | None = None,
+    sprint_results: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Aggregate per-round race points/wins into cumulative standings by round.
+    """Aggregate per-round points/wins into cumulative standings by round.
 
-    Groups `results` by season, round, race_name, date, `id_column`, and
-    `name_column`; sums points and counts wins per round; then adds a running
+    Groups by season, round, race_name, date, `id_column`, and `name_column`;
+    sums points and counts race wins per round; then adds a running
     per-season cumulative total and `standing_rank`. This is the single
-    function every curated standings table (driver and constructor) calls —
-    no parallel implementation.
+    function every curated standings table (driver and constructor) calls.
+
+    `sprint_results` rows add their points to the round they belong to; a
+    sprint win is not a race win. `date` comes from `races` when `results`
+    does not already carry it.
     """
+    rows = results
+    if sprint_results is not None and not sprint_results.empty:
+        columns = [c for c in ("season", "round", "race_name", "date", id_column, name_column, "points") if c in results.columns]
+        sprint = sprint_results[[c for c in columns if c in sprint_results.columns]].copy()
+        # A sprint win is not a race win.
+        sprint["position"] = pd.array([pd.NA] * len(sprint), dtype="Int64")
+        if "date" in columns and "date" not in sprint.columns:
+            columns.remove("date")
+        rows = pd.concat([results[columns + ["position"]], sprint[columns + ["position"]]], ignore_index=True)
+    if "date" not in rows.columns:
+        if races is None:
+            raise ValueError("compute_cumulative_standings needs a `date` column or a `races` frame")
+        rows = rows.merge(races[["season", "round", "date"]], on=["season", "round"], how="left")
+
     grouped = (
-        results.groupby(
+        rows.groupby(
             ["season", "round", "race_name", "date", id_column, name_column],
             dropna=False,
             as_index=False,
         )
         .agg(
             race_points=("points", "sum"),
-            race_wins=("position", lambda values: int((values == 1).any())),
+            race_wins=("position", lambda values: int((values == 1).fillna(False).any())),
         )
         .sort_values(["season", id_column, "round"])
     )
+    grouped["race_points"] = grouped["race_points"].astype("float64")
+    grouped["race_wins"] = grouped["race_wins"].astype("int64")
     grouped["cumulative_points"] = grouped.groupby(["season", id_column])["race_points"].cumsum()
     grouped["cumulative_wins"] = grouped.groupby(["season", id_column])["race_wins"].cumsum()
     return add_standing_rank(grouped, ["season", "round"], [id_column])

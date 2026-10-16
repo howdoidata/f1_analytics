@@ -1,8 +1,0 @@
-season,round,race_name,driverId,driverNumber,driverCode,givenName,familyName,constructorId,constructorName,grid,position,points,laps,status,totalRaceTime,fastestLapNumber,fastestLapRank
-2026,1,Match Grand Prix,verstappen,1,VER,Max,Verstappen,red_bull,Red Bull,1,1,25,57,Finished,0 days 01:31:44.742000,55,1
-2026,1,Match Grand Prix,hamilton,44,HAM,Lewis,Hamilton,mercedes,Mercedes,2,2,18,57,Finished,0 days 00:00:05.023000,50,3
-2026,3,JolpicaOnly Grand Prix,verstappen,1,VER,Max,Verstappen,red_bull,Red Bull,1,1,25,58,Finished,0 days 01:35:02.114000,56,1
-2026,3,JolpicaOnly Grand Prix,hamilton,44,HAM,Lewis,Hamilton,mercedes,Mercedes,3,2,18,58,Finished,0 days 00:00:09.884000,52,2
-2026,4,Diverges Grand Prix,verstappen,1,VER,Max,Verstappen,red_bull,Red Bull,1,1,25,53,Finished,0 days 01:25:10.556000,49,1
-2026,4,Diverges Grand Prix,hamilton,44,HAM,Lewis,Hamilton,mercedes,Mercedes,2,2,18,53,Finished,0 days 00:00:08.112000,47,2
-2026,4,Diverges Grand Prix,alonso,14,ALO,Fernando,Alonso,aston_martin,Aston Martin,5,3,15,53,Finished,0 days 00:00:15.400000,51,3

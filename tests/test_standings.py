@@ -170,10 +170,7 @@ def test_a_season_with_one_round_ranks_without_raising():
     # Series when there is exactly ONE group, so assigning it to the single
     # `standing_rank` column raised `ValueError: Cannot set a DataFrame with
     # multiple columns to the single column standing_rank`. Reachable on the
-    # first race weekend of a season, through both `build_f1_dataset.py` and
-    # `build_combined_dataset.py`, after the latter had already written
-    # `combined_results` — the partial-write-then-crash class the build's
-    # fail-fast discipline exists to prevent.
+    # first race weekend of a season.
     standings = compute_cumulative_standings(_single_round_fixture(), "driver_id", "driver_name")
 
     assert len(standings) == 2
@@ -197,3 +194,29 @@ def test_the_very_first_row_of_the_frame_ranks_from_one():
     assert standings["standing_rank"].min() == 1
     first_round = standings[(standings["season"] == 2024) & (standings["round"] == 1)]
     assert first_round["standing_rank"].min() == 1
+
+
+def test_sprint_points_join_their_round_and_date_comes_from_races():
+    results = pd.DataFrame(
+        {
+            "season": [2025, 2025],
+            "round": [1, 1],
+            "race_name": ["X Grand Prix", "X Grand Prix"],
+            "driver_id": ["a", "b"],
+            "driver_name": ["A", "B"],
+            "points": [18.0, 25.0],
+            "position": [2, 1],
+        }
+    )
+    sprint = results.assign(points=[8.0, 0.0], position=[1, 9])
+    races = pd.DataFrame({"season": [2025], "round": [1], "date": [pd.Timestamp("2025-03-01").date()]})
+
+    standings = compute_cumulative_standings(
+        results, "driver_id", "driver_name", races=races, sprint_results=sprint
+    ).set_index("driver_id")
+
+    assert standings.loc["a", "race_points"] == 26
+    assert standings.loc["a", "race_wins"] == 0  # a sprint win is not a race win
+    assert standings.loc["a", "standing_rank"] == 1
+    assert standings.loc["b", "race_wins"] == 1
+    assert str(standings.loc["a", "date"]) == "2025-03-01"

@@ -1,16 +1,14 @@
-"""Main-env FastF1 loader: id-map, derive, and verify (Story 1.6).
+"""FastF1 loader: id-map, derive, and verify the committed race extracts.
 
 No `fastf1` import here -- this module only reads the plain `laps.csv`/
-`weather.csv`/`counts.json` that the isolated-env `fastf1_fetch.py` half
-already dumped under `data/raw/fastf1/<race_label>/`. That split keeps every
-function here offline-testable against small fixture CSVs (AD-11).
+`weather.csv`/`counts.json` that `fastf1_fetch.py` dumped under
+`data/raw/fastf1/<season>/<RR>-<slug>/`, so every function is offline-testable
+against small fixture CSVs.
 
 Every row is mapped to `driver_id`/`constructor_id` by the FastF1 `Driver`
 code / `Team` name -- never by `DriverNumber` (car number) -- against the
-curated `drivers`/`constructors` tables Story 1.5 already landed (AD-14),
-mirroring `kaggle_csv.py`'s drop_duplicates + `.map()` reconciliation
-pattern. An unresolved name raises `UnmappedFastF1NameError` naming the
-exact unmatched FastF1 string.
+Jolpica-built `drivers`/`constructors` tables. An unresolved name raises
+`UnmappedFastF1NameError` naming the exact unmatched FastF1 string.
 """
 
 from __future__ import annotations
@@ -25,9 +23,8 @@ LAPS_FILENAME = "laps.csv"
 WEATHER_FILENAME = "weather.csv"
 COUNTS_FILENAME = "counts.json"
 
-# Second sanctioned name->id reconciliation under AD-14: exactly these
-# four 2026 FastF1 `Team` strings don't exactly match their curated
-# `constructors.name`. Resolution order in map_constructor_ids(): (1) exact
+# FastF1 -> Jolpica id mapping: these four 2026 FastF1 `Team` strings don't
+# exactly match their Jolpica `constructors.name`. Resolution order in map_constructor_ids(): (1) exact
 # name match, (2) this alias table, (3) UnmappedFastF1NameError -- never a
 # fuzzy match.
 FASTF1_TEAM_TO_CONSTRUCTOR_ID_ALIASES = {
@@ -37,8 +34,7 @@ FASTF1_TEAM_TO_CONSTRUCTOR_ID_ALIASES = {
     "Red Bull Racing": "red_bull",
 }
 
-# Third sanctioned name->id reconciliation under AD-14: these curated
-# `drivers.code` values are ambiguous (each matches two curated driver_id
+# FastF1 -> Jolpica id mapping: these Jolpica `drivers.code` values are ambiguous (each matches two curated driver_id
 # rows -- F1 codes are reused across eras). Consulted only when a code is
 # ambiguous; resolution order in map_driver_ids(): (1) unique code match,
 # (2) this override table, (3) AmbiguousFastF1DriverCodeError -- never a
@@ -69,7 +65,7 @@ class FastF1RaceLoadError(Exception):
     """One race's fetch-dump-to-landed-frames pipeline failed.
 
     Wraps the named underlying error with the race label attached, so the
-    orchestrator (`scripts/pull_fastf1_data.py`) can report a per-race
+    build can report a per-race
     statused failure without aborting the remaining races (AD-13).
     """
 
@@ -289,3 +285,29 @@ def load_and_map_race(
         raise FastF1RaceLoadError(f"{label}: {error}") from error
 
     return {"laps": mapped_laps, "stints": stints, "weather": weather}
+
+
+def load_extracts(
+    fastf1_raw_dir: Path,
+    drivers: pd.DataFrame,
+    constructors: pd.DataFrame,
+) -> dict[str, pd.DataFrame]:
+    """Load every committed extract under `<fastf1_raw_dir>/<season>/<RR>-<slug>/`.
+
+    Returns concatenated `laps`/`stints`/`weather` frames. A broken extract
+    raises `FastF1RaceLoadError` naming it: committed raw data must load.
+    """
+    frames: dict[str, list[pd.DataFrame]] = {"laps": [], "stints": [], "weather": []}
+    season_dirs = sorted(p for p in fastf1_raw_dir.iterdir() if p.is_dir() and p.name.isdigit()) if fastf1_raw_dir.is_dir() else []
+    for season_dir in season_dirs:
+        for race_dir in sorted(p for p in season_dir.iterdir() if p.is_dir()):
+            race = load_and_map_race(race_dir, drivers, constructors, label=race_dir.name, season=int(season_dir.name))
+            prefix = race_dir.name.split("-", 1)[0]
+            round_number = int(race["laps"]["round"].iloc[0])
+            if not prefix.isdigit() or int(prefix) != round_number:
+                raise FastF1RaceLoadError(
+                    f"{race_dir}: folder round {prefix!r} does not match counts.json round {round_number}"
+                )
+            for key in frames:
+                frames[key].append(race[key])
+    return {key: pd.concat(parts, ignore_index=True) if parts else pd.DataFrame() for key, parts in frames.items()}

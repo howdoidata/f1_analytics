@@ -1,0 +1,925 @@
+season,round,position,positionText,points,wins,constructorId,constructorName
+1958,11,1,1,48,6,vanwall,Vanwall
+1958,11,2,2,40,2,ferrari,Ferrari
+1958,11,3,3,31,2,cooper,Cooper
+1958,11,4,4,18,0,brm,BRM
+1958,11,5,5,6,0,maserati,Maserati
+1958,11,6,6,3,0,team_lotus,Team Lotus
+1958,11,,-,0,0,porsche,Porsche
+1958,11,,-,0,0,connaught,Connaught
+1959,9,1,1,40,5,cooper-climax,Cooper-Climax
+1959,9,2,2,32,2,ferrari,Ferrari
+1959,9,3,3,18,1,brm,BRM
+1959,9,4,4,5,0,team_lotus,Team Lotus
+1959,9,,-,0,0,cooper-maserati,Cooper-Maserati
+1959,9,,-,0,0,aston_martin,Aston Martin
+1959,9,,-,0,0,porsche,Porsche
+1959,9,,-,0,0,maserati,Maserati
+1959,9,,-,0,0,cooper-borgward,Cooper-Borgward
+1959,9,,-,0,0,kurtis_kraft,Kurtis Kraft
+1959,9,,-,0,0,cooper-osca,Cooper-OSCA
+1959,9,,-,0,0,tec-mec,Tec-Mec
+1959,9,,-,0,0,connaught,Connaught
+1959,9,,-,0,0,jbw,JBW
+1959,9,,-,0,0,vanwall,Vanwall
+1960,10,1,1,48,6,cooper-climax,Cooper-Climax
+1960,10,2,2,34,2,team_lotus,Team Lotus
+1960,10,3,3,26,1,ferrari,Ferrari
+1960,10,4,4,8,0,brm,BRM
+1960,10,5,5,3,0,cooper-maserati,Cooper-Maserati
+1960,10,6,6,3,0,cooper-castellotti,Cooper-Castellotti
+1960,10,7,7,1,0,porsche,Porsche
+1960,10,,-,0,0,behra-porsche,Behra-Porsche
+1960,10,,-,0,0,scarab,Scarab
+1960,10,,-,0,0,aston_martin,Aston Martin
+1960,10,,-,0,0,maserati,Maserati
+1960,10,,-,0,0,jbw,JBW
+1960,10,,-,0,0,vanwall,Vanwall
+1961,8,1,1,45,5,ferrari,Ferrari
+1961,8,2,2,35,3,lotus-climax,Lotus-Climax
+1961,8,3,3,22,0,porsche,Porsche
+1961,8,4,4,14,0,cooper-climax,Cooper-Climax
+1961,8,5,5,7,0,brm,BRM
+1961,8,,-,0,0,cooper-maserati,Cooper-Maserati
+1961,8,,-,0,0,gilby,Gilby
+1961,8,,-,0,0,lotus-maserati,Lotus-Maserati
+1961,8,,-,0,0,ferguson,Ferguson
+1961,8,,-,0,0,de_tomaso-alfa_romeo,De Tomaso-Alfa Romeo
+1961,8,,-,0,0,de_tomaso-osca,De Tomaso-Osca
+1961,8,,-,0,0,jbw,JBW
+1961,8,,-,0,0,emeryson,Emeryson
+1961,8,,-,0,0,mbm,MBM
+1962,9,1,1,42,4,brm,BRM
+1962,9,2,2,36,3,lotus-climax,Lotus-Climax
+1962,9,3,3,29,1,cooper-climax,Cooper-Climax
+1962,9,4,4,19,0,lola,Lola
+1962,9,5,5,18,1,porsche,Porsche
+1962,9,6,6,18,0,ferrari,Ferrari
+1962,9,7,7,6,0,brabham,Brabham
+1962,9,8,8,1,0,lotus-brm,Lotus-BRM
+1962,9,,-,0,0,emeryson,Emeryson
+1962,9,,-,0,0,enb,ENB
+1962,9,,-,0,0,cooper,Cooper
+1962,9,,-,0,0,lds,LDS
+1962,9,,-,0,0,cooper-alfa_romeo,Cooper-Alfa Romeo
+1962,9,,-,0,0,team_lotus,Team Lotus
+1962,9,,-,0,0,gilby,Gilby
+1962,9,,-,0,0,de_tomaso-alfa_romeo,De Tomaso-Alfa Romeo
+1962,9,,-,0,0,lotus-borgward,Lotus-Borgward
+1963,10,1,1,54,7,lotus-climax,Lotus-Climax
+1963,10,2,2,36,2,brm,BRM
+1963,10,3,3,28,0,brabham,Brabham
+1963,10,4,4,26,1,ferrari,Ferrari
+1963,10,5,5,25,0,cooper-climax,Cooper-Climax
+1963,10,6,6,6,0,brp,BRP
+1963,10,7,7,5,0,porsche,Porsche
+1963,10,8,8,4,0,lotus-brm,Lotus-BRM
+1963,10,,-,0,0,lola,Lola
+1963,10,,-,0,0,stebro,Stebro
+1963,10,,-,0,0,scirocco,Scirocco
+1963,10,,-,0,0,ats,ATS
+1963,10,,-,0,0,lds,LDS
+1963,10,,-,0,0,cooper-maserati,Cooper-Maserati
+1963,10,,-,0,0,lotus-ford,Lotus-Ford
+1963,10,,-,0,0,alfa,Alfa Romeo
+1963,10,,-,0,0,gilby,Gilby
+1963,10,,-,0,0,tomaso,De Tomaso
+1963,10,,-,0,0,team_lotus,Team Lotus
+1963,10,,-,0,0,lotus-maserati,Lotus-Maserati
+1964,10,1,1,45,3,ferrari,Ferrari
+1964,10,2,2,42,2,brm,BRM
+1964,10,3,3,37,3,lotus-climax,Lotus-Climax
+1964,10,4,4,30,2,brabham-climax,Brabham-Climax
+1964,10,5,5,16,0,cooper-climax,Cooper-Climax
+1964,10,6,6,7,0,brabham-brm,Brabham-BRM
+1964,10,7,7,5,0,brp,BRP
+1964,10,8,8,3,0,lotus-brm,Lotus-BRM
+1964,10,,-,0,0,honda,Honda
+1964,10,,-,0,0,scirocco,Scirocco
+1964,10,,-,0,0,derrington,Derrington
+1964,10,,-,0,0,porsche,Porsche
+1964,10,,-,0,0,brabham-ford,Brabham-Ford
+1965,10,1,1,54,6,lotus-climax,Lotus-Climax
+1965,10,2,2,45,3,brm,BRM
+1965,10,3,3,27,0,brabham-climax,Brabham-Climax
+1965,10,4,4,26,0,ferrari,Ferrari
+1965,10,5,5,14,0,cooper-climax,Cooper-Climax
+1965,10,6,6,11,1,honda,Honda
+1965,10,7,7,5,0,brabham-brm,Brabham-BRM
+1965,10,8,8,2,0,lotus-brm,Lotus-BRM
+1965,10,,-,0,0,brabham-ford,Brabham-Ford
+1965,10,,-,0,0,alfa,Alfa Romeo
+1965,10,,-,0,0,lds-alfa_romeo,LDS-Alfa Romeo
+1965,10,,-,0,0,re,RE
+1965,10,,-,0,0,cooper-maserati,Cooper-Maserati
+1966,9,1,1,42,4,brabham-repco,Brabham-Repco
+1966,9,2,2,31,2,ferrari,Ferrari
+1966,9,3,3,30,1,cooper-maserati,Cooper-Maserati
+1966,9,4,4,22,1,brm,BRM
+1966,9,5,5,13,1,lotus-brm,Lotus-BRM
+1966,9,6,6,8,0,lotus-climax,Lotus-Climax
+1966,9,7,7,4,0,eagle-climax,Eagle-Climax
+1966,9,8,8,3,0,honda,Honda
+1966,9,9,9,2,0,mclaren-ford,McLaren-Ford
+1966,9,10,10,1,0,brabham-climax,Brabham-Climax
+1966,9,11,11,1,0,brabham-brm,Brabham-BRM
+1966,9,12,12,1,0,mclaren-seren,McLaren-Serenissima
+1966,9,,-,0,0,cooper-ferrari,Cooper-Ferrari
+1966,9,,-,0,0,eagle-weslake,Eagle-Weslake
+1966,9,,-,0,0,shannon,Shannon
+1967,11,1,1,67,4,brabham-repco,Brabham-Repco
+1967,11,2,2,44,4,lotus-ford,Lotus-Ford
+1967,11,3,3,28,1,cooper-maserati,Cooper-Maserati
+1967,11,4,4,20,1,honda,Honda
+1967,11,5,5,20,0,ferrari,Ferrari
+1967,11,6,6,17,0,brm,BRM
+1967,11,7,7,13,1,eagle-weslake,Eagle-Weslake
+1967,11,8,8,6,0,lotus-brm,Lotus-BRM
+1967,11,9,9,6,0,cooper-climax,Cooper-Climax
+1967,11,10,10,3,0,mclaren-brm,McLaren-BRM
+1967,11,11,11,2,0,brabham-climax,Brabham-Climax
+1967,11,,-,0,0,mclaren-ford,McLaren-Ford
+1967,11,,-,0,0,brabham-ford,Brabham-Ford
+1967,11,,-,0,0,lola,Lola
+1967,11,,-,0,0,lds-climax,LDS-Climax
+1967,11,,-,0,0,lotus-climax,Lotus-Climax
+1967,11,,-,0,0,eagle-climax,Eagle-Climax
+1967,11,,-,0,0,matra,Matra
+1967,11,,-,0,0,protos,Protos
+1967,11,,-,0,0,cooper-ats,Cooper-ATS
+1968,12,1,1,62,5,lotus-ford,Lotus-Ford
+1968,12,2,2,49,3,mclaren-ford,McLaren-Ford
+1968,12,3,3,45,3,matra-ford,Matra-Ford
+1968,12,4,4,32,1,ferrari,Ferrari
+1968,12,5,5,28,0,brm,BRM
+1968,12,6,6,14,0,honda,Honda
+1968,12,7,7,14,0,cooper-brm,Cooper-BRM
+1968,12,8,8,10,0,brabham-repco,Brabham-Repco
+1968,12,9,9,8,0,matra,Matra
+1968,12,10,10,3,0,mclaren-brm,McLaren-BRM
+1968,12,,-,0,0,cooper-maserati,Cooper-Maserati
+1968,12,,-,0,0,eagle-weslake,Eagle-Weslake
+1968,12,,-,0,0,lola,Lola
+1968,12,,-,0,0,mclaren,McLaren
+1968,12,,-,0,0,brabham-climax,Brabham-Climax
+1968,12,,-,0,0,lds,LDS
+1968,12,,-,0,0,cooper-climax,Cooper-Climax
+1969,11,1,1,66,6,matra-ford,Matra-Ford
+1969,11,2,2,51,2,brabham-ford,Brabham-Ford
+1969,11,3,3,47,2,lotus-ford,Lotus-Ford
+1969,11,4,4,38,1,mclaren-ford,McLaren-Ford
+1969,11,5,5,7,0,brm,BRM
+1969,11,6,6,7,0,ferrari,Ferrari
+1969,11,,-,0,0,cooper-maserati,Cooper-Maserati
+1969,11,,-,0,0,brabham-repco,Brabham-Repco
+1969,11,,-,0,0,brm-ford,BRM-Ford
+1969,11,,-,0,0,eagle-climax,Eagle-Climax
+1969,11,,-,0,0,brabham-climax,Brabham-Climax
+1970,13,1,1,59,6,team_lotus,Team Lotus
+1970,13,2,2,55,4,ferrari,Ferrari
+1970,13,3,3,48,1,march,March
+1970,13,4,4,35,1,brabham,Brabham
+1970,13,5,5,35,0,mclaren-ford,McLaren-Ford
+1970,13,6,6,23,1,brm,BRM
+1970,13,7,7,23,0,matra,Matra
+1970,13,8,8,3,0,surtees,Surtees
+1970,13,,-,0,0,mclaren-alfa_romeo,McLaren-Alfa Romeo
+1970,13,,-,0,0,tomaso,De Tomaso
+1970,13,,-,0,0,tyrrell,Tyrrell
+1970,13,,-,0,0,bellasi,Bellasi
+1971,11,1,1,73,7,tyrrell,Tyrrell
+1971,11,2,2,36,2,brm,BRM
+1971,11,3,3,34,0,march-ford,March-Ford
+1971,11,4,4,33,2,ferrari,Ferrari
+1971,11,5,5,21,0,lotus-ford,Lotus-Ford
+1971,11,6,6,10,0,mclaren,McLaren
+1971,11,7,7,9,0,matra,Matra
+1971,11,8,8,8,0,surtees,Surtees
+1971,11,9,9,5,0,brabham,Brabham
+1971,11,,-,0,0,lotus-pw,Lotus-Pratt &amp; Whitney
+1971,11,,-,0,0,march-alfa_romeo,March-Alfa Romeo
+1971,11,,-,0,0,bellasi,Bellasi
+1972,12,1,1,61,5,team_lotus,Team Lotus
+1972,12,2,2,51,4,tyrrell,Tyrrell
+1972,12,3,3,49,1,mclaren,McLaren
+1972,12,4,4,33,1,ferrari,Ferrari
+1972,12,5,5,18,0,surtees,Surtees
+1972,12,6,6,15,0,march,March
+1972,12,7,7,14,1,brm,BRM
+1972,12,8,8,12,0,matra,Matra
+1972,12,9,9,7,0,brabham,Brabham
+1972,12,,-,0,0,tecno,Tecno
+1972,12,,-,0,0,connew,Connew
+1972,12,,-,0,0,politoys,Politoys
+1973,15,1,1,91,7,team_lotus,Team Lotus
+1973,15,2,2,80,5,tyrrell,Tyrrell
+1973,15,3,3,58,3,mclaren,McLaren
+1973,15,4,4,22,0,brabham,Brabham
+1973,15,5,5,14,0,march,March
+1973,15,6,6,12,0,ferrari,Ferrari
+1973,15,7,7,12,0,brm,BRM
+1973,15,8,8,9,0,shadow,Shadow
+1973,15,9,9,7,0,surtees,Surtees
+1973,15,10,10,2,0,iso_marlboro,Iso Marlboro
+1973,15,11,11,1,0,tecno,Tecno
+1973,15,,-,0,0,ensign,Ensign
+1974,15,1,1,72,4,mclaren,McLaren
+1974,15,2,2,65,3,ferrari,Ferrari
+1974,15,3,3,51,2,tyrrell,Tyrrell
+1974,15,4,4,42,3,team_lotus,Team Lotus
+1974,15,5,5,35,3,brabham,Brabham
+1974,15,6,6,15,0,hesketh,Hesketh
+1974,15,7,7,10,0,brm,BRM
+1974,15,8,8,7,0,shadow,Shadow
+1974,15,9,9,6,0,march,March
+1974,15,10,10,4,0,iso_marlboro,Iso Marlboro
+1974,15,11,11,3,0,surtees,Surtees
+1974,15,12,12,1,0,lola,Lola
+1974,15,,-,0,0,parnelli,Parnelli
+1974,15,,-,0,0,trojan,Trojan
+1974,15,,-,0,0,penske,Penske
+1974,15,,-,0,0,token,Token
+1974,15,,-,0,0,ensign,Ensign
+1974,15,,-,0,0,amon,Amon
+1975,14,1,1,72.5,6,ferrari,Ferrari
+1975,14,2,2,54,2,brabham,Brabham
+1975,14,3,3,53,3,mclaren,McLaren
+1975,14,4,4,33,1,hesketh,Hesketh
+1975,14,5,5,25,1,tyrrell,Tyrrell
+1975,14,6,6,9.5,0,shadow-ford,Shadow-Ford
+1975,14,7,7,9,0,team_lotus,Team Lotus
+1975,14,8,8,7.5,1,march,March
+1975,14,9,9,6,0,williams,Williams
+1975,14,10,10,5,0,parnelli,Parnelli
+1975,14,11,11,3,0,hill,Embassy Hill
+1975,14,12,12,2,0,penske,Penske
+1975,14,13,13,1,0,ensign,Ensign
+1975,14,,-,0,0,surtees,Surtees
+1975,14,,-,0,0,brm,BRM
+1975,14,,-,0,0,fittipaldi,Fittipaldi
+1975,14,,-,0,0,lola,Lola
+1975,14,,-,0,0,lyncar,Lyncar
+1975,14,,-,0,0,shadow-matra,Shadow-Matra
+1975,14,,-,0,0,maki,Maki
+1976,16,1,1,83,6,ferrari,Ferrari
+1976,16,2,2,74,6,mclaren,McLaren
+1976,16,3,3,71,1,tyrrell,Tyrrell
+1976,16,4,4,29,1,team_lotus,Team Lotus
+1976,16,5,5,20,1,penske,Penske
+1976,16,6,6,20,0,ligier,Ligier
+1976,16,7,7,19,1,march,March
+1976,16,8,8,10,0,shadow,Shadow
+1976,16,9,9,9,0,brabham-alfa_romeo,Brabham-Alfa Romeo
+1976,16,10,10,7,0,surtees,Surtees
+1976,16,11,11,3,0,fittipaldi,Fittipaldi
+1976,16,12,12,2,0,ensign,Ensign
+1976,16,13,13,1,0,parnelli,Parnelli
+1976,16,,-,0,0,hesketh,Hesketh
+1976,16,,-,0,0,wolf,Wolf
+1976,16,,-,0,0,boro,Boro
+1976,16,,-,0,0,williams,Williams
+1976,16,,-,0,0,kojima,Kojima
+1976,16,,-,0,0,brabham-ford,Brabham-Ford
+1976,16,,-,0,0,brm,BRM
+1977,17,1,1,84,4,ferrari,Ferrari
+1977,17,2,2,62,5,team_lotus,Team Lotus
+1977,17,3,3,56,3,mclaren,McLaren
+1977,17,4,4,55,3,wolf,Wolf
+1977,17,5,5,27,0,brabham,Brabham
+1977,17,6,6,27,0,tyrrell,Tyrrell
+1977,17,7,7,23,1,shadow,Shadow
+1977,17,8,8,18,1,ligier,Ligier
+1977,17,9,9,11,0,fittipaldi,Fittipaldi
+1977,17,10,10,10,0,ensign,Ensign
+1977,17,11,11,6,0,surtees,Surtees
+1977,17,12,12,1,0,penske,Penske
+1977,17,,-,0,0,march,March
+1977,17,,-,0,0,hesketh,Hesketh
+1977,17,,-,0,0,kojima,Kojima
+1977,17,,-,0,0,lec,LEC
+1977,17,,-,0,0,brm,BRM
+1977,17,,-,0,0,boro,Boro
+1977,17,,-,0,0,renault,Renault
+1978,16,1,1,86,8,team_lotus,Team Lotus
+1978,16,2,2,58,5,ferrari,Ferrari
+1978,16,3,3,53,2,brabham,Brabham
+1978,16,4,4,38,1,tyrrell,Tyrrell
+1978,16,5,5,24,0,wolf,Wolf
+1978,16,6,6,19,0,ligier,Ligier
+1978,16,7,7,17,0,fittipaldi,Fittipaldi
+1978,16,8,8,15,0,mclaren,McLaren
+1978,16,9,9,11,0,williams,Williams
+1978,16,10,10,11,0,arrows,Arrows
+1978,16,11,11,6,0,shadow,Shadow
+1978,16,12,12,3,0,renault,Renault
+1978,16,13,13,1,0,surtees,Surtees
+1978,16,14,14,1,0,ensign,Ensign
+1978,16,,-,0,0,ats,ATS
+1978,16,,-,0,0,martini,Martini
+1978,16,,-,0,0,merzario,Merzario
+1978,16,,-,0,0,theodore,Theodore
+1978,16,,-,0,0,hesketh,Hesketh
+1979,15,1,1,113,6,ferrari,Ferrari
+1979,15,2,2,75,5,williams,Williams
+1979,15,3,3,61,3,ligier,Ligier
+1979,15,4,4,39,0,team_lotus,Team Lotus
+1979,15,5,5,28,0,tyrrell,Tyrrell
+1979,15,6,6,26,1,renault,Renault
+1979,15,7,7,15,0,mclaren,McLaren
+1979,15,8,8,7,0,brabham-alfa_romeo,Brabham-Alfa Romeo
+1979,15,9,9,5,0,arrows,Arrows
+1979,15,10,10,3,0,shadow,Shadow
+1979,15,11,11,2,0,ats,ATS
+1979,15,12,12,1,0,fittipaldi,Fittipaldi
+1979,15,,-,0,0,brabham-ford,Brabham-Ford
+1979,15,,-,0,0,wolf,Wolf
+1979,15,,-,0,0,ensign,Ensign
+1979,15,,-,0,0,alfa,Alfa Romeo
+1979,15,,-,0,0,rebaque,Rebaque
+1979,15,,-,0,0,merzario,Merzario
+1980,14,1,1,120,6,williams,Williams
+1980,14,2,2,66,2,ligier,Ligier
+1980,14,3,3,55,3,brabham,Brabham
+1980,14,4,4,38,3,renault,Renault
+1980,14,5,5,14,0,team_lotus,Team Lotus
+1980,14,6,6,12,0,tyrrell,Tyrrell
+1980,14,7,7,11,0,arrows,Arrows
+1980,14,8,8,11,0,fittipaldi,Fittipaldi
+1980,14,9,9,11,0,mclaren,McLaren
+1980,14,10,10,8,0,ferrari,Ferrari
+1980,14,11,11,4,0,alfa,Alfa Romeo
+1980,14,,-,0,0,ats,ATS
+1980,14,,-,0,0,ensign,Ensign
+1980,14,,-,0,0,osella,Osella
+1980,14,,-,0,0,shadow,Shadow
+1981,15,1,1,95,4,williams,Williams
+1981,15,2,2,61,3,brabham,Brabham
+1981,15,3,3,54,3,renault,Renault
+1981,15,4,4,44,2,ligier,Ligier
+1981,15,5,5,34,2,ferrari,Ferrari
+1981,15,6,6,28,1,mclaren,McLaren
+1981,15,7,7,22,0,team_lotus,Team Lotus
+1981,15,8,8,10,0,arrows,Arrows
+1981,15,9,9,10,0,alfa,Alfa Romeo
+1981,15,10,10,10,0,tyrrell,Tyrrell
+1981,15,11,11,5,0,ensign,Ensign
+1981,15,12,12,1,0,theodore,Theodore
+1981,15,13,13,1,0,ats,ATS
+1981,15,,-,0,0,march,March
+1981,15,,-,0,0,fittipaldi,Fittipaldi
+1981,15,,-,0,0,osella,Osella
+1981,15,,-,0,0,toleman,Toleman
+1982,16,1,1,74,3,ferrari,Ferrari
+1982,16,2,2,69,4,mclaren,McLaren
+1982,16,3,3,62,4,renault,Renault
+1982,16,4,4,58,1,williams,Williams
+1982,16,5,5,41,2,brabham,Brabham
+1982,16,6,6,30,1,team_lotus,Team Lotus
+1982,16,7,7,25,1,tyrrell,Tyrrell
+1982,16,8,8,20,0,ligier,Ligier
+1982,16,9,9,7,0,alfa,Alfa Romeo
+1982,16,10,10,5,0,arrows,Arrows
+1982,16,11,11,4,0,ats,ATS
+1982,16,12,12,3,0,osella,Osella
+1982,16,13,13,1,0,fittipaldi,Fittipaldi
+1982,16,,-,0,0,march,March
+1982,16,,-,0,0,ensign,Ensign
+1982,16,,-,0,0,toleman,Toleman
+1982,16,,-,0,0,theodore,Theodore
+1983,15,1,1,89,4,ferrari,Ferrari
+1983,15,2,2,79,4,renault,Renault
+1983,15,3,3,72,4,brabham,Brabham
+1983,15,4,4,38,1,williams,Williams
+1983,15,5,5,34,1,mclaren,McLaren
+1983,15,6,6,18,0,alfa,Alfa Romeo
+1983,15,7,7,12,1,tyrrell,Tyrrell
+1983,15,8,8,12,0,team_lotus,Team Lotus
+1983,15,9,9,10,0,toleman,Toleman
+1983,15,10,10,4,0,arrows,Arrows
+1983,15,11,11,1,0,theodore,Theodore
+1983,15,,-,0,0,ligier,Ligier
+1983,15,,-,0,0,spirit,Spirit
+1983,15,,-,0,0,ats,ATS
+1983,15,,-,0,0,osella,Osella
+1983,15,,-,0,0,ram,RAM
+1984,16,1,1,143.5,12,mclaren,McLaren
+1984,16,2,2,57.5,1,ferrari,Ferrari
+1984,16,3,3,47,0,team_lotus,Team Lotus
+1984,16,4,4,38,2,brabham,Brabham
+1984,16,5,5,34,0,renault,Renault
+1984,16,6,6,25.5,1,williams,Williams
+1984,16,7,7,16,0,toleman,Toleman
+1984,16,8,8,11,0,alfa,Alfa Romeo
+1984,16,9,9,6,0,arrows,Arrows
+1984,16,10,10,3,0,ligier,Ligier
+1984,16,11,11,2,0,osella,Osella
+1984,16,,-,0,0,ats,ATS
+1984,16,,-,0,0,spirit,Spirit
+1984,16,,-,0,0,ram,RAM
+1984,16,,-,0,0,tyrrell,Tyrrell
+1985,16,1,1,90,6,mclaren,McLaren
+1985,16,2,2,82,2,ferrari,Ferrari
+1985,16,3,3,71,4,williams,Williams
+1985,16,4,4,71,3,team_lotus,Team Lotus
+1985,16,5,5,26,1,brabham,Brabham
+1985,16,6,6,23,0,ligier,Ligier
+1985,16,7,7,16,0,renault,Renault
+1985,16,8,8,14,0,arrows,Arrows
+1985,16,9,9,7,0,tyrrell,Tyrrell
+1985,16,,-,0,0,osella,Osella
+1985,16,,-,0,0,minardi,Minardi
+1985,16,,-,0,0,alfa,Alfa Romeo
+1985,16,,-,0,0,ram,RAM
+1985,16,,-,0,0,zakspeed,Zakspeed
+1985,16,,-,0,0,toleman,Toleman
+1985,16,,-,0,0,spirit,Spirit
+1985,16,,-,0,0,lola,Lola
+1986,16,1,1,141,9,williams,Williams
+1986,16,2,2,96,4,mclaren,McLaren
+1986,16,3,3,58,2,team_lotus,Team Lotus
+1986,16,4,4,37,0,ferrari,Ferrari
+1986,16,5,5,29,0,ligier,Ligier
+1986,16,6,6,19,1,benetton,Benetton
+1986,16,7,7,11,0,tyrrell,Tyrrell
+1986,16,8,8,6,0,lola,Lola
+1986,16,9,9,2,0,brabham,Brabham
+1986,16,10,10,1,0,arrows,Arrows
+1986,16,,-,0,0,zakspeed,Zakspeed
+1986,16,,-,0,0,minardi,Minardi
+1986,16,,-,0,0,osella,Osella
+1986,16,,-,0,0,ags,AGS
+1987,16,1,1,137,9,williams,Williams
+1987,16,2,2,76,3,mclaren,McLaren
+1987,16,3,3,64,2,team_lotus,Team Lotus
+1987,16,4,4,53,2,ferrari,Ferrari
+1987,16,5,5,28,0,benetton,Benetton
+1987,16,6,6,11,0,tyrrell,Tyrrell
+1987,16,7,7,11,0,arrows,Arrows
+1987,16,8,8,10,0,brabham,Brabham
+1987,16,9,9,3,0,larrousse,Larrousse
+1987,16,10,10,2,0,zakspeed,Zakspeed
+1987,16,11,11,1,0,ligier,Ligier
+1987,16,12,12,1,0,ags,AGS
+1987,16,13,13,1,0,march,March
+1987,16,,-,0,0,minardi,Minardi
+1987,16,,-,0,0,osella,Osella
+1987,16,,-,0,0,coloni,Coloni
+1988,16,1,1,199,15,mclaren,McLaren
+1988,16,2,2,65,1,ferrari,Ferrari
+1988,16,3,3,39,0,benetton,Benetton
+1988,16,4,4,23,0,team_lotus,Team Lotus
+1988,16,5,5,23,0,arrows,Arrows
+1988,16,6,6,22,0,march,March
+1988,16,7,7,20,0,williams,Williams
+1988,16,8,8,5,0,tyrrell,Tyrrell
+1988,16,9,9,3,0,rial,Rial
+1988,16,10,10,1,0,minardi,Minardi
+1988,16,,-,0,0,larrousse,Larrousse
+1988,16,,-,0,0,dallara,Dallara
+1988,16,,-,0,0,ags,AGS
+1988,16,,-,0,0,coloni,Coloni
+1988,16,,-,0,0,ligier,Ligier
+1988,16,,-,0,0,osella,Osella
+1988,16,,-,0,0,eurobrun,Euro Brun
+1988,16,,-,0,0,zakspeed,Zakspeed
+1989,16,1,1,141,10,mclaren,McLaren
+1989,16,2,2,77,2,williams,Williams
+1989,16,3,3,59,3,ferrari,Ferrari
+1989,16,4,4,39,1,benetton,Benetton
+1989,16,5,5,16,0,tyrrell,Tyrrell
+1989,16,6,6,15,0,team_lotus,Team Lotus
+1989,16,7,7,13,0,arrows,Arrows
+1989,16,8,8,8,0,dallara,Dallara
+1989,16,9,9,8,0,brabham,Brabham
+1989,16,10,10,6,0,onyx,Onyx
+1989,16,11,11,6,0,minardi,Minardi
+1989,16,12,12,4,0,march,March
+1989,16,13,13,3,0,rial,Rial
+1989,16,14,14,3,0,ligier,Ligier
+1989,16,15,15,1,0,ags,AGS
+1989,16,16,16,1,0,larrousse,Larrousse
+1989,16,,-,0,0,osella,Osella
+1989,16,,-,0,0,coloni,Coloni
+1989,16,,-,0,0,zakspeed,Zakspeed
+1990,16,1,1,121,6,mclaren,McLaren
+1990,16,2,2,110,6,ferrari,Ferrari
+1990,16,3,3,71,2,benetton,Benetton
+1990,16,4,4,57,2,williams,Williams
+1990,16,5,5,16,0,tyrrell,Tyrrell
+1990,16,6,6,11,0,larrousse,Larrousse
+1990,16,7,7,7,0,leyton,Leyton House
+1990,16,8,8,3,0,team_lotus,Team Lotus
+1990,16,9,9,2,0,arrows,Arrows
+1990,16,10,10,2,0,brabham,Brabham
+1990,16,,-,0,0,ligier,Ligier
+1990,16,,-,0,0,minardi,Minardi
+1990,16,,-,0,0,onyx,Onyx
+1990,16,,-,0,0,ags,AGS
+1990,16,,-,0,0,dallara,Dallara
+1990,16,,-,0,0,osella,Osella
+1990,16,,-,0,0,eurobrun,Euro Brun
+1991,16,1,1,139,8,mclaren,McLaren
+1991,16,2,2,125,7,williams,Williams
+1991,16,3,3,55.5,0,ferrari,Ferrari
+1991,16,4,4,38.5,1,benetton,Benetton
+1991,16,5,5,13,0,jordan,Jordan
+1991,16,6,6,12,0,tyrrell,Tyrrell
+1991,16,7,7,6,0,minardi,Minardi
+1991,16,8,8,5,0,dallara,Dallara
+1991,16,9,9,3,0,team_lotus,Team Lotus
+1991,16,10,10,3,0,brabham,Brabham
+1991,16,11,11,1,0,leyton,Leyton House
+1991,16,12,12,1,0,lola,Lola
+1991,16,13,13,1,0,larrousse,Larrousse
+1991,16,,-,0,0,ligier,Ligier
+1991,16,,-,0,0,lambo,Lambo
+1991,16,,-,0,0,ags,AGS
+1991,16,,-,0,0,fondmetal,Fondmetal
+1991,16,,-,0,0,footwork,Footwork
+1992,16,1,1,164,10,williams,Williams
+1992,16,2,2,99,5,mclaren,McLaren
+1992,16,3,3,91,1,benetton,Benetton
+1992,16,4,4,21,0,ferrari,Ferrari
+1992,16,5,5,13,0,team_lotus,Team Lotus
+1992,16,6,6,8,0,tyrrell,Tyrrell
+1992,16,7,7,6,0,footwork,Footwork
+1992,16,8,8,6,0,ligier,Ligier
+1992,16,9,9,3,0,march,March
+1992,16,10,10,2,0,dallara,Dallara
+1992,16,11,11,1,0,jordan,Jordan
+1992,16,12,12,1,0,minardi,Minardi
+1992,16,13,13,1,0,larrousse,Larrousse
+1992,16,,-,0,0,fondmetal,Fondmetal
+1992,16,,-,0,0,brabham,Brabham
+1992,16,,-,0,0,moda,Andrea Moda
+1993,16,1,1,168,10,williams,Williams
+1993,16,2,2,84,5,mclaren,McLaren
+1993,16,3,3,72,1,benetton,Benetton
+1993,16,4,4,28,0,ferrari,Ferrari
+1993,16,5,5,23,0,ligier,Ligier
+1993,16,6,6,12,0,team_lotus,Team Lotus
+1993,16,7,7,12,0,sauber,Sauber
+1993,16,8,8,7,0,minardi,Minardi
+1993,16,9,9,4,0,footwork,Footwork
+1993,16,10,10,3,0,larrousse,Larrousse
+1993,16,11,11,3,0,jordan,Jordan
+1993,16,,-,0,0,lola,Lola
+1993,16,,-,0,0,tyrrell,Tyrrell
+1994,16,1,1,118,7,williams,Williams
+1994,16,2,2,103,8,benetton,Benetton
+1994,16,3,3,71,1,ferrari,Ferrari
+1994,16,4,4,42,0,mclaren,McLaren
+1994,16,5,5,28,0,jordan,Jordan
+1994,16,6,6,13,0,ligier,Ligier
+1994,16,7,7,13,0,tyrrell,Tyrrell
+1994,16,8,8,12,0,sauber,Sauber
+1994,16,9,9,9,0,footwork,Footwork
+1994,16,10,10,5,0,minardi,Minardi
+1994,16,11,11,2,0,larrousse,Larrousse
+1994,16,,-,0,0,team_lotus,Team Lotus
+1994,16,,-,0,0,simtek,Simtek
+1994,16,,-,0,0,pacific,Pacific
+1995,17,1,1,147,11,benetton,Benetton
+1995,17,2,2,118,5,williams,Williams
+1995,17,3,3,73,1,ferrari,Ferrari
+1995,17,4,4,30,0,mclaren,McLaren
+1995,17,5,5,24,0,ligier,Ligier
+1995,17,6,6,21,0,jordan,Jordan
+1995,17,7,7,18,0,sauber,Sauber
+1995,17,8,8,5,0,footwork,Footwork
+1995,17,9,9,5,0,tyrrell,Tyrrell
+1995,17,10,10,1,0,minardi,Minardi
+1995,17,,-,0,0,forti,Forti
+1995,17,,-,0,0,pacific,Pacific
+1995,17,,-,0,0,simtek,Simtek
+1996,16,1,1,175,12,williams,Williams
+1996,16,2,2,70,3,ferrari,Ferrari
+1996,16,3,3,68,0,benetton,Benetton
+1996,16,4,4,49,0,mclaren,McLaren
+1996,16,5,5,22,0,jordan,Jordan
+1996,16,6,6,15,1,ligier,Ligier
+1996,16,7,7,11,0,sauber,Sauber
+1996,16,8,8,5,0,tyrrell,Tyrrell
+1996,16,9,9,1,0,footwork,Footwork
+1996,16,,-,0,0,minardi,Minardi
+1996,16,,-,0,0,forti,Forti
+1997,17,1,1,123,8,williams,Williams
+1997,17,2,2,102,5,ferrari,Ferrari
+1997,17,3,3,67,1,benetton,Benetton
+1997,17,4,4,63,3,mclaren,McLaren
+1997,17,5,5,33,0,jordan,Jordan
+1997,17,6,6,21,0,prost,Prost
+1997,17,7,7,16,0,sauber,Sauber
+1997,17,8,8,9,0,arrows,Arrows
+1997,17,9,9,6,0,stewart,Stewart
+1997,17,10,10,2,0,tyrrell,Tyrrell
+1997,17,,-,0,0,minardi,Minardi
+1998,16,1,1,156,9,mclaren,McLaren
+1998,16,2,2,133,6,ferrari,Ferrari
+1998,16,3,3,38,0,williams,Williams
+1998,16,4,4,34,1,jordan,Jordan
+1998,16,5,5,33,0,benetton,Benetton
+1998,16,6,6,10,0,sauber,Sauber
+1998,16,7,7,6,0,arrows,Arrows
+1998,16,8,8,5,0,stewart,Stewart
+1998,16,9,9,1,0,prost,Prost
+1998,16,,-,0,0,minardi,Minardi
+1998,16,,-,0,0,tyrrell,Tyrrell
+1999,16,1,1,128,6,ferrari,Ferrari
+1999,16,2,2,124,7,mclaren,McLaren
+1999,16,3,3,61,2,jordan,Jordan
+1999,16,4,4,36,1,stewart,Stewart
+1999,16,5,5,35,0,williams,Williams
+1999,16,6,6,16,0,benetton,Benetton
+1999,16,7,7,9,0,prost,Prost
+1999,16,8,8,5,0,sauber,Sauber
+1999,16,9,9,1,0,arrows,Arrows
+1999,16,10,10,1,0,minardi,Minardi
+1999,16,,-,0,0,bar,BAR
+2000,17,1,1,170,10,ferrari,Ferrari
+2000,17,2,2,162,7,mclaren,McLaren
+2000,17,3,3,36,0,williams,Williams
+2000,17,4,4,20,0,benetton,Benetton
+2000,17,5,5,20,0,bar,BAR
+2000,17,6,6,17,0,jordan,Jordan
+2000,17,7,7,7,0,arrows,Arrows
+2000,17,8,8,6,0,sauber,Sauber
+2000,17,9,9,4,0,jaguar,Jaguar
+2000,17,,-,0,0,minardi,Minardi
+2000,17,,-,0,0,prost,Prost
+2001,17,1,1,179,9,ferrari,Ferrari
+2001,17,2,2,102,4,mclaren,McLaren
+2001,17,3,3,80,4,williams,Williams
+2001,17,4,4,21,0,sauber,Sauber
+2001,17,5,5,19,0,jordan,Jordan
+2001,17,6,6,17,0,bar,BAR
+2001,17,7,7,10,0,benetton,Benetton
+2001,17,8,8,9,0,jaguar,Jaguar
+2001,17,9,9,4,0,prost,Prost
+2001,17,10,10,1,0,arrows,Arrows
+2001,17,,-,0,0,minardi,Minardi
+2002,17,1,1,221,15,ferrari,Ferrari
+2002,17,2,2,92,1,williams,Williams
+2002,17,3,3,65,1,mclaren,McLaren
+2002,17,4,4,23,0,renault,Renault
+2002,17,5,5,11,0,sauber,Sauber
+2002,17,6,6,9,0,jordan,Jordan
+2002,17,7,7,8,0,jaguar,Jaguar
+2002,17,8,8,7,0,bar,BAR
+2002,17,9,9,2,0,minardi,Minardi
+2002,17,10,10,2,0,toyota,Toyota
+2002,17,11,11,2,0,arrows,Arrows
+2003,16,1,1,158,8,ferrari,Ferrari
+2003,16,2,2,144,4,williams,Williams
+2003,16,3,3,142,2,mclaren,McLaren
+2003,16,4,4,88,1,renault,Renault
+2003,16,5,5,26,0,bar,BAR
+2003,16,6,6,19,0,sauber,Sauber
+2003,16,7,7,18,0,jaguar,Jaguar
+2003,16,8,8,16,0,toyota,Toyota
+2003,16,9,9,13,1,jordan,Jordan
+2003,16,10,10,0,0,minardi,Minardi
+2004,18,1,1,262,15,ferrari,Ferrari
+2004,18,2,2,119,0,bar,BAR
+2004,18,3,3,105,1,renault,Renault
+2004,18,4,4,88,1,williams,Williams
+2004,18,5,5,69,1,mclaren,McLaren
+2004,18,6,6,34,0,sauber,Sauber
+2004,18,7,7,10,0,jaguar,Jaguar
+2004,18,8,8,9,0,toyota,Toyota
+2004,18,9,9,5,0,jordan,Jordan
+2004,18,10,10,1,0,minardi,Minardi
+2005,19,1,1,191,8,renault,Renault
+2005,19,2,2,182,10,mclaren,McLaren
+2005,19,3,3,100,1,ferrari,Ferrari
+2005,19,4,4,88,0,toyota,Toyota
+2005,19,5,5,66,0,williams,Williams
+2005,19,6,6,38,0,bar,BAR
+2005,19,7,7,34,0,red_bull,Red Bull
+2005,19,8,8,20,0,sauber,Sauber
+2005,19,9,9,12,0,jordan,Jordan
+2005,19,10,10,7,0,minardi,Minardi
+2006,18,1,1,206,8,renault,Renault
+2006,18,2,2,201,9,ferrari,Ferrari
+2006,18,3,3,110,0,mclaren,McLaren
+2006,18,4,4,86,1,honda,Honda
+2006,18,5,5,36,0,bmw_sauber,BMW Sauber
+2006,18,6,6,35,0,toyota,Toyota
+2006,18,7,7,16,0,red_bull,Red Bull
+2006,18,8,8,11,0,williams,Williams
+2006,18,9,9,1,0,toro_rosso,Toro Rosso
+2006,18,10,10,0,0,mf1,MF1
+2006,18,11,11,0,0,super_aguri,Super Aguri
+2006,18,12,12,0,0,spyker_mf1,Spyker MF1
+2007,17,1,1,204,9,ferrari,Ferrari
+2007,17,2,2,101,0,bmw_sauber,BMW Sauber
+2007,17,3,3,51,0,renault,Renault
+2007,17,4,4,33,0,williams,Williams
+2007,17,5,5,24,0,red_bull,Red Bull
+2007,17,6,6,13,0,toyota,Toyota
+2007,17,7,7,8,0,toro_rosso,Toro Rosso
+2007,17,8,8,6,0,honda,Honda
+2007,17,9,9,4,0,super_aguri,Super Aguri
+2007,17,10,10,1,0,spyker,Spyker
+2007,17,,E,0,8,mclaren,McLaren
+2008,18,1,1,172,8,ferrari,Ferrari
+2008,18,2,2,151,6,mclaren,McLaren
+2008,18,3,3,135,1,bmw_sauber,BMW Sauber
+2008,18,4,4,80,2,renault,Renault
+2008,18,5,5,56,0,toyota,Toyota
+2008,18,6,6,39,1,toro_rosso,Toro Rosso
+2008,18,7,7,29,0,red_bull,Red Bull
+2008,18,8,8,26,0,williams,Williams
+2008,18,9,9,14,0,honda,Honda
+2008,18,10,10,0,0,force_india,Force India
+2008,18,11,11,0,0,super_aguri,Super Aguri
+2009,17,1,1,172,8,brawn,Brawn
+2009,17,2,2,153.5,6,red_bull,Red Bull
+2009,17,3,3,71,2,mclaren,McLaren
+2009,17,4,4,70,1,ferrari,Ferrari
+2009,17,5,5,59.5,0,toyota,Toyota
+2009,17,6,6,36,0,bmw_sauber,BMW Sauber
+2009,17,7,7,34.5,0,williams,Williams
+2009,17,8,8,26,0,renault,Renault
+2009,17,9,9,13,0,force_india,Force India
+2009,17,10,10,8,0,toro_rosso,Toro Rosso
+2010,19,1,1,498,9,red_bull,Red Bull
+2010,19,2,2,454,5,mclaren,McLaren
+2010,19,3,3,396,5,ferrari,Ferrari
+2010,19,4,4,214,0,mercedes,Mercedes
+2010,19,5,5,163,0,renault,Renault
+2010,19,6,6,69,0,williams,Williams
+2010,19,7,7,68,0,force_india,Force India
+2010,19,8,8,44,0,sauber,Sauber
+2010,19,9,9,13,0,toro_rosso,Toro Rosso
+2010,19,10,10,0,0,lotus_racing,Lotus
+2010,19,11,11,0,0,hrt,HRT
+2010,19,12,12,0,0,virgin,Virgin
+2011,19,1,1,650,12,red_bull,Red Bull
+2011,19,2,2,497,6,mclaren,McLaren
+2011,19,3,3,375,1,ferrari,Ferrari
+2011,19,4,4,165,0,mercedes,Mercedes
+2011,19,5,5,73,0,renault,Renault
+2011,19,6,6,69,0,force_india,Force India
+2011,19,7,7,44,0,sauber,Sauber
+2011,19,8,8,41,0,toro_rosso,Toro Rosso
+2011,19,9,9,5,0,williams,Williams
+2011,19,10,10,0,0,lotus_racing,Lotus
+2011,19,11,11,0,0,hrt,HRT
+2011,19,12,12,0,0,virgin,Virgin
+2012,20,1,1,460,7,red_bull,Red Bull
+2012,20,2,2,400,3,ferrari,Ferrari
+2012,20,3,3,378,7,mclaren,McLaren
+2012,20,4,4,303,1,lotus_f1,Lotus F1
+2012,20,5,5,142,1,mercedes,Mercedes
+2012,20,6,6,126,0,sauber,Sauber
+2012,20,7,7,109,0,force_india,Force India
+2012,20,8,8,76,1,williams,Williams
+2012,20,9,9,26,0,toro_rosso,Toro Rosso
+2012,20,10,10,0,0,caterham,Caterham
+2012,20,11,11,0,0,marussia,Marussia
+2012,20,12,12,0,0,hrt,HRT
+2013,19,1,1,596,13,red_bull,Red Bull
+2013,19,2,2,360,3,mercedes,Mercedes
+2013,19,3,3,354,2,ferrari,Ferrari
+2013,19,4,4,315,1,lotus_f1,Lotus F1
+2013,19,5,5,122,0,mclaren,McLaren
+2013,19,6,6,77,0,force_india,Force India
+2013,19,7,7,57,0,sauber,Sauber
+2013,19,8,8,33,0,toro_rosso,Toro Rosso
+2013,19,9,9,5,0,williams,Williams
+2013,19,10,10,0,0,marussia,Marussia
+2013,19,11,11,0,0,caterham,Caterham
+2014,19,1,1,701,16,mercedes,Mercedes
+2014,19,2,2,405,3,red_bull,Red Bull
+2014,19,3,3,320,0,williams,Williams
+2014,19,4,4,216,0,ferrari,Ferrari
+2014,19,5,5,181,0,mclaren,McLaren
+2014,19,6,6,155,0,force_india,Force India
+2014,19,7,7,30,0,toro_rosso,Toro Rosso
+2014,19,8,8,10,0,lotus_f1,Lotus F1
+2014,19,9,9,2,0,marussia,Marussia
+2014,19,10,10,0,0,sauber,Sauber
+2014,19,11,11,0,0,caterham,Caterham
+2015,19,1,1,703,16,mercedes,Mercedes
+2015,19,2,2,428,3,ferrari,Ferrari
+2015,19,3,3,257,0,williams,Williams
+2015,19,4,4,187,0,red_bull,Red Bull
+2015,19,5,5,136,0,force_india,Force India
+2015,19,6,6,78,0,lotus_f1,Lotus F1
+2015,19,7,7,67,0,toro_rosso,Toro Rosso
+2015,19,8,8,36,0,sauber,Sauber
+2015,19,9,9,27,0,mclaren,McLaren
+2015,19,10,10,0,0,manor,Manor Marussia
+2016,21,1,1,765,19,mercedes,Mercedes
+2016,21,2,2,468,2,red_bull,Red Bull
+2016,21,3,3,398,0,ferrari,Ferrari
+2016,21,4,4,173,0,force_india,Force India
+2016,21,5,5,138,0,williams,Williams
+2016,21,6,6,76,0,mclaren,McLaren
+2016,21,7,7,63,0,toro_rosso,Toro Rosso
+2016,21,8,8,29,0,haas,Haas F1 Team
+2016,21,9,9,8,0,renault,Renault
+2016,21,10,10,2,0,sauber,Sauber
+2016,21,11,11,1,0,manor,Manor Marussia
+2017,20,1,1,668,12,mercedes,Mercedes
+2017,20,2,2,522,5,ferrari,Ferrari
+2017,20,3,3,368,3,red_bull,Red Bull
+2017,20,4,4,187,0,force_india,Force India
+2017,20,5,5,83,0,williams,Williams
+2017,20,6,6,57,0,renault,Renault
+2017,20,7,7,53,0,toro_rosso,Toro Rosso
+2017,20,8,8,47,0,haas,Haas F1 Team
+2017,20,9,9,30,0,mclaren,McLaren
+2017,20,10,10,5,0,sauber,Sauber
+2018,21,1,1,655,11,mercedes,Mercedes
+2018,21,2,2,571,6,ferrari,Ferrari
+2018,21,3,3,419,4,red_bull,Red Bull
+2018,21,4,4,122,0,renault,Renault
+2018,21,5,5,111,0,force_india,Force India
+2018,21,6,6,93,0,haas,Haas F1 Team
+2018,21,7,7,62,0,mclaren,McLaren
+2018,21,8,8,48,0,sauber,Sauber
+2018,21,9,9,33,0,toro_rosso,Toro Rosso
+2018,21,10,10,7,0,williams,Williams
+2019,21,1,1,739,15,mercedes,Mercedes
+2019,21,2,2,504,3,ferrari,Ferrari
+2019,21,3,3,417,3,red_bull,Red Bull
+2019,21,4,4,145,0,mclaren,McLaren
+2019,21,5,5,91,0,renault,Renault
+2019,21,6,6,85,0,toro_rosso,Toro Rosso
+2019,21,7,7,73,0,racing_point,Racing Point
+2019,21,8,8,57,0,alfa,Alfa Romeo
+2019,21,9,9,28,0,haas,Haas F1 Team
+2019,21,10,10,1,0,williams,Williams
+2020,17,1,1,573,13,mercedes,Mercedes
+2020,17,2,2,319,2,red_bull,Red Bull
+2020,17,3,3,202,0,mclaren,McLaren
+2020,17,4,4,195,1,racing_point,Racing Point
+2020,17,5,5,181,0,renault,Renault
+2020,17,6,6,131,0,ferrari,Ferrari
+2020,17,7,7,107,1,alphatauri,AlphaTauri
+2020,17,8,8,8,0,alfa,Alfa Romeo
+2020,17,9,9,3,0,haas,Haas F1 Team
+2020,17,10,10,0,0,williams,Williams
+2021,22,1,1,613.5,9,mercedes,Mercedes
+2021,22,2,2,585.5,11,red_bull,Red Bull
+2021,22,3,3,323.5,0,ferrari,Ferrari
+2021,22,4,4,275,1,mclaren,McLaren
+2021,22,5,5,155,1,alpine,Alpine F1 Team
+2021,22,6,6,142,0,alphatauri,AlphaTauri
+2021,22,7,7,77,0,aston_martin,Aston Martin
+2021,22,8,8,23,0,williams,Williams
+2021,22,9,9,13,0,alfa,Alfa Romeo
+2021,22,10,10,0,0,haas,Haas F1 Team
+2022,22,1,1,759,17,red_bull,Red Bull
+2022,22,2,2,554,4,ferrari,Ferrari
+2022,22,3,3,515,1,mercedes,Mercedes
+2022,22,4,4,173,0,alpine,Alpine F1 Team
+2022,22,5,5,159,0,mclaren,McLaren
+2022,22,6,6,55,0,alfa,Alfa Romeo
+2022,22,7,7,55,0,aston_martin,Aston Martin
+2022,22,8,8,37,0,haas,Haas F1 Team
+2022,22,9,9,35,0,alphatauri,AlphaTauri
+2022,22,10,10,8,0,williams,Williams
+2023,22,1,1,860,21,red_bull,Red Bull
+2023,22,2,2,409,0,mercedes,Mercedes
+2023,22,3,3,406,1,ferrari,Ferrari
+2023,22,4,4,302,0,mclaren,McLaren
+2023,22,5,5,280,0,aston_martin,Aston Martin
+2023,22,6,6,120,0,alpine,Alpine F1 Team
+2023,22,7,7,28,0,williams,Williams
+2023,22,8,8,25,0,alphatauri,AlphaTauri
+2023,22,9,9,16,0,alfa,Alfa Romeo
+2023,22,10,10,12,0,haas,Haas F1 Team
+2024,24,1,1,666,6,mclaren,McLaren
+2024,24,2,2,652,5,ferrari,Ferrari
+2024,24,3,3,589,9,red_bull,Red Bull
+2024,24,4,4,468,4,mercedes,Mercedes
+2024,24,5,5,94,0,aston_martin,Aston Martin
+2024,24,6,6,65,0,alpine,Alpine F1 Team
+2024,24,7,7,58,0,haas,Haas F1 Team
+2024,24,8,8,46,0,rb,RB F1 Team
+2024,24,9,9,17,0,williams,Williams
+2024,24,10,10,4,0,sauber,Sauber
+2025,24,1,1,833,14,mclaren,McLaren
+2025,24,2,2,469,2,mercedes,Mercedes
+2025,24,3,3,451,8,red_bull,Red Bull
+2025,24,4,4,398,0,ferrari,Ferrari
+2025,24,5,5,137,0,williams,Williams
+2025,24,6,6,92,0,rb,RB F1 Team
+2025,24,7,7,89,0,aston_martin,Aston Martin
+2025,24,8,8,79,0,haas,Haas F1 Team
+2025,24,9,9,70,0,sauber,Sauber
+2025,24,10,10,22,0,alpine,Alpine F1 Team
+2026,17,1,1,578,11,mercedes,Mercedes
+2026,17,2,2,444,2,ferrari,Ferrari
+2026,17,3,3,339,2,mclaren,McLaren
+2026,17,4,4,332,2,red_bull,Red Bull
+2026,17,5,5,100,0,rb,RB F1 Team
+2026,17,6,6,68,0,alpine,Alpine F1 Team
+2026,17,7,7,30,0,haas,Haas F1 Team
+2026,17,8,8,23,0,audi,Audi
+2026,17,9,9,12,0,williams,Williams
+2026,17,10,10,7,0,aston_martin,Aston Martin
+2026,17,11,11,0,0,cadillac,Cadillac F1 Team

@@ -1,19 +1,13 @@
-"""Offline tests for `retry_with_backoff` and `fetch_race` (Story 1.6, AD-13).
+"""Offline tests for `fastf1_fetch.py`: retry/backoff, `fetch_race`, and the #978 workaround.
 
-`fastf1_fetch.py` runs only inside the isolated pandas-<3.0 FastF1
-environment -- but `retry_with_backoff` is dependency-free (no
-`fastf1`/`requests` import), and `fetch_race` accepts an injectable
-`fastf1_module` seam, so this file loads the module directly by path
-(rather than `import f1_analytics...`, which would work too, but this
-mirrors how `scripts/pull_fastf1_data.py` is loaded in
-`test_pull_fastf1_data.py`) and exercises both with a fake `sleep`/fake
-fastf1-like object so tests never actually wait or need the real `fastf1`
-package. No network, no `fastf1` install required (AD-11).
+`fetch_race` takes an injectable `fastf1_module`, so a fake fastf1-like object
+exercises its dump/verify logic with no network. The #978 test runs the real
+`fastf1.Cache.enable_cache` against a temporary directory, which makes no
+request.
 """
 
 from __future__ import annotations
 
-import importlib.util
 import json
 from pathlib import Path
 from typing import Any
@@ -21,14 +15,8 @@ from typing import Any
 import pandas as pd
 import pytest
 
-
-_MODULE_PATH = Path(__file__).parent.parent / "src" / "f1_analytics" / "data_sources" / "fastf1_fetch.py"
-_spec = importlib.util.spec_from_file_location("fastf1_fetch", _MODULE_PATH)
-fastf1_fetch = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(fastf1_fetch)
-
-retry_with_backoff = fastf1_fetch.retry_with_backoff
-fetch_race = fastf1_fetch.fetch_race
+from f1_analytics.data_sources import fastf1_fetch
+from f1_analytics.data_sources.fastf1_fetch import fetch_race, retry_with_backoff, round_dir_name
 
 
 class RetryableError(Exception):
@@ -134,12 +122,21 @@ class _FakeExceptions:
     RateLimitExceededError = RetryableError
 
 
+class _FakeCachedSession:
+    def __init__(self) -> None:
+        self.headers: dict[str, str] = {}
+
+
 class _FakeCache:
+    """Like the real Cache: every enable_cache builds a new cached session."""
+
     def __init__(self) -> None:
         self.enable_calls: list[str] = []
+        self._requests_session_cached: _FakeCachedSession | None = None
 
     def enable_cache(self, path: str) -> None:
         self.enable_calls.append(path)
+        self._requests_session_cached = _FakeCachedSession()
 
 
 class _FakeSession:
@@ -147,7 +144,7 @@ class _FakeSession:
         self.laps = laps
         self.weather_data = weather_data
         self.results = results
-        self.event = {"RoundNumber": round_number}
+        self.event = {"RoundNumber": round_number, "EventName": "Australian Grand Prix"}
 
     def load(self, **kwargs: Any) -> None:
         pass  # The fake session is already "loaded" -- nothing to do.
@@ -159,9 +156,11 @@ class _FakeFastF1:
         self.exceptions = _FakeExceptions()
         self._session = session
         self.get_session_calls: list[tuple] = []
+        self.auth_at_get_session: list[str | None] = []
 
-    def get_session(self, season: int, event: str, identifier: str) -> _FakeSession:
-        self.get_session_calls.append((season, event, identifier))
+    def get_session(self, season: int, round_number: int, identifier: str) -> _FakeSession:
+        self.get_session_calls.append((season, round_number, identifier))
+        self.auth_at_get_session.append(self.Cache._requests_session_cached.headers.get("Authorization"))
         return self._session
 
 
@@ -195,11 +194,9 @@ def test_fetch_race_pass_dumps_three_files_with_independent_completeness_totals(
     session = _FakeSession(laps=_fake_laps(), weather_data=_fake_weather(), results=_fake_results())
     fastf1_module = _FakeFastF1(session)
     cache_dir = tmp_path / "cache"
-    output_dir = tmp_path / "Melbourne"
+    output_dir = tmp_path / "01-australian-grand-prix"
 
-    result = fetch_race(
-        "Melbourne", "Australian Grand Prix", 2026, cache_dir, output_dir, fastf1_module=fastf1_module
-    )
+    result = fetch_race(2026, 1, cache_dir, output_dir, "tok", fastf1_module=fastf1_module)
 
     assert result["status"] == "pass"
     assert result["lap_count"] == 4  # the actual dumped laps.csv row count
@@ -214,9 +211,12 @@ def test_fetch_race_pass_dumps_three_files_with_independent_completeness_totals(
     assert counts["drivers"] == ["HAM", "VER"]
     assert counts["round"] == 1
     assert counts["weather_count"] == 2
+    assert counts["race_label"] == "01-australian-grand-prix"
 
     assert fastf1_module.Cache.enable_calls == [str(cache_dir)]
-    assert fastf1_module.get_session_calls == [(2026, "Australian Grand Prix", "R")]
+    assert fastf1_module.get_session_calls == [(2026, 1, "R")]
+    # The #978 header was on the session before the load ran.
+    assert fastf1_module.auth_at_get_session == ["Bearer tok"]
 
 
 def test_fetch_race_fails_when_weather_is_none_and_writes_no_files(tmp_path: Path):
@@ -224,9 +224,7 @@ def test_fetch_race_fails_when_weather_is_none_and_writes_no_files(tmp_path: Pat
     fastf1_module = _FakeFastF1(session)
     output_dir = tmp_path / "Melbourne"
 
-    result = fetch_race(
-        "Melbourne", "Australian Grand Prix", 2026, tmp_path / "cache", output_dir, fastf1_module=fastf1_module
-    )
+    result = fetch_race(2026, 1, tmp_path / "cache", output_dir, "tok", fastf1_module=fastf1_module)
 
     assert result["status"] == "failed"
     assert "MissingWeatherData" in result["exception"]
@@ -239,9 +237,7 @@ def test_fetch_race_fails_when_weather_is_an_empty_dataframe_and_writes_no_files
     fastf1_module = _FakeFastF1(session)
     output_dir = tmp_path / "Melbourne"
 
-    result = fetch_race(
-        "Melbourne", "Australian Grand Prix", 2026, tmp_path / "cache", output_dir, fastf1_module=fastf1_module
-    )
+    result = fetch_race(2026, 1, tmp_path / "cache", output_dir, "tok", fastf1_module=fastf1_module)
 
     assert result["status"] == "failed"
     assert "MissingWeatherData" in result["exception"]
@@ -254,10 +250,70 @@ def test_fetch_race_reports_empty_status_for_a_zero_row_laps_session(tmp_path: P
     fastf1_module = _FakeFastF1(session)
     output_dir = tmp_path / "Barcelona"
 
-    result = fetch_race(
-        "Barcelona", "Spanish Grand Prix", 2026, tmp_path / "cache", output_dir, fastf1_module=fastf1_module
-    )
+    result = fetch_race(2026, 7, tmp_path / "cache", output_dir, "tok", fastf1_module=fastf1_module)
 
     assert result["status"] == "empty"
     assert result["lap_count"] == 0
     assert not output_dir.exists()
+
+
+def test_fetch_race_reports_a_load_failure_and_writes_nothing(tmp_path: Path):
+    class Broken(_FakeFastF1):
+        def get_session(self, season, round_number, identifier):
+            raise OtherError("DataNotLoadedError: no data for this session")
+
+    output_dir = tmp_path / "17-singapore-grand-prix"
+    result = fetch_race(2026, 17, tmp_path / "cache", output_dir, "tok", fastf1_module=Broken(None))
+    assert result["status"] == "failed"
+    assert "DataNotLoadedError" in result["exception"]
+    assert not output_dir.exists()
+
+
+def test_the_978_header_is_reapplied_after_every_enable_cache(tmp_path: Path):
+    attempts = {"n": 0}
+    session = _FakeSession(laps=_fake_laps(), weather_data=_fake_weather(), results=_fake_results())
+
+    class Flaky(_FakeFastF1):
+        def get_session(self, season, round_number, identifier):
+            attempts["n"] += 1
+            result = super().get_session(season, round_number, identifier)
+            if attempts["n"] == 1:
+                raise RetryableError("rate limited")
+            return result
+
+    fake = Flaky(session)
+    result = fetch_race(2026, 1, tmp_path / "cache", tmp_path / "01-x", "tok", fastf1_module=fake, sleep=lambda s: None)
+    assert result["status"] == "pass"
+    assert len(fake.Cache.enable_calls) == 2
+    assert fake.auth_at_get_session == ["Bearer tok", "Bearer tok"]
+
+
+def test_978_workaround_sets_the_bearer_header_on_the_real_fastf1_cache_session(tmp_path: Path):
+    import fastf1
+
+    previous = (fastf1.Cache._CACHE_DIR, fastf1.Cache._requests_session_cached)
+    try:
+        fastf1.Cache.enable_cache(str(tmp_path))
+        fastf1_fetch.apply_archive_auth_header(fastf1, "abc.def.ghi")
+        assert fastf1.Cache._requests_session_cached.headers["Authorization"] == "Bearer abc.def.ghi"
+
+        # enable_cache rebuilds the session and drops the header -- which is why
+        # the workaround runs after every enable_cache.
+        fastf1.Cache.enable_cache(str(tmp_path))
+        assert "Authorization" not in fastf1.Cache._requests_session_cached.headers
+        fastf1_fetch.apply_archive_auth_header(fastf1, "abc.def.ghi")
+        assert fastf1.Cache._requests_session_cached.headers["Authorization"] == "Bearer abc.def.ghi"
+    finally:
+        session = fastf1.Cache._requests_session_cached
+        if session is not None:
+            session.close()
+        fastf1.Cache._CACHE_DIR, fastf1.Cache._requests_session_cached = previous
+
+
+def test_978_workaround_names_the_issue_in_its_docstring():
+    assert "https://github.com/theOehrly/Fast-F1/issues/978" in fastf1_fetch.apply_archive_auth_header.__doc__
+
+
+def test_round_dir_name_is_keyed_by_the_jolpica_round():
+    assert round_dir_name(17, "Singapore Grand Prix") == "17-singapore-grand-prix"
+    assert round_dir_name(16, "Bahrain Grand Prix in Malaysia") == "16-bahrain-grand-prix-in-malaysia"

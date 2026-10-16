@@ -18,9 +18,8 @@ import pandas as pd
 # `log_source_load`. An unregistered source name is a programming error
 # (a new loader forgot to register itself here), never silently logged.
 SOURCE_METADATA: dict[str, dict[str, str]] = {
-    "kaggle": {"role": "curated_baseline", "access_model": "local_csv"},
-    "jolpica": {"role": "gap_fill", "access_model": "rest_api"},
-    "fastf1": {"role": "telemetry_facts", "access_model": "isolated_python_client"},
+    "jolpica": {"role": "results", "access_model": "committed_csv"},
+    "fastf1": {"role": "telemetry_facts", "access_model": "committed_csv"},
 }
 
 VALIDATION_RESULTS_COLUMNS = [

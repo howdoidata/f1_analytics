@@ -22,6 +22,6 @@ jobs:
         run: uv sync
 
       # tests/conftest.py blocks all network access -- this suite
-      # never needs Kaggle/FastF1 credentials to run.
+      # never needs F1TV/FastF1 credentials to run.
       - name: Run tests
         run: uv run pytest -v

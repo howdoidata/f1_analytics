@@ -2,9 +2,7 @@
 
 Covers `check_null_rate`/`check_referential_integrity` directly (including
 the missing-column guard both must share), and `run_validations()` against
-curated tables, `combined_results` (Story 1.7), and `raw_fastf1_laps`/
-`raw_fastf1_stints`/`raw_fastf1_weather` (Story 1.6) -- the amended scope
-this story's registries cover, per the frozen spec's Spec Change Log.
+curated tables and `raw_fastf1_laps`/`raw_fastf1_stints`/`raw_fastf1_weather`.
 """
 
 from __future__ import annotations
@@ -28,14 +26,13 @@ ORPHAN_REFERENTIAL_DIR = FIXTURE_DIR / "orphan_referential"
 
 
 def _load_scenario(scenario_dir: Path) -> dict[str, pd.DataFrame]:
-    """Load a scenario dir's curated CSVs plus its combined_results-shaped addition."""
+    """Load a scenario dir's curated CSVs."""
     return {
         "results": pd.read_csv(scenario_dir / "results.csv"),
         "drivers": pd.read_csv(scenario_dir / "drivers.csv"),
         "constructors": pd.read_csv(scenario_dir / "constructors.csv"),
         "races": pd.read_csv(scenario_dir / "races.csv"),
         "circuits": pd.read_csv(scenario_dir / "circuits.csv"),
-        "combined_results": pd.read_csv(scenario_dir / "combined_results.csv"),
     }
 
 
@@ -209,29 +206,9 @@ def test_run_validations_logs_an_orphan_for_curated_results():
     assert constructor_check["passed"]
 
 
-# --- run_validations(): combined_results (Story 1.7 amendment) -----------
-
-
-def test_run_validations_logs_a_null_violation_for_combined_results():
-    tables = _load_scenario(NULL_VIOLATION_DIR)
-    result = run_validations(tables)
-    findings = _findings_by_table_column(result[result["check_type"] == "null_rate"])
-
-    combined_points = findings[("combined_results", "points")]
-    assert not combined_points["passed"]
-    assert combined_points["null_count"] == 1
-
-
-def test_run_validations_logs_an_orphan_for_combined_results():
-    tables = _load_scenario(ORPHAN_REFERENTIAL_DIR)
-    result = run_validations(tables)
-    referential = result[result["check_type"] == "referential_integrity"]
-    combined_orphan = referential[
-        (referential["table_name"] == "combined_results") & (referential["column_name"] == "driver_id")
-    ].iloc[0]
-
-    assert not combined_orphan["passed"]
-    assert combined_orphan["orphan_count"] == 1
+def test_no_registry_entry_names_a_combined_table():
+    names = {table for table, _ in NULL_RATE_CHECKS} | {entry[0] for entry in REFERENTIAL_CHECKS}
+    assert not any(name.startswith("combined_") for name in names)
 
 
 # --- run_validations(): raw_fastf1_* tables (Story 1.6 amendment) --------

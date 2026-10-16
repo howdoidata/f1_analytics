@@ -1,36 +1,26 @@
-"""Main-env Jolpica loader: shape, verify, and id-validate landed race results (Story 1.7).
+"""Shape the committed Jolpica CSVs into the curated tables.
 
-No `fastf1` import here -- this module only reads the plain `race_results.csv`/
-`counts.json` that the isolated-env `jolpica_fetch.py` half already dumped
-under `data/raw/jolpica/<season>/`. That split keeps every function here
-offline-testable against small fixture CSVs (AD-11), mirroring
-`fastf1_loader.py`'s split from `fastf1_fetch.py`.
+No network and no `fastf1` here: this reads only `data/raw/jolpica/*.csv`
+(Ergast field names, written by `jolpica_fetch.py`) and returns curated
+frames in the column names and dtypes the analysis code reads.
 
-Jolpica's `driverId`/`constructorId` values already ARE the Ergast/Jolpica
-id space that Kaggle's curated `driver_id`/`constructor_id` columns also
-use (AD-14, row-level verified) -- no name-based reconciliation table is
-needed here, unlike FastF1's raw telemetry `Driver`/`Team` strings. This
-loader's job is: (1) shape Jolpica's raw Ergast column names into the exact
-column set curated `results` uses, so `combined_results` is a straight
-concatenation (per `kaggle_csv.build_curated_tables`), and (2) a defensive
-existence check against curated `drivers`/`constructors` -- an id absent
-from the curated tables raises `UnresolvedJolpicaIdError` naming it, rather
-than silently landing a dangling id.
+Jolpica's `driverId`/`constructorId` values are the id space every curated
+table uses, so ids pass through unchanged. `validate_ids` is a
+defensive check that every id in results/sprint/qualifying/standings exists
+in the Jolpica-built `drivers`/`constructors` reference tables.
 """
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pandas as pd
 
+from f1_analytics.data_sources.jolpica_fetch import RAW_COLUMNS, read_raw_table
+from f1_analytics.data_sources.standings import compute_cumulative_standings
 
-RACE_RESULTS_FILENAME = "race_results.csv"
-COUNTS_FILENAME = "counts.json"
 
-# The exact column set (and order) of curated `results`
-# (`kaggle_csv.build_curated_tables`) that `combined_results` must match.
+# Curated `results` (and `sprint_results`) columns, in order.
 RESULTS_COLUMNS = [
     "season",
     "round",
@@ -49,240 +39,266 @@ RESULTS_COLUMNS = [
     "fastest_lap_rank",
 ]
 
-
-# The raw Ergast column names `shape_results()` reads from a landed
-# `race_results.csv`. Used by `empty_shaped_results()` below to build a
-# zero-row frame through the same shaping path a populated one takes,
-# rather than duplicating `RESULTS_COLUMNS`' dtypes by hand.
-RAW_ERGAST_COLUMNS = [
-    "season",
-    "round",
-    "race_name",
-    "driverId",
-    "givenName",
-    "familyName",
-    "constructorId",
-    "constructorName",
-    "grid",
-    "position",
-    "points",
-    "laps",
-    "status",
-    "totalRaceTime",
-    "fastestLapNumber",
-    "fastestLapRank",
-]
+# Nullable integers. `points` is fractional (half points for shortened
+# races) and `fastest_lap`/`fastest_lap_rank` are DOUBLE in curated results.
+NUMERIC_INT_COLUMNS = ["season", "round", "grid", "position", "laps"]
+NUMERIC_FLOAT_COLUMNS = ["points", "fastest_lap", "fastest_lap_rank"]
 
 
 class UnresolvedJolpicaIdError(ValueError):
-    """A Jolpica `driverId`/`constructorId` has no curated drivers/constructors match."""
-
-
-class IncompleteJolpicaDataError(ValueError):
-    """Landed Jolpica rows undercount the fetch's own reported totals."""
-
-
-class JolpicaResultsLoadError(Exception):
-    """One season's Jolpica fetch-dump-to-landed-frame pipeline failed.
-
-    Wraps the named underlying error with the season attached, mirroring
-    `FastF1RaceLoadError` -- so an orchestrator can report a per-season
-    statused failure without it becoming an uncaught crash.
-    """
+    """A Jolpica `driverId`/`constructorId` has no drivers/constructors match."""
 
 
 class InvalidJolpicaSeasonOrRoundError(ValueError):
     """A Jolpica row's `season`/`round` value did not coerce to a number.
 
-    `pd.to_numeric(..., errors="coerce")` silently turns a non-numeric
-    `season`/`round` into null; left unchecked, that row would simply
-    vanish from every later inner merge on `["season", "round"]` (e.g.
-    `build_combined_dataset.build_combined_results`) instead of raising --
-    a thinner, guessed result the epic's fail-early discipline (AD-16)
-    forbids.
+    Left unchecked, such a row would vanish from every later merge on
+    `["season", "round"]` instead of raising.
     """
 
 
-def read_season_dump(season_dir: Path) -> tuple[pd.DataFrame, dict]:
-    """Read one season's dumped race-results CSV and its counts sidecar."""
-    results_path = season_dir / RACE_RESULTS_FILENAME
-    counts_path = season_dir / COUNTS_FILENAME
-
-    missing = [path.name for path in (results_path, counts_path) if not path.is_file()]
+def read_jolpica_raw(raw_dir: Path) -> dict[str, pd.DataFrame]:
+    """Read every Jolpica CSV; a missing file raises `FileNotFoundError` naming it."""
+    missing = [str(raw_dir / f"{table}.csv") for table in RAW_COLUMNS if not (raw_dir / f"{table}.csv").is_file()]
     if missing:
-        missing_list = ", ".join(missing)
-        raise FileNotFoundError(f"Missing Jolpica dump file(s) under {season_dir}: {missing_list}")
-
-    results = pd.read_csv(results_path)
-    counts = json.loads(counts_path.read_text())
-    return results, counts
+        raise FileNotFoundError(f"Missing Jolpica raw file(s): {', '.join(missing)}")
+    return {table: read_raw_table(raw_dir, table) for table in RAW_COLUMNS}
 
 
-def verify_completeness(results: pd.DataFrame, counts: dict) -> None:
-    """Verify landed rows against the fetch's own counts sidecar (AD-13).
+def _int(series: pd.Series) -> pd.Series:
+    return pd.to_numeric(series, errors="coerce").astype("Int64")
 
-    A row count that doesn't exactly match the sidecar -- short OR long --
-    is a statused failure, never accepted as "close enough": a truncated
-    read is the obvious case, but an over-count (e.g. a corrupted or
-    hand-edited dump) is just as much a mismatch against "the source's own
-    published total". Mirrors `fastf1_loader.verify_completeness`.
-    """
-    season = counts.get("season", "season")
-    expected_row_count = counts.get("row_count")
-    landed_row_count = len(results)
-    if expected_row_count is None:
-        raise IncompleteJolpicaDataError(f"season {season}: counts sidecar is missing 'row_count'")
-    if landed_row_count != expected_row_count:
-        raise IncompleteJolpicaDataError(
-            f"season {season}: landed {landed_row_count} row(s), fetch reported {expected_row_count}"
+
+def _float(series: pd.Series) -> pd.Series:
+    return pd.to_numeric(series, errors="coerce").astype("Float64")
+
+
+def _str(series: pd.Series) -> pd.Series:
+    return series.astype("string")
+
+
+def _driver_name(given: pd.Series, family: pd.Series) -> pd.Series:
+    return (given.fillna("") + " " + family.fillna("")).str.strip()
+
+
+def _require_season_round(frame: pd.DataFrame, raw: pd.DataFrame, label: str) -> None:
+    invalid = frame["season"].isna() | frame["round"].isna()
+    if invalid.any():
+        ids = sorted(
+            "<missing driver_id value>" if pd.isna(value) else str(value)
+            for value in raw.loc[invalid.to_numpy(), "driverId"].unique()
+        ) if "driverId" in raw.columns else []
+        raise InvalidJolpicaSeasonOrRoundError(
+            f"{label}: {int(invalid.sum())} row(s) with a non-numeric season/round value"
+            + (f" (driver_id: {', '.join(ids)})" if ids else "")
         )
 
 
-def _driver_name(results: pd.DataFrame) -> pd.Series:
-    given = results["givenName"].fillna("")
-    family = results["familyName"].fillna("")
-    return (given + " " + family).str.strip()
-
-
-# Columns cast to a nullable integer dtype after `pd.to_numeric` coercion,
-# rather than left as `float64`. `position` is the one downstream Epic 2
-# Story 2.1's AC actually requires typed INTEGER end-to-end, but leaving
-# the rest as float64 would make `combined_results`/combined standings'
-# dtype for these columns shift depending on whether a given round's rows
-# came from Kaggle (already integer-typed) or Jolpica -- `pd.concat`
-# upcasts a mixed int/float column to float64 for the whole table.
-#
-# `points` is deliberately NOT in this list: F1 awards half points when a
-# race is stopped early (2021 Spa is the most recent of 8 fractional-points
-# rounds in the curated data), so `12.5` is a legitimate value, and the
-# curated Kaggle `results.points` column is itself DOUBLE. An earlier
-# revision did cast it here, reasoning that a fractional value raising was
-# preferable to silent truncation. The raise was real but its blast radius
-# was not what that reasoning assumed: `shape_results` shapes a whole season
-# at once, `load_and_map_season_results` wraps the entire pipeline in one
-# `JolpicaResultsLoadError`, and `build_combined_dataset.load_jolpica_results`
-# degrades that to `empty_shaped_results()`. So one half-points race silently
-# emptied the ENTIRE season's gap-fill -- every genuinely `jolpica_only` round
-# re-tagged `no_data` -- while the build printed "all passed" and exited 0.
-# Verified end-to-end 2026-08-20: 7 landed rows -> 0 from one race's points.
-NUMERIC_INT_COLUMNS = ["season", "round", "grid", "position", "laps", "fastest_lap", "fastest_lap_rank"]
-# Fractional-safe, matching curated `results.points` (DOUBLE). Float64 (not
-# float64) keeps it nullable, so it concatenates with Kaggle rows without an
-# object upcast -- the same dtype-stability concern the int list above exists for.
-NUMERIC_FLOAT_COLUMNS = ["points"]
-
-
-def shape_results(results: pd.DataFrame) -> pd.DataFrame:
-    """Rename/select Jolpica's raw Ergast columns into curated `results`'s shape.
-
-    Column provenance:
-    - `driver_id`/`constructor_id` <- Ergast's `driverId`/`constructorId`
-      (already the AD-14 id space, no mapping table needed).
-    - `driver_name` <- `givenName` + `familyName` (mirrors
-      `kaggle_csv.build_curated_tables`'s own construction of `driver_name`).
-    - `constructor` <- `constructorName`.
-    - `time` <- `totalRaceTime` (Ergast's absolute time for P1, gap-to-leader
-      for the rest) -- a best-effort carry of Kaggle's free-text `time`
-      column; not used by any AD-2 precedence or standings computation.
-    - `fastest_lap`/`fastest_lap_rank` <- `fastestLapNumber`/`fastestLapRank`.
-    """
+def shape_results(raw: pd.DataFrame) -> pd.DataFrame:
+    """Race or sprint classification rows -> curated `results` columns."""
     shaped = pd.DataFrame(
         {
-            "season": pd.to_numeric(results["season"], errors="coerce"),
-            "round": pd.to_numeric(results["round"], errors="coerce"),
-            "race_name": results["race_name"],
-            "driver_id": results["driverId"],
-            "driver_name": _driver_name(results),
-            "constructor_id": results["constructorId"],
-            "constructor": results["constructorName"],
-            "grid": pd.to_numeric(results["grid"], errors="coerce"),
-            "position": pd.to_numeric(results["position"], errors="coerce"),
-            "points": pd.to_numeric(results["points"], errors="coerce"),
-            "laps": pd.to_numeric(results["laps"], errors="coerce"),
-            "status": results["status"],
-            "time": results["totalRaceTime"].astype("string") if "totalRaceTime" in results.columns else pd.NA,
-            "fastest_lap": pd.to_numeric(results.get("fastestLapNumber"), errors="coerce"),
-            "fastest_lap_rank": pd.to_numeric(results.get("fastestLapRank"), errors="coerce"),
+            "season": _int(raw["season"]),
+            "round": _int(raw["round"]),
+            "race_name": _str(raw["raceName"]),
+            "driver_id": _str(raw["driverId"]),
+            "driver_name": _driver_name(_str(raw["givenName"]), _str(raw["familyName"])),
+            "constructor_id": _str(raw["constructorId"]),
+            "constructor": _str(raw["constructorName"]),
+            "grid": _int(raw["grid"]),
+            "position": _int(raw["position"]),
+            "points": _float(raw["points"]),
+            "laps": _int(raw["laps"]),
+            "status": _str(raw["status"]),
+            "time": _str(raw["totalRaceTime"]),
+            "fastest_lap": _float(raw["fastestLapNumber"]),
+            "fastest_lap_rank": _float(raw["fastestLapRank"]),
+        }
+    )[RESULTS_COLUMNS]
+    _require_season_round(shaped, raw, "results")
+    return shaped.reset_index(drop=True)
+
+
+def shape_races(raw: pd.DataFrame) -> pd.DataFrame:
+    races = pd.DataFrame(
+        {
+            "season": _int(raw["season"]),
+            "round": _int(raw["round"]),
+            "race_name": _str(raw["raceName"]),
+            "circuit_id": _str(raw["circuitId"]),
+            # DuckDB writes Python dates as DATE.
+            "date": pd.to_datetime(raw["date"], errors="coerce").dt.date,
+            "time": _str(raw["time"]),
+            "url": _str(raw["url"]),
         }
     )
-    shaped = shaped[RESULTS_COLUMNS]
-
-    invalid_season_or_round = shaped["season"].isna() | shaped["round"].isna()
-    if invalid_season_or_round.any():
-        affected_driver_ids = sorted(
-            "<missing driver_id value>" if pd.isna(value) else str(value)
-            for value in shaped.loc[invalid_season_or_round, "driver_id"].unique()
-        )
-        raise InvalidJolpicaSeasonOrRoundError(
-            f"{int(invalid_season_or_round.sum())} row(s) with a non-numeric season/round value "
-            f"(driver_id: {', '.join(affected_driver_ids)})"
-        )
-
-    for column in NUMERIC_INT_COLUMNS:
-        shaped[column] = shaped[column].astype("Int64")
-    for column in NUMERIC_FLOAT_COLUMNS:
-        shaped[column] = shaped[column].astype("Float64")
-    return shaped
+    _require_season_round(races, raw, "races")
+    return races
 
 
-def empty_shaped_results() -> pd.DataFrame:
-    """A zero-row, correctly-typed `results`-shaped frame.
-
-    Used when a season's Jolpica fetch/load degrades to "nothing landed"
-    (see `build_combined_dataset.load_jolpica_results`). Routing the empty
-    case through `shape_results()` itself -- rather than a bare
-    `pd.DataFrame(columns=RESULTS_COLUMNS)` -- guarantees its column dtypes
-    match a populated frame's exactly, so concatenating it with real Kaggle
-    rows in `build_combined_results` never silently upcasts a numeric
-    column (e.g. `points`) to `object` (which would then break
-    `compute_cumulative_standings`'s `cumsum()`).
-    """
-    return shape_results(pd.DataFrame(columns=RAW_ERGAST_COLUMNS))
-
-
-def validate_ids(shaped: pd.DataFrame, drivers: pd.DataFrame, constructors: pd.DataFrame) -> None:
-    """Verify every `driver_id`/`constructor_id` exists in the curated tables.
-
-    A NaN id is treated as unresolved too (named distinctly), rather than
-    silently landing a null id -- mirrors `fastf1_loader.map_driver_ids`'s
-    "never guesses or silently drops the row" rule.
-    """
-    known_driver_ids = set(drivers["driver_id"])
-    unresolved_drivers = sorted(str(value) for value in set(shaped["driver_id"].dropna()) - known_driver_ids)
-    if shaped["driver_id"].isna().any():
-        unresolved_drivers = ["<missing driverId value>"] + unresolved_drivers
-    if unresolved_drivers:
-        raise UnresolvedJolpicaIdError(f"Unresolved Jolpica driver id(s): {', '.join(unresolved_drivers)}")
-
-    known_constructor_ids = set(constructors["constructor_id"])
-    unresolved_constructors = sorted(
-        str(value) for value in set(shaped["constructor_id"].dropna()) - known_constructor_ids
+def shape_circuits(raw: pd.DataFrame) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "circuit_id": _str(raw["circuitId"]),
+            "circuit_name": _str(raw["circuitName"]),
+            "locality": _str(raw["locality"]),
+            "country": _str(raw["country"]),
+            "lat": _float(raw["lat"]),
+            "lng": _float(raw["long"]),
+            "url": _str(raw["url"]),
+        }
     )
-    if shaped["constructor_id"].isna().any():
-        unresolved_constructors = ["<missing constructorId value>"] + unresolved_constructors
-    if unresolved_constructors:
-        raise UnresolvedJolpicaIdError(f"Unresolved Jolpica constructor id(s): {', '.join(unresolved_constructors)}")
 
 
-def load_and_map_season_results(
-    season_dir: Path,
-    drivers: pd.DataFrame,
-    constructors: pd.DataFrame,
-    *,
-    season: int,
+def shape_drivers(raw: pd.DataFrame) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "driver_id": _str(raw["driverId"]),
+            "given_name": _str(raw["givenName"]),
+            "family_name": _str(raw["familyName"]),
+            "dob": _str(raw["dateOfBirth"]),
+            "nationality": _str(raw["nationality"]),
+            "number": _float(raw["permanentNumber"]),
+            "code": _str(raw["code"]),
+            "url": _str(raw["url"]),
+        }
+    )
+
+
+def shape_constructors(raw: pd.DataFrame) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "constructor_id": _str(raw["constructorId"]),
+            "name": _str(raw["name"]),
+            "nationality": _str(raw["nationality"]),
+            "url": _str(raw["url"]),
+        }
+    )
+
+
+def shape_qualifying(raw: pd.DataFrame) -> pd.DataFrame:
+    qualifying = pd.DataFrame(
+        {
+            "season": _int(raw["season"]),
+            "round": _int(raw["round"]),
+            "driver_id": _str(raw["driverId"]),
+            "constructor_id": _str(raw["constructorId"]),
+            "position": _int(raw["position"]),
+            "q1": _str(raw["Q1"]),
+            "q2": _str(raw["Q2"]),
+            "q3": _str(raw["Q3"]),
+        }
+    )
+    _require_season_round(qualifying, raw, "qualifying")
+    return qualifying
+
+
+def shape_final_driver_standings(
+    raw: pd.DataFrame, drivers: pd.DataFrame, constructors: pd.DataFrame
 ) -> pd.DataFrame:
-    """Read one season's Jolpica dump, verify it, and shape it to curated `results`'s columns.
+    """Official season-end driver standings, in the curated column order.
 
-    Any failure anywhere in this pipeline -- a missing dump file, a corrupt
-    `counts.json`, an incomplete-count mismatch, or an unresolved id -- is
-    wrapped in `JolpicaResultsLoadError`, naming the season, mirroring
-    `fastf1_loader.load_and_map_race`'s per-unit failure wrapping.
+    A driver who raced for several teams in a season lists them in order;
+    the first is kept, as the curated table always did.
     """
-    try:
-        results, counts = read_season_dump(season_dir)
-        verify_completeness(results, counts)
-        shaped = shape_results(results)
-        validate_ids(shaped, drivers, constructors)
-    except Exception as error:
-        raise JolpicaResultsLoadError(f"season {season}: {error}") from error
-    return shaped
+    names = drivers.assign(driver_name=_driver_name(drivers["given_name"], drivers["family_name"]))
+    constructor_id = _str(raw["constructorIds"]).str.split(";").str[0].replace("", pd.NA)
+    shaped = pd.DataFrame(
+        {
+            "season": _int(raw["season"]),
+            "position": _float(raw["position"]),
+            "points": _float(raw["points"]),
+            "wins": _int(raw["wins"]),
+            "driver_id": _str(raw["driverId"]),
+            "constructor_id": constructor_id.astype("string"),
+        }
+    )
+    shaped["constructor"] = shaped["constructor_id"].map(
+        constructors.set_index("constructor_id")["name"]
+    ).astype("string")
+    shaped["driver_name"] = shaped["driver_id"].map(names.set_index("driver_id")["driver_name"]).astype("string")
+    return shaped[
+        ["season", "position", "points", "wins", "driver_id", "constructor", "driver_name", "constructor_id"]
+    ]
+
+
+def shape_final_constructor_standings(raw: pd.DataFrame) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "season": _int(raw["season"]),
+            "position": _float(raw["position"]),
+            "points": _float(raw["points"]),
+            "wins": _int(raw["wins"]),
+            "constructor_id": _str(raw["constructorId"]),
+            "constructor": _str(raw["constructorName"]),
+        }
+    )
+
+
+def validate_ids(shaped: pd.DataFrame, drivers: pd.DataFrame, constructors: pd.DataFrame, *, label: str = "") -> None:
+    """Every `driver_id`/`constructor_id` present in `shaped` must exist in the reference tables.
+
+    A null id is unresolved too, rather than landing silently.
+    """
+    prefix = f"{label}: " if label else ""
+    for column, reference, ref_column in (
+        ("driver_id", drivers, "driver_id"),
+        ("constructor_id", constructors, "constructor_id"),
+    ):
+        if column not in shaped.columns:
+            continue
+        known = set(reference[ref_column].dropna())
+        unresolved = sorted(str(value) for value in set(shaped[column].dropna()) - known)
+        if shaped[column].isna().any():
+            unresolved = [f"<missing {column} value>"] + unresolved
+        if unresolved:
+            kind = "driver" if column == "driver_id" else "constructor"
+            raise UnresolvedJolpicaIdError(f"{prefix}Unresolved Jolpica {kind} id(s): {', '.join(unresolved)}")
+
+
+def build_curated_tables(raw: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
+    """Every curated table built from the Jolpica CSVs."""
+    races = shape_races(raw["races"])
+    circuits = shape_circuits(raw["circuits"])
+    drivers = shape_drivers(raw["drivers"])
+    constructors = shape_constructors(raw["constructors"])
+    results = shape_results(raw["results"])
+    sprint_results = shape_results(raw["sprint_results"])
+    qualifying = shape_qualifying(raw["qualifying"])
+    final_driver = shape_final_driver_standings(raw["final_driver_standings"], drivers, constructors)
+    final_constructor = shape_final_constructor_standings(raw["final_constructor_standings"])
+
+    for label, frame in (
+        ("results", results),
+        ("sprint_results", sprint_results),
+        ("qualifying", qualifying),
+        ("final_driver_standings", final_driver[["driver_id"]]),
+        ("final_constructor_standings", final_constructor[["constructor_id"]]),
+    ):
+        validate_ids(frame, drivers, constructors, label=label)
+
+    race_results = results.merge(
+        races[["season", "round", "date", "time", "circuit_id", "url"]],
+        on=["season", "round"],
+        how="left",
+        suffixes=("", "_race"),
+    )
+
+    return {
+        "races": races,
+        "results": results,
+        "sprint_results": sprint_results,
+        "drivers": drivers,
+        "constructors": constructors,
+        "circuits": circuits,
+        "qualifying": qualifying,
+        "race_results_enriched": race_results,
+        "driver_standings_by_round": compute_cumulative_standings(
+            results, "driver_id", "driver_name", races=races, sprint_results=sprint_results
+        ),
+        "constructor_standings_by_round": compute_cumulative_standings(
+            results, "constructor_id", "constructor", races=races, sprint_results=sprint_results
+        ),
+        "final_driver_standings": final_driver,
+        "final_constructor_standings": final_constructor,
+    }
