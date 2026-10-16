@@ -124,7 +124,15 @@ class _FakeExceptions:
 
 class _FakeCachedSession:
     def __init__(self) -> None:
-        self.headers: dict[str, str] = {}
+        self.auth = None
+
+    def authorization_for(self, url: str) -> str | None:
+        import requests
+
+        if self.auth is None:
+            return None
+        prepared = self.auth(requests.Request("GET", url).prepare())
+        return prepared.headers.get("Authorization")
 
 
 class _FakeCache:
@@ -160,7 +168,9 @@ class _FakeFastF1:
 
     def get_session(self, season: int, round_number: int, identifier: str) -> _FakeSession:
         self.get_session_calls.append((season, round_number, identifier))
-        self.auth_at_get_session.append(self.Cache._requests_session_cached.headers.get("Authorization"))
+        self.auth_at_get_session.append(
+            self.Cache._requests_session_cached.authorization_for("https://livetiming.formula1.com/static/x.json")
+        )
         return self._session
 
 
@@ -288,21 +298,38 @@ def test_the_978_header_is_reapplied_after_every_enable_cache(tmp_path: Path):
     assert fake.auth_at_get_session == ["Bearer tok", "Bearer tok"]
 
 
-def test_978_workaround_sets_the_bearer_header_on_the_real_fastf1_cache_session(tmp_path: Path):
+def _authorization(session, url: str) -> str | None:
+    import requests
+
+    return session.prepare_request(requests.Request("GET", url)).headers.get("Authorization")
+
+
+F1_URL = "https://livetiming.formula1.com/static/2026/Index.json"
+OTHER_URLS = (
+    "https://raw.githubusercontent.com/theOehrly/f1schedule/master/schedule_2026.json",
+    "https://api.jolpi.ca/ergast/f1/2026/races.json",
+)
+
+
+def test_978_workaround_sends_the_bearer_token_to_f1_hosts_only(tmp_path: Path):
     import fastf1
 
     previous = (fastf1.Cache._CACHE_DIR, fastf1.Cache._requests_session_cached)
     try:
         fastf1.Cache.enable_cache(str(tmp_path))
         fastf1_fetch.apply_archive_auth_header(fastf1, "abc.def.ghi")
-        assert fastf1.Cache._requests_session_cached.headers["Authorization"] == "Bearer abc.def.ghi"
+        session = fastf1.Cache._requests_session_cached
+        assert _authorization(session, F1_URL) == "Bearer abc.def.ghi"
+        for url in OTHER_URLS:
+            assert _authorization(session, url) is None, url
+        assert _authorization(session, "https://formula1.com.evil.example/x") is None
 
-        # enable_cache rebuilds the session and drops the header -- which is why
+        # enable_cache rebuilds the session and drops the auth -- which is why
         # the workaround runs after every enable_cache.
         fastf1.Cache.enable_cache(str(tmp_path))
-        assert "Authorization" not in fastf1.Cache._requests_session_cached.headers
+        assert _authorization(fastf1.Cache._requests_session_cached, F1_URL) is None
         fastf1_fetch.apply_archive_auth_header(fastf1, "abc.def.ghi")
-        assert fastf1.Cache._requests_session_cached.headers["Authorization"] == "Bearer abc.def.ghi"
+        assert _authorization(fastf1.Cache._requests_session_cached, F1_URL) == "Bearer abc.def.ghi"
     finally:
         session = fastf1.Cache._requests_session_cached
         if session is not None:

@@ -267,3 +267,26 @@ def test_build_refuses_to_shrink_a_landed_table(raw_dir: Path, tmp_path: Path, c
     jolpica_fetch.write_raw_table(raw_dir / "jolpica", "results", results.iloc[:-1])
     assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 1
     assert "refusing to replace" in capsys.readouterr().err
+
+
+def test_build_refuses_to_drop_landed_fastf1_tables_when_extracts_vanish(raw_dir: Path, tmp_path: Path, capsys):
+    db_path = tmp_path / "out.duckdb"
+    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 0
+    shutil.rmtree(raw_dir / "fastf1")
+    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 1
+    assert "raw_fastf1_laps: this write has 0 row(s)" in capsys.readouterr().err
+    assert {"raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather"} <= _tables(db_path)
+
+
+@pytest.mark.parametrize("missing", ["laps.csv", "counts.json"])
+def test_build_names_a_missing_fastf1_extract_file(raw_dir: Path, tmp_path: Path, capsys, missing: str):
+    (raw_dir / "fastf1" / "2024" / "01-bahrain-grand-prix" / missing).unlink()
+    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(tmp_path / "out.duckdb")]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("[build] ") and missing in err
+
+
+def test_a_round_with_any_extract_folder_is_not_refetched_after_a_race_rename(raw_dir: Path):
+    _extract(raw_dir, 2025, "01-old-bahrain-name")
+    missing = cli.missing_extract_rounds(raw_dir, 2025, today=date(2025, 12, 31))
+    assert missing == [(2, "02-saudi-arabian-grand-prix")]

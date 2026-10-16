@@ -64,6 +64,13 @@ def retry_with_backoff(
             attempt += 1
 
 
+def _is_f1_host(url: str) -> bool:
+    from urllib.parse import urlsplit
+
+    host = (urlsplit(url).hostname or "").lower()
+    return host == "formula1.com" or host.endswith(".formula1.com")
+
+
 def apply_archive_auth_header(fastf1: Any, token: str) -> None:
     """Workaround for Fast-F1#978: send the F1TV token to F1's live-timing archive.
 
@@ -71,13 +78,23 @@ def apply_archive_auth_header(fastf1: Any, token: str) -> None:
     <token>`, and FastF1 3.8.3 does not send it (see
     https://github.com/theOehrly/Fast-F1/issues/978). Every
     `Cache.enable_cache()` builds a new `_requests_session_cached`, so this
-    must run after each `enable_cache` call. Remove it once FastF1 ships the
-    fix.
+    must run after each `enable_cache` call. The header is added only to
+    requests for `formula1.com` hosts; the same session also calls GitHub,
+    Jolpica and others, which must never see the token. Remove this once
+    FastF1 ships the fix.
     """
+    import requests
+
+    class _F1BearerAuth(requests.auth.AuthBase):
+        def __call__(self, request):
+            if _is_f1_host(request.url):
+                request.headers["Authorization"] = f"Bearer {token}"
+            return request
+
     session = fastf1.Cache._requests_session_cached
     if session is None:
         raise RuntimeError(f"FastF1 cache session is not initialised; call enable_cache first ({FASTF1_978_URL})")
-    session.headers["Authorization"] = f"Bearer {token}"
+    session.auth = _F1BearerAuth()
 
 
 def load_session_with_retry(

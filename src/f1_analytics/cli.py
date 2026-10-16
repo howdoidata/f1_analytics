@@ -19,7 +19,7 @@ from typing import Callable, Sequence
 import pandas as pd
 
 from f1_analytics.config import DUCKDB_PATH, FASTF1_CACHE_DIR, RAW_DATA_DIR
-from f1_analytics.data_sources.fastf1_loader import load_extracts
+from f1_analytics.data_sources.fastf1_loader import FastF1RaceLoadError, load_extracts
 from f1_analytics.data_sources.jolpica_loader import build_curated_tables, read_jolpica_raw
 from f1_analytics.database.duckdb_io import (
     WriteRegressionError,
@@ -91,11 +91,13 @@ def run_build(raw_dir: Path = RAW_DATA_DIR, db_path: Path = DUCKDB_PATH, *, log:
     with connect_duckdb(db_path) as conn:
         # Check every guarded table before writing any, so a refused build
         # leaves the previous database whole.
-        for name in REGRESSION_GUARDED_TABLES & set(tables):
+        # A guarded table already landed but absent from this build counts as 0 rows.
+        for name in sorted(REGRESSION_GUARDED_TABLES):
             existing = existing_row_count(conn, name)
-            if existing is not None and len(tables[name]) < existing:
+            new_count = len(tables[name]) if name in tables else 0
+            if existing is not None and new_count < existing:
                 raise WriteRegressionError(
-                    f"{name}: this write has {len(tables[name])} row(s), fewer than the "
+                    f"{name}: this write has {new_count} row(s), fewer than the "
                     f"{existing} row(s) already landed -- refusing to replace"
                 )
         for name, frame in tables.items():
@@ -126,7 +128,7 @@ def build(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     try:
         return run_build(args.raw_dir, args.db)
-    except FileNotFoundError as error:
+    except (FileNotFoundError, FastF1RaceLoadError) as error:
         print(f"[build] {error}", file=sys.stderr)
         return 1
     except WriteRegressionError as error:
@@ -192,9 +194,9 @@ def missing_extract_rounds(raw_dir: Path, season: int, today: date | None = None
     season_dir = raw_dir / "fastf1" / str(season)
     missing = []
     for round_ in completed_rounds(raw_dir / "jolpica", season, today):
-        dir_name = round_dir_name(round_, names[round_])
-        if not (season_dir / dir_name / "counts.json").is_file():
-            missing.append((round_, dir_name))
+        # Any `<RR>-*` folder with a counts.json counts, so a renamed race is not refetched.
+        if not any(season_dir.glob(f"{round_:02d}-*/counts.json")):
+            missing.append((round_, round_dir_name(round_, names[round_])))
     return missing
 
 
