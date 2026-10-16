@@ -439,15 +439,15 @@ REVISE_ON_QUALIFYING = [
 def _load(conn) -> dict[str, pd.DataFrame]:
     results = conn.execute(
         "SELECT season, round, race_name, driver_id, constructor_id, grid, position, status "
-        "FROM combined_results"
+        "FROM results"
     ).df()
     standings = conn.execute(
         "SELECT season, round, constructor_id, standing_rank, cumulative_points "
-        "FROM combined_constructor_standings_by_round WHERE season = ?",
+        "FROM constructor_standings_by_round WHERE season = ?",
         [SEASON],
     ).df()
     laps = conn.execute(
-        "SELECT season, round, race_label, Driver, driver_id, constructor_id, LapTime "
+        "SELECT season, round, Driver, driver_id, constructor_id, LapTime "
         "FROM raw_fastf1_laps WHERE season = ?",
         [SEASON],
     ).df()
@@ -644,7 +644,7 @@ def main(db_path: Path = DUCKDB_PATH) -> int:
     if not db_path.exists():
         print(
             f"golden_check: no DuckDB file at {db_path}. Build the local database first "
-            "(scripts/build_f1_dataset.py, scripts/build_combined_dataset.py).",
+            "with `uv run build`.",
             file=sys.stderr,
         )
         return 1

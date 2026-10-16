@@ -13,13 +13,20 @@ uv run pytest
 
 `uv sync` builds the project from `pyproject.toml` (src layout, editable install) and creates `.venv/`. It also resolves the pinned interpreter (`.python-version`: 3.13) — if Python 3.13 isn't already installed locally, `uv` downloads it, which requires network access on that first run. `uv run pytest` runs the offline test suite — tests never touch the network (see `tests/conftest.py`).
 
+## Data
+
+`data/raw/` is committed: the Jolpica CSVs (1950 to the latest round) and the FastF1 extracts. See [`data/raw/NOTICE.md`](data/raw/NOTICE.md) for sources and licences.
+
+```bash
+uv run build     # data/raw/ -> data/processed/f1_analytics.duckdb (offline, no credentials)
+uv run refresh   # append new Jolpica rounds, fetch missing FastF1 extracts, then build
+```
+
 ## Credentials
 
-Every source's credential requirement, in full:
-
-| Source | Credential |
+| Command | Credential |
 | --- | --- |
-| Kaggle | None. `kaggle_csv.py` reads static CSVs already present at `KAGGLE_F1_RAW_DIR` (`data/raw/f1_complete_dataset/`) — no KaggleHub download or token check in the current pipeline. |
-| FastF1 | None. |
+| `uv run build` | None. It reads only `data/raw/` and makes no network calls. |
+| `uv run refresh` | An F1TV subscription login for FastF1. Run `python -m fastf1 auth f1tv --authenticate` first; `refresh` checks the token before doing anything and exits if it is missing or expired. Jolpica needs no credential. |
 
-No other setup is required to run the test suite. Some scripts under `scripts/` have their own separate environment requirements documented in their module docstring — check a script's docstring before running it directly.
+The test suite needs no credentials.

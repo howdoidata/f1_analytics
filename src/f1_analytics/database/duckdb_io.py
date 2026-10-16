@@ -24,11 +24,11 @@ class WriteRegressionError(Exception):
     """A replace-sync write would shrink `table_name` below its already-landed row count."""
 
 
-def _existing_row_count(conn: duckdb.DuckDBPyConnection, table_name: str) -> int | None:
+def existing_row_count(conn: duckdb.DuckDBPyConnection, table_name: str) -> int | None:
     # Scoped to `main` BASE TABLEs deliberately. Unqualified, the probe matches
     # a same-named object in ANY schema (and matches VIEWs as well as tables),
     # while the COUNT(*) below resolves only against the search path -- so a
-    # table existing solely as `other.combined_results` made the probe truthy
+    # table existing solely as `other.results` made the probe truthy
     # and the very next line raise CatalogException, and a same-named view
     # could have supplied the row count the regression guard compares against.
     exists = conn.execute(
@@ -58,7 +58,7 @@ def write_dataframe(
     including an empty `frame` -- there is nothing to regress from.
     """
     if refuse_regression:
-        existing_count = _existing_row_count(conn, table_name)
+        existing_count = existing_row_count(conn, table_name)
         if existing_count is not None and len(frame) < existing_count:
             raise WriteRegressionError(
                 f"{table_name}: this write has {len(frame)} row(s), fewer than the "

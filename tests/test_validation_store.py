@@ -87,14 +87,18 @@ def test_log_source_load_accumulates_across_calls_never_overwrites(tmp_path: Pat
     db_path = tmp_path / "test.duckdb"
 
     with connect_duckdb(db_path) as conn:
-        log_source_load(conn, "kaggle", "combined_results", 10)
-        log_source_load(conn, "jolpica", "combined_results", 3)
+        log_source_load(conn, "jolpica", "results", 10)
+        log_source_load(conn, "fastf1", "raw_fastf1_laps", 3)
         registry_count = conn.execute("SELECT COUNT(*) FROM source_registry").fetchone()[0]
         load_log = conn.execute("SELECT * FROM source_load_log ORDER BY source_name").fetch_df()
 
     assert registry_count == 2
-    assert load_log["source_name"].tolist() == ["jolpica", "kaggle"]
+    assert load_log["source_name"].tolist() == ["fastf1", "jolpica"]
     assert load_log["row_count"].tolist() == [3, 10]
+
+
+def test_registered_sources_are_jolpica_and_fastf1_only():
+    assert set(SOURCE_METADATA) == {"jolpica", "fastf1"}
 
 
 def test_log_source_load_raises_value_error_for_an_unregistered_source(tmp_path: Path):

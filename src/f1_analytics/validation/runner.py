@@ -1,5 +1,4 @@
-"""Shared build-script helpers so `pull_fastf1_data.py`/`build_combined_dataset.py`
-run validation identically instead of each duplicating it (Story 1.8)."""
+"""Validation helpers the build runs after writing its tables."""
 
 from __future__ import annotations
 

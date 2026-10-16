@@ -1,0 +1,28 @@
+{
+  "drivers": [
+    "ALO",
+    "ANT",
+    "BEA",
+    "BOT",
+    "COL",
+    "GAS",
+    "HAD",
+    "HAM",
+    "HUL",
+    "LAW",
+    "LEC",
+    "LIN",
+    "OCO",
+    "PER",
+    "RUS",
+    "SAI",
+    "STR",
+    "VER"
+  ],
+  "event": "Chinese Grand Prix",
+  "lap_count": 919,
+  "race_label": "02-chinese-grand-prix",
+  "round": 2,
+  "season": 2026,
+  "weather_count": 152
+}

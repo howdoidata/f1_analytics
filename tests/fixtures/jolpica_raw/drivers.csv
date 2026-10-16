@@ -1,0 +1,4 @@
+driverId,givenName,familyName,dateOfBirth,nationality,permanentNumber,code,url
+alonso,Fernando,Alonso,1981-07-29,Spanish,14,ALO,https://example.com/driver/alonso
+hamilton,Lewis,Hamilton,1985-01-07,British,44,HAM,https://example.com/driver/hamilton
+verstappen,Max,Verstappen,1997-09-30,Dutch,1,VER,https://example.com/driver/verstappen

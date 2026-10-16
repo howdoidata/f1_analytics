@@ -1,0 +1,32 @@
+{
+  "drivers": [
+    "ALB",
+    "ALO",
+    "ANT",
+    "BEA",
+    "BOR",
+    "BOT",
+    "COL",
+    "GAS",
+    "HAD",
+    "HAM",
+    "HUL",
+    "LAW",
+    "LEC",
+    "LIN",
+    "NOR",
+    "OCO",
+    "PER",
+    "PIA",
+    "RUS",
+    "SAI",
+    "STR",
+    "VER"
+  ],
+  "event": "Singapore Grand Prix",
+  "lap_count": 1236,
+  "race_label": "17-singapore-grand-prix",
+  "round": 17,
+  "season": 2026,
+  "weather_count": 160
+}

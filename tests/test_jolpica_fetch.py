@@ -1,393 +1,245 @@
-"""Offline tests for `fetch_all_race_result_pages`/`fetch_season_results` (Story 1.7, AD-13).
+"""Offline tests for the Jolpica client and the incremental update.
 
-`jolpica_fetch.py` runs only inside the isolated pandas-<3.0 FastF1
-environment -- but `retry_with_backoff` is dependency-free, and both
-pagination-exhausting and dump/verify functions accept an injectable
-`fastf1_module` seam, so this file loads the module directly by path
-(mirrors `test_fastf1_fetch.py`) and exercises them with a fake fastf1/
-Ergast-like object and a fake `sleep`, so tests never actually wait or need
-the real `fastf1` package installed. No network (AD-11).
+Every response is a recorded `MRData` payload replayed through the client's
+injectable getter. No network: `tests/conftest.py` blocks sockets.
 """
 
 from __future__ import annotations
 
-import importlib.util
-import json
+import copy
+import hashlib
 from pathlib import Path
 
-import pandas as pd
 import pytest
 
-
-_MODULE_PATH = Path(__file__).parent.parent / "src" / "f1_analytics" / "data_sources" / "jolpica_fetch.py"
-_spec = importlib.util.spec_from_file_location("jolpica_fetch", _MODULE_PATH)
-jolpica_fetch = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(jolpica_fetch)
-
-retry_with_backoff = jolpica_fetch.retry_with_backoff
-fetch_all_race_result_pages = jolpica_fetch.fetch_all_race_result_pages
-fetch_season_results = jolpica_fetch.fetch_season_results
-
-
-class ErgastErrorStub(Exception):
-    """Stand-in for fastf1.exceptions.ErgastError in tests."""
+from f1_analytics.data_sources import jolpica_fetch as jf
+from jolpica_responses import (
+    SCHEDULE_2025,
+    RecordedGetter,
+    _qualifying,
+    _race,
+    _race_table,
+    _result,
+    make_update_world,
+    recorded_responses,
+)
 
 
-def _fake_sleep_recorder() -> tuple[list[float], object]:
-    calls: list[float] = []
-
-    def sleep(seconds: float) -> None:
-        calls.append(seconds)
-
-    return calls, sleep
+def _client(getter) -> jf.JolpicaClient:
+    return jf.JolpicaClient(getter, sleep=lambda s: None, clock=lambda: 0.0)
 
 
-# --- Fake fastf1/Ergast object graph: `fastf1_module.Cache.enable_cache()`,
-# `fastf1_module.exceptions.ErgastError`, and
-# `fastf1_module.ergast.Ergast().get_race_results(season=, limit=)` returning
-# a response exposing `.content`/`.description`/`.total_results`/
-# `.get_next_result_page()` -- mirrors the real `fastf1.ergast.Ergast` /
-# `ErgastMultiResponse` surface confirmed live against FastF1 3.8.3.
+def _hashes(directory: Path) -> dict[str, str]:
+    return {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(directory.glob("*.csv"))}
 
 
-class _FakeCache:
-    def __init__(self) -> None:
-        self.enable_calls: list[str] = []
-
-    def enable_cache(self, path: str) -> None:
-        self.enable_calls.append(path)
+@pytest.fixture
+def raw_dir(tmp_path: Path) -> Path:
+    return make_update_world(tmp_path / "jolpica")
 
 
-class _FakeExceptions:
-    ErgastError = ErgastErrorStub
+# --- the incremental update ------------------------------------------------
 
 
-class _FakeResponse:
-    def __init__(self, content: list[pd.DataFrame], description: pd.DataFrame, total_results: int, next_pages=None):
-        self.content = content
-        self.description = description
-        self.total_results = total_results
-        self._next_pages = list(next_pages or [])
+def test_update_appends_exactly_the_one_new_round_and_a_rerun_appends_nothing(raw_dir: Path):
+    getter = RecordedGetter(recorded_responses())
+    before = {t: len(jf.read_raw_table(raw_dir, t)) for t in jf.RAW_COLUMNS}
 
-    def get_next_result_page(self) -> "_FakeResponse":
-        if not self._next_pages:
-            raise ValueError("No more data after this response.")
-        return self._next_pages.pop(0)
+    outcome = jf.update_raw_dir(raw_dir, _client(getter), log=lambda m: None)
 
+    assert outcome["appended"] == [(2025, 3)]
+    results = jf.read_raw_table(raw_dir, "results")
+    assert len(results) == before["results"] + 3
+    new = results[(results["season"] == "2025") & (results["round"] == "3")]
+    assert list(new["driverId"]) == ["piastri", "verstappen", "hamilton"]
+    assert len(jf.read_raw_table(raw_dir, "qualifying")) == before["qualifying"] + 3
+    assert len(jf.read_raw_table(raw_dir, "sprint_results")) == before["sprint_results"]
+    # A debut driver and constructor arrive with their round.
+    assert "piastri" in set(jf.read_raw_table(raw_dir, "drivers")["driverId"])
+    assert "mclaren" in set(jf.read_raw_table(raw_dir, "constructors")["constructorId"])
+    # The season's final standings were replaced, not appended.
+    standings = jf.read_raw_table(raw_dir, "final_driver_standings")
+    assert list(standings[standings["season"] == "2025"]["points"]) == ["69", "68", "25"]
+    assert len(standings[standings["season"] == "2024"]) == 3
 
-def _description(rows: list[tuple[int, int, str]]) -> pd.DataFrame:
-    return pd.DataFrame(rows, columns=["season", "round", "raceName"])
-
-
-def _content(driver_ids: list[str]) -> pd.DataFrame:
-    return pd.DataFrame({"driverId": driver_ids, "points": [25] * len(driver_ids)})
-
-
-class _FakeErgastClient:
-    def __init__(self, first_page_factory, *, fail_times: int = 0):
-        self._first_page_factory = first_page_factory
-        self._fail_times = fail_times
-        self.calls: list[tuple[int, int]] = []
-
-    def get_race_results(self, season: int, limit: int) -> _FakeResponse:
-        self.calls.append((season, limit))
-        if self._fail_times > 0:
-            self._fail_times -= 1
-            raise ErgastErrorStub("simulated transient Jolpica failure")
-        return self._first_page_factory()
+    snapshot = _hashes(raw_dir)
+    rerun = jf.update_raw_dir(raw_dir, _client(getter), log=lambda m: None)
+    assert rerun["appended"] == []
+    assert _hashes(raw_dir) == snapshot
 
 
-class _FakeErgastNamespace:
-    def __init__(self, client: _FakeErgastClient) -> None:
-        self._client = client
-
-    def Ergast(self) -> _FakeErgastClient:
-        return self._client
-
-
-class _FakeFastF1:
-    def __init__(self, client: _FakeErgastClient) -> None:
-        self.Cache = _FakeCache()
-        self.exceptions = _FakeExceptions()
-        self.ergast = _FakeErgastNamespace(client)
+def test_update_requests_carry_no_auth_header_and_only_url_and_paging_params(raw_dir: Path):
+    getter = RecordedGetter(recorded_responses())
+    jf.update_raw_dir(raw_dir, _client(getter), log=lambda m: None)
+    assert getter.calls
+    for url, params in getter.calls:
+        assert set(params) == {"limit", "offset"}
 
 
-# --- fetch_all_race_result_pages(): pagination exhaustion, retries, and the
-# hourly-budget guard.
+def test_requests_getter_sends_no_authorization_header(monkeypatch: pytest.MonkeyPatch):
+    import requests
+
+    seen = {}
+
+    class Response:
+        status_code = 200
+        url = "u"
+
+        def json(self):
+            return {"MRData": {}}
+
+    def fake_get(url, **kwargs):
+        seen.update(kwargs)
+        return Response()
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    jf.requests_getter(jf.BASE_URL + "2025/races.json", {"limit": 100, "offset": 0})
+    assert "headers" not in seen and "auth" not in seen
 
 
-def test_single_complete_page_lands_all_rows_and_matches_total():
-    page = _FakeResponse(
-        content=[_content(["verstappen", "hamilton"])],
-        description=_description([(2026, 1, "Match Grand Prix")]),
-        total_results=2,
+def test_update_when_the_next_round_has_not_run_writes_nothing(raw_dir: Path):
+    getter = RecordedGetter(recorded_responses(round3_run=False))
+    snapshot = _hashes(raw_dir)
+    messages = []
+
+    outcome = jf.update_raw_dir(raw_dir, _client(getter), log=messages.append)
+
+    assert outcome == {"appended": [], "races_changed": False}
+    assert _hashes(raw_dir) == snapshot
+    assert messages[-1] == "[jolpica] up to date"
+
+
+def test_update_season_rollover_with_an_empty_next_schedule_changes_nothing(raw_dir: Path):
+    jf.update_raw_dir(raw_dir, _client(RecordedGetter(recorded_responses())), log=lambda m: None)
+    snapshot = _hashes(raw_dir)
+    getter = RecordedGetter(recorded_responses())
+
+    outcome = jf.update_raw_dir(raw_dir, _client(getter), log=lambda m: None)
+
+    assert outcome == {"appended": [], "races_changed": False}
+    assert any(url.endswith("2026/races.json") for url, _ in getter.calls)
+    assert _hashes(raw_dir) == snapshot
+
+
+def test_update_season_rollover_adds_the_published_next_schedule(raw_dir: Path):
+    jf.update_raw_dir(raw_dir, _client(RecordedGetter(recorded_responses())), log=lambda m: None)
+    next_season = [_race(2026, 1, "Australian Grand Prix", "albert_park", "2026-03-08", "04:00:00Z", "https://example.com/race/2026/1")]
+
+    outcome = jf.update_raw_dir(raw_dir, _client(RecordedGetter(recorded_responses(next_season=next_season))), log=lambda m: None)
+
+    assert outcome == {"appended": [], "races_changed": True}
+    races = jf.read_raw_table(raw_dir, "races")
+    assert ("2026", "1") in set(zip(races["season"], races["round"]))
+    assert len(jf.read_raw_table(raw_dir, "results")[lambda f: f["season"] == "2026"]) == 0
+
+
+def test_update_refuses_a_round_whose_pages_do_not_add_up(raw_dir: Path):
+    responses = recorded_responses()
+    responses["2025/3/results"]["MRData"]["total"] = "4"
+    snapshot = _hashes(raw_dir)
+    with pytest.raises(jf.IncompleteJolpicaFetchError, match="landed 3 row"):
+        jf.update_raw_dir(raw_dir, _client(RecordedGetter(responses)), log=lambda m: None)
+    assert _hashes(raw_dir) == snapshot
+
+
+# --- client ---------------------------------------------------------------
+
+
+def test_get_all_follows_offsets_and_merge_joins_a_race_split_across_pages():
+    r1 = SCHEDULE_2025[0]
+    page1 = _race_table([_race(2025, *r1, Results=[_result(1, "verstappen", "red_bull", 25, 1)])], total=2, limit=1)
+    page2 = _race_table([_race(2025, *r1, Results=[_result(2, "hamilton", "mercedes", 18, 2)])], total=2, limit=1, offset=1)
+    pages = {0: page1, 1: page2}
+    calls = []
+
+    def getter(url, params):
+        calls.append(params["offset"])
+        return copy.deepcopy(pages[params["offset"]])
+
+    result_pages = _client(getter).get_all("2025/results")
+    jf.verify_total(result_pages, "Results", "2025 results")
+    races = jf.merge_race_pages(result_pages, "Results")
+    assert calls == [0, 1]
+    assert len(races) == 1 and [r["Driver"]["driverId"] for r in races[0]["Results"]] == ["verstappen", "hamilton"]
+
+
+def test_client_paces_requests_at_the_hourly_cap_interval():
+    now = [0.0]
+    sleeps = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    client = jf.JolpicaClient(lambda url, params: {"MRData": {"total": "0"}}, sleep=sleep, clock=lambda: now[0])
+    for path in ("a", "b", "c"):
+        client.get_page(path)
+    assert jf.MIN_REQUEST_INTERVAL_SECONDS == pytest.approx(7.2)
+    assert sleeps == [pytest.approx(7.2), pytest.approx(7.2)]
+    # 3600 / 7.2 = 500 requests an hour at most, and well under 4 per second.
+    assert 3600 / jf.MIN_REQUEST_INTERVAL_SECONDS <= jf.HOURLY_REQUEST_CAP
+
+
+def test_client_hourly_window_blocks_the_request_past_the_cap():
+    now = [0.0]
+    sleeps = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    client = jf.JolpicaClient(
+        lambda url, params: {"MRData": {"total": "0"}}, sleep=sleep, clock=lambda: now[0], min_interval=0, hourly_cap=2
     )
-    fastf1_module = _FakeFastF1(_FakeErgastClient(lambda: page))
-    sleep_calls, sleep = _fake_sleep_recorder()
-
-    frames, landed_row_count, total_expected = fetch_all_race_result_pages(
-        fastf1_module, 2026, sleep=sleep
-    )
-
-    assert landed_row_count == 2
-    assert total_expected == 2
-    assert len(frames) == 1
-    assert frames[0]["season"].tolist() == [2026, 2026]
-    assert frames[0]["round"].tolist() == [1, 1]
-    assert frames[0]["race_name"].tolist() == ["Match Grand Prix", "Match Grand Prix"]
-    # The loop always throttles once before checking for a next page --
-    # even when that check turns out to find none -- since
-    # get_next_result_page() is a single call that both checks for and
-    # fetches the next page; there's no way to know in advance it will
-    # raise. Over-throttling by one no-op sleep is harmless (AD-13 cares
-    # about never exceeding the cap, not about shaving off a wasted 0.3s).
-    assert len(sleep_calls) == 1
+    for path in ("a", "b", "c"):
+        client.get_page(path)
+    assert sleeps == [pytest.approx(3600)]
 
 
-def test_follows_pagination_across_multiple_pages_until_exhausted():
-    # Total is 4 but each page only carries 2 rows (simulates Jolpica's
-    # server-side 100-row clamp truncating a season across page
-    # boundaries) -- the real defect class AD-13 exists to prevent.
-    page_2 = _FakeResponse(
-        content=[_content(["alonso"])],
-        description=_description([(2026, 2, "Second Grand Prix")]),
-        total_results=4,
-    )
-    page_1 = _FakeResponse(
-        content=[_content(["verstappen", "hamilton"])],
-        description=_description([(2026, 1, "Match Grand Prix")]),
-        total_results=4,
-        next_pages=[page_2],
-    )
-    fastf1_module = _FakeFastF1(_FakeErgastClient(lambda: page_1))
-    sleep_calls, sleep = _fake_sleep_recorder()
+def test_client_retries_transient_errors_with_backoff_then_gives_up():
+    sleeps = []
+    attempts = []
 
-    frames, landed_row_count, total_expected = fetch_all_race_result_pages(
-        fastf1_module, 2026, sleep=sleep
-    )
+    def getter(url, params):
+        attempts.append(1)
+        raise jf.TransientJolpicaError("HTTP 429")
 
-    assert landed_row_count == 3
-    assert total_expected == 4
-    assert len(frames) == 2
-    assert frames[1]["round"].tolist() == [2]
-    # Two throttle sleeps: between page 1 and page 2, and once more before
-    # the (empty) page-3 attempt that discovers there's no more data (AD-13:
-    # stay below the 4 req/sec burst cap).
-    assert len(sleep_calls) == 2
+    client = jf.JolpicaClient(getter, sleep=sleeps.append, clock=lambda: 1e9, min_interval=0, retry_cap=2, backoff_base=1)
+    with pytest.raises(jf.JolpicaRequestError, match="retry cap"):
+        client.get_page("2025/races")
+    assert len(attempts) == 3
+    assert sleeps == [1, 2]
 
 
-def test_retries_a_transient_ergast_error_and_succeeds_before_the_cap():
-    page = _FakeResponse(
-        content=[_content(["verstappen"])],
-        description=_description([(2026, 1, "Match Grand Prix")]),
-        total_results=1,
-    )
-    client = _FakeErgastClient(lambda: page, fail_times=2)
-    fastf1_module = _FakeFastF1(client)
-    sleep_calls, sleep = _fake_sleep_recorder()
+def test_page_cache_makes_a_rerun_free(tmp_path: Path):
+    calls = []
 
-    frames, landed_row_count, total_expected = fetch_all_race_result_pages(
-        fastf1_module, 2026, sleep=sleep, retry_cap=5
-    )
+    def getter(url, params):
+        calls.append(url)
+        return {"MRData": {"total": "0", "RaceTable": {"Races": []}}}
 
-    assert landed_row_count == 1
-    assert total_expected == 1
-    # Two failed attempts before the third succeeds -> two backoff sleeps
-    # (retry_with_backoff), plus the one trailing throttle sleep before the
-    # loop discovers (via ValueError) that there is no second page.
-    assert len(sleep_calls) == 3
+    jf.JolpicaClient(getter, cache_dir=tmp_path, sleep=lambda s: None).get_page("2025/races")
+    second = jf.JolpicaClient(getter, cache_dir=tmp_path, sleep=lambda s: None)
+    assert second.get_page("2025/races") == {"total": "0", "RaceTable": {"Races": []}}
+    assert len(calls) == 1 and second.request_count == 0
 
 
-def test_raises_named_runtime_error_when_retry_cap_exhausted_on_persistent_error():
-    client = _FakeErgastClient(lambda: pytest.fail("should never be reached"), fail_times=10**6)
-    fastf1_module = _FakeFastF1(client)
-    sleep_calls, sleep = _fake_sleep_recorder()
-
-    with pytest.raises(RuntimeError) as excinfo:
-        fetch_all_race_result_pages(fastf1_module, 2026, sleep=sleep, retry_cap=2)
-
-    assert "Retry cap (2) exhausted" in str(excinfo.value)
-    assert "season 2026" in str(excinfo.value)
-    assert "ErgastErrorStub" in str(excinfo.value)
-
-
-def test_raises_named_runtime_error_when_hourly_request_budget_is_exhausted_mid_fetch():
-    page_2 = _FakeResponse(
-        content=[_content(["alonso"])],
-        description=_description([(2026, 2, "Second Grand Prix")]),
-        total_results=4,
-    )
-    page_1 = _FakeResponse(
-        content=[_content(["verstappen", "hamilton"])],
-        description=_description([(2026, 1, "Match Grand Prix")]),
-        total_results=4,
-        next_pages=[page_2],
-    )
-    fastf1_module = _FakeFastF1(_FakeErgastClient(lambda: page_1))
-    sleep_calls, sleep = _fake_sleep_recorder()
-
-    with pytest.raises(RuntimeError) as excinfo:
-        fetch_all_race_result_pages(fastf1_module, 2026, sleep=sleep, hourly_request_cap=1)
-
-    assert "hourly request budget (1)" in str(excinfo.value)
-    assert "season 2026" in str(excinfo.value)
+def test_flatteners_produce_the_raw_csv_columns():
+    r3 = SCHEDULE_2025[2]
+    race = _race(2025, *r3, Results=[_result(1, "piastri", "mclaren", 25, 1)],
+                 QualifyingResults=[_qualifying(1, "piastri", "mclaren")])
+    results = jf.flatten_results([race])
+    assert list(results.columns) == jf.RAW_COLUMNS["results"]
+    assert results.iloc[0][["driverId", "constructorName", "fastestLapNumber", "totalRaceTime"]].tolist() == [
+        "piastri", "McLaren", "40", "1:23:20.000"]
+    assert list(jf.flatten_qualifying([race]).columns) == jf.RAW_COLUMNS["qualifying"]
+    assert list(jf.flatten_races([race]).iloc[0][["circuitId", "date"]]) == ["albert_park", "2025-03-16"]
+    drivers, constructors = jf.reference_rows([[race]])
+    assert set(drivers["driverId"]) == {"piastri"} and set(constructors["constructorId"]) == {"mclaren"}
 
 
-def test_hourly_request_budget_counts_every_retry_attempt_not_just_one_per_page():
-    # Two transient failures before the first page succeeds -> three real
-    # HTTP attempts. A budget of 2 must be exhausted on the third attempt,
-    # proving retries are counted individually -- a budget tracker that
-    # only incremented once per page-loop iteration (the prior defect)
-    # would never trip here at all, since only one page was ever "in
-    # progress".
-    page = _FakeResponse(
-        content=[_content(["verstappen"])],
-        description=_description([(2026, 1, "Match Grand Prix")]),
-        total_results=1,
-    )
-    client = _FakeErgastClient(lambda: page, fail_times=2)
-    fastf1_module = _FakeFastF1(client)
-    sleep_calls, sleep = _fake_sleep_recorder()
+def test_completed_rounds_needs_results_and_a_past_date(raw_dir: Path):
+    from datetime import date
 
-    with pytest.raises(RuntimeError) as excinfo:
-        fetch_all_race_result_pages(fastf1_module, 2026, sleep=sleep, retry_cap=5, hourly_request_cap=2)
-
-    assert "hourly request budget (2)" in str(excinfo.value)
-    # Only the two budgeted attempts actually reached the client; the third
-    # was blocked before ever calling get_race_results again.
-    assert client.calls == [(2026, 100), (2026, 100)]
-
-
-def test_a_value_error_from_the_initial_page_call_is_a_real_failure_not_an_empty_season():
-    # ValueError as "no more pages" is only a valid signal from
-    # get_next_result_page() -- an unrelated ValueError out of the very
-    # first get_race_results() call must propagate, never be swallowed
-    # into "this season simply has zero rounds".
-    def _raise_unrelated_value_error():
-        raise ValueError("some unrelated ValueError, not a get_next_result_page() signal")
-
-    client = _FakeErgastClient(_raise_unrelated_value_error)
-    fastf1_module = _FakeFastF1(client)
-    sleep_calls, sleep = _fake_sleep_recorder()
-
-    with pytest.raises(ValueError, match="some unrelated ValueError"):
-        fetch_all_race_result_pages(fastf1_module, 2026, sleep=sleep)
-
-
-def test_fetch_season_results_fails_when_landed_rows_exceed_the_reported_total(tmp_path: Path):
-    # An over-count is just as much a mismatch against the source's own
-    # published total as an under-count -- AD-13 requires an exact match,
-    # not merely "at least".
-    page = _FakeResponse(
-        content=[_content(["verstappen", "hamilton", "alonso"])],
-        description=_description([(2026, 1, "Match Grand Prix")]),
-        total_results=2,  # fewer than the 3 rows actually landed
-    )
-    fastf1_module = _FakeFastF1(_FakeErgastClient(lambda: page))
-    output_dir = tmp_path / "2026"
-
-    result = fetch_season_results(2026, tmp_path / "cache", output_dir, fastf1_module=fastf1_module)
-
-    assert result["status"] == "failed"
-    assert "IncompleteJolpicaFetch" in result["exception"]
-    assert "3" in result["exception"] and "2" in result["exception"]
-    assert not output_dir.exists()
-
-
-def test_fetch_season_results_fails_when_initial_page_raises_an_unrelated_value_error(tmp_path: Path):
-    def _raise_unrelated_value_error():
-        raise ValueError("boom: not a real 'no more pages' signal")
-
-    client = _FakeErgastClient(_raise_unrelated_value_error)
-    fastf1_module = _FakeFastF1(client)
-    output_dir = tmp_path / "2026"
-
-    result = fetch_season_results(2026, tmp_path / "cache", output_dir, fastf1_module=fastf1_module)
-
-    assert result["status"] == "failed"
-    assert "boom: not a real 'no more pages' signal" in result["exception"]
-    assert not output_dir.exists()
-
-
-# --- fetch_season_results(): the dump/verify wrapper around
-# fetch_all_race_result_pages(), mirroring fetch_race()'s status contract.
-
-
-def test_fetch_season_results_pass_dumps_csv_and_counts_sidecar(tmp_path: Path):
-    page = _FakeResponse(
-        content=[_content(["verstappen", "hamilton"])],
-        description=_description([(2026, 1, "Match Grand Prix")]),
-        total_results=2,
-    )
-    fastf1_module = _FakeFastF1(_FakeErgastClient(lambda: page))
-    cache_dir = tmp_path / "cache"
-    output_dir = tmp_path / "2026"
-
-    result = fetch_season_results(2026, cache_dir, output_dir, fastf1_module=fastf1_module)
-
-    assert result["status"] == "pass"
-    assert result["row_count"] == 2
-    assert result["rounds"] == [1]
-    assert sorted(path.name for path in output_dir.iterdir()) == ["counts.json", "race_results.csv"]
-
-    landed = pd.read_csv(output_dir / "race_results.csv")
-    assert len(landed) == 2
-    assert landed["driverId"].tolist() == ["verstappen", "hamilton"]
-
-    counts = json.loads((output_dir / "counts.json").read_text())
-    assert counts == {"season": 2026, "row_count": 2, "rounds": [1]}
-
-    assert fastf1_module.Cache.enable_calls == [str(cache_dir)]
-
-
-def test_fetch_season_results_fails_and_writes_no_files_when_pagination_is_incomplete(tmp_path: Path):
-    # total_results (3) exceeds what actually landed (2 rows across all
-    # pages) -- a truncated fetch must be a statused failure, never a
-    # silently shorter table (AD-13).
-    page = _FakeResponse(
-        content=[_content(["verstappen", "hamilton"])],
-        description=_description([(2026, 1, "Match Grand Prix")]),
-        total_results=3,
-    )
-    fastf1_module = _FakeFastF1(_FakeErgastClient(lambda: page))
-    output_dir = tmp_path / "2026"
-
-    result = fetch_season_results(2026, tmp_path / "cache", output_dir, fastf1_module=fastf1_module)
-
-    assert result["status"] == "failed"
-    assert "IncompleteJolpicaFetch" in result["exception"]
-    assert "2" in result["exception"] and "3" in result["exception"]
-    assert not output_dir.exists()
-
-
-def test_fetch_season_results_reports_empty_status_for_a_zero_row_season(tmp_path: Path):
-    page = _FakeResponse(content=[], description=_description([]), total_results=0)
-    fastf1_module = _FakeFastF1(_FakeErgastClient(lambda: page))
-    output_dir = tmp_path / "2026"
-
-    result = fetch_season_results(2026, tmp_path / "cache", output_dir, fastf1_module=fastf1_module)
-
-    assert result["status"] == "empty"
-    assert result["row_count"] == 0
-    assert not output_dir.exists()
-
-
-def test_fetch_season_results_reports_failed_status_for_a_non_retryable_error(tmp_path: Path):
-    # A plain (non-Ergast, non-request) exception is not in
-    # fetch_all_race_result_pages's retryable tuple, so it propagates on
-    # the first attempt -- no real backoff sleep, keeping this test fast
-    # (fetch_season_results has no injectable `sleep` seam of its own, so
-    # retry-cap-exhaustion paths are exercised instead at the
-    # fetch_all_race_result_pages level above, with a fake sleep).
-    def _raise():
-        raise RuntimeError("boom: non-retryable failure")
-
-    client = _FakeErgastClient(_raise)
-    fastf1_module = _FakeFastF1(client)
-    output_dir = tmp_path / "2026"
-
-    result = fetch_season_results(2026, tmp_path / "cache", output_dir, fastf1_module=fastf1_module)
-
-    assert result["status"] == "failed"
-    assert "boom: non-retryable failure" in result["exception"]
-    assert not output_dir.exists()
+    assert jf.completed_rounds(raw_dir, 2025, today=date(2025, 3, 5)) == [1]
+    assert jf.completed_rounds(raw_dir, 2025, today=date(2026, 1, 1)) == [1, 2]

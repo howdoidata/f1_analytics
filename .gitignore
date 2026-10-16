@@ -2,8 +2,9 @@
 **/.DS_Store
 .vscode/
 
-# Local data and generated outputs
-data/raw/
+# Local data and generated outputs. data/raw/ is committed; its caches are not.
+data/raw/fastf1_cache/
+data/cache/
 data/processed/
 data/.run_marker
 data/.run.lock
@@ -12,8 +13,6 @@ outputs/
 # Local credentials and environment files
 .env
 .env.*
-.kaggle/
-kaggle.json
 access_token
 
 # Python environments and caches

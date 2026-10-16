@@ -14,6 +14,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from f1_analytics.data_sources.jolpica_fetch import read_raw_table
+from f1_analytics.data_sources.jolpica_loader import shape_constructors, shape_drivers
 from f1_analytics.data_sources.fastf1_loader import (
     FASTF1_AMBIGUOUS_DRIVER_CODE_OVERRIDES,
     FASTF1_TEAM_TO_CONSTRUCTOR_ID_ALIASES,
@@ -33,17 +35,17 @@ from f1_analytics.data_sources.fastf1_loader import (
 
 
 FASTF1_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "fastf1_csv"
-KAGGLE_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "kaggle_csv"
+JOLPICA_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "jolpica_raw"
 
 
 @pytest.fixture
 def drivers() -> pd.DataFrame:
-    return pd.read_csv(KAGGLE_FIXTURE_DIR / "f1_drivers.csv")
+    return shape_drivers(read_raw_table(JOLPICA_FIXTURE_DIR, "drivers"))
 
 
 @pytest.fixture
 def constructors() -> pd.DataFrame:
-    return pd.read_csv(KAGGLE_FIXTURE_DIR / "f1_constructors.csv")
+    return shape_constructors(read_raw_table(JOLPICA_FIXTURE_DIR, "constructors"))
 
 
 def test_read_race_dump_loads_laps_weather_and_counts():
@@ -204,7 +206,7 @@ def test_map_constructor_ids_raises_named_error_for_a_nan_team_value_instead_of_
 
 
 def test_map_constructor_ids_resolves_all_four_sanctioned_aliases_against_real_curated_names():
-    # Real curated constructors.name spellings -- deliberately not the shared kaggle_csv fixture,
+    # Real curated constructors.name spellings -- deliberately not the shared jolpica_raw fixture,
     # which happens to already spell "Alpine" without the "F1 Team" suffix
     # (so it resolves via the exact-match branch there) and doesn't carry
     # cadillac/rb at all. This exercises every alias-fallback row for real.
