@@ -12,7 +12,7 @@ the PDF's text:
 - Grid slot: Albon's 2026 grid slots, weighted 0.5 ** ((last_round - round) / 6).
 - Retirement: per race p ~ Beta(n_nf + 8f, n_fin + 8(1 - f)), where n_nf / n_fin
   are Albon's non-finishes / finishes and f is the field non-finish rate
-  (2026, Albon excluded).
+  (2026 R1-R16, all cars, Albon included).
 - Finishing change: a coin flip between one of Albon's own finishing changes
   and a 2026 non-Albon finisher whose grid is within 2 of the drawn slot.
 - Retirement change: a 2026 non-finish whose grid is within 2 of the slot.
@@ -269,7 +269,7 @@ def build_sim_inputs(
         weights = np.ones(len(driver))
     weights = weights / weights.sum()
 
-    f = field_non_finish_rate(rows, driver_id)
+    f = field_non_finish_rate(rows)
     n_nf = int((~driver["finished"]).sum())
     n_fin = int(driver["finished"].sum())
     fixed_p = {"blend": None, "field": f, "own": n_nf / (n_nf + n_fin)}[retirement]
@@ -291,9 +291,9 @@ def build_sim_inputs(
     )
 
 
-def field_non_finish_rate(season_rows: pd.DataFrame, driver_id: str = "albon") -> float:
-    field = season_rows[season_rows["driver_id"] != driver_id]
-    return float((~field["finished"]).mean())
+def field_non_finish_rate(season_rows: pd.DataFrame) -> float:
+    """Non-finish rate over every car in `season_rows` (the PDF's "field rate of 21%")."""
+    return float((~season_rows["finished"]).mean())
 
 
 def _draw_near(rng, slots, pool_grid, pool_change) -> np.ndarray:
@@ -357,7 +357,7 @@ def run_scenario(inputs: SimInputs, seeds=SEEDS, n: int = RACES_PER_RUN):
 
 
 # --------------------------------------------------------------------------
-# Baselines (golden-outputs.md, "Values to compare")
+# Baselines, transcribed from the PDFs in reports/golden/
 # --------------------------------------------------------------------------
 
 SINGAPORE_ROUNDS = [
@@ -381,12 +381,12 @@ SINGAPORE_ROUNDS = [
 ]
 
 ALBON_AT_SINGAPORE = [
-    # season, grid, finish, change
-    (2019, 6, 6, 0),
-    (2022, 18, 17, 1),
-    (2023, 14, 11, 3),
-    (2024, 11, 20, -9),
-    (2025, 20, 14, 6),
+    # season, grid, finish, change, note
+    (2019, 6, 6, 0, ""),
+    (2022, 18, 17, 1, ""),
+    (2023, 14, 11, 3, ""),
+    (2024, 11, 20, -9, "Retired"),
+    (2025, 20, 14, 6, ""),
 ]
 
 RUN_TABLE = [
@@ -551,27 +551,26 @@ def check_singapore_exact(report: Report, data: dict[str, pd.DataFrame]) -> pd.D
     report.check("mean change over all starts", round(s["mean_change_all"], 1), -0.3, fmt=signed1)
     report.check("mean grid slot", round(s["mean_grid"], 1), 16.6)
     report.note("(The PDF's method text says +2.3 / −2.7; the baseline is its table and summary row.)")
-    field_rate = field_non_finish_rate(season)
-    all_rate = float((~season["finished"]).mean())
-    report.note(
-        f"field non-finish rate: {pct(field_rate * 100)} excluding Albon "
-        f"(simulation input f), {pct(all_rate * 100)} all 22 cars"
-    )
+    all_rate = field_non_finish_rate(season)
+    report.note(f"field non-finish rate, all 22 cars: {pct(all_rate * 100)} (simulation input f)")
     report.check("field retirement rate (all cars)", round(all_rate * 100), 21, fmt=lambda v: f"{v}%")
 
     report.section("Singapore PDF: Albon at Singapore")
     sg = with_change(
         results[results["race_name"].str.contains("singapore", case=False, na=False) & (results["driver_id"] == "albon")]
     ).sort_values("season")
-    for season_year, grid, finish, change in ALBON_AT_SINGAPORE:
+    for season_year, grid, finish, change, note in ALBON_AT_SINGAPORE:
         row = sg[sg["season"] == season_year]
-        got = (
-            (int(row["grid"].iloc[0]), f"P{int(row['position'].iloc[0])}", signed(int(row["change"].iloc[0])))
-            if len(row)
-            else None
-        )
-        status = f" [{row['status'].iloc[0]}]" if len(row) else ""
-        report.check(f"{season_year} (grid, finish, change){status}", got, (grid, f"P{finish}", signed(change)))
+        got = None
+        if len(row):
+            first = row.iloc[0]
+            got = (
+                int(first["grid"]),
+                f"P{int(first['position'])}",
+                signed(int(first["change"])),
+                "" if first["finished"] else first["status"],
+            )
+        report.check(f"{season_year} (grid, finish, change, note)", got, (grid, f"P{finish}", signed(change), note))
     return season
 
 

@@ -186,3 +186,24 @@ def test_fixed_slot_and_fixed_p_are_honoured(tiny_season):
     ]
     allowed = set(peers["change"]) | set(inputs.own_finish_changes)
     assert set(change) <= allowed
+
+
+def test_happy_path_prints_rows_and_summary_and_exits_zero(tmp_path: Path, capsys, monkeypatch):
+    import duckdb
+
+    db_path = tmp_path / "empty.duckdb"
+    duckdb.connect(str(db_path)).close()
+
+    monkeypatch.setattr(golden_check, "_load", lambda conn: {})
+    monkeypatch.setattr(golden_check, "check_zandvoort", lambda report, data: report.check("z", 1, 1))
+    monkeypatch.setattr(
+        golden_check, "check_singapore_exact", lambda report, data: report.check("s", 2, 2) and None
+    )
+    monkeypatch.setattr(golden_check, "check_singapore_simulation", lambda report, season: report.check("m", 3, 4))
+
+    assert golden_check.main(db_path=db_path) == 0
+    out = capsys.readouterr().out
+    assert "Columns: name · regenerated · baseline · tolerance · OK/DEVIATION" in out
+    assert "z · 1 · 1 · exact · OK" in out
+    assert "m · 3 · 4 · exact · DEVIATION" in out
+    assert "3 values compared · 2 OK · 1 DEVIATION" in out
