@@ -20,3 +20,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ipynb_checkpoints/
+
+# dbt artifacts (target/run_results.json is the per-build test record)
+dbt/target/
+dbt/logs/
+dbt/.user.yml

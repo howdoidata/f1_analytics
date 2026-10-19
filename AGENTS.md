@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Local Formula 1 data pipeline and analysis project. Python source lives in `src/f1_analytics/`, scripts in `scripts/`, SQL in `sql/`, tests in `tests/`.
+Local Formula 1 data pipeline and analysis project. Python source lives in `src/f1_analytics/`, scripts in `scripts/`, the dbt project (SQL models and tests) in `dbt/`, tests in `tests/`.
 
 Set up and run the tests with:
 

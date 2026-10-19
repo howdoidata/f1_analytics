@@ -1,0 +1,277 @@
+version: 2
+
+# Tests marked (V) replace a Stage 2 validation/ check; the rest replace the
+# fail-loud checks the pandas loaders ran. Every test is error severity.
+models:
+
+  - name: races
+    description: >
+      One row per race (Jolpica races.csv).
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round]
+    columns:
+      - name: season
+        data_tests:
+          - not_null
+      - name: round
+        data_tests:
+          - not_null
+      - name: circuit_id
+        description: (V) circuit_id -> circuits.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('circuits')
+                field: circuit_id
+
+  - name: circuits
+    description: >
+      One row per circuit.
+    columns:
+      - name: circuit_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: drivers
+    description: >
+      One row per driver.
+    columns:
+      - name: driver_id
+        description: (V) not_null.
+        data_tests:
+          - unique
+          - not_null
+
+  - name: constructors
+    description: >
+      One row per constructor.
+    columns:
+      - name: constructor_id
+        description: (V) not_null.
+        data_tests:
+          - unique
+          - not_null
+
+  - name: results
+    description: >
+      Race classification, one row per car per race.
+    columns:
+      - name: season
+        description: (V)
+        data_tests:
+          - not_null
+      - name: round
+        description: (V)
+        data_tests:
+          - not_null
+      - name: driver_id
+        description: (V) not_null and -> drivers.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('drivers')
+                field: driver_id
+      - name: constructor_id
+        description: (V) -> constructors.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('constructors')
+                field: constructor_id
+      - name: position
+        description: (V)
+        data_tests:
+          - not_null
+      - name: points
+        description: (V)
+        data_tests:
+          - not_null
+
+  - name: sprint_results
+    description: >
+      Sprint classification, one row per car per sprint.
+    columns:
+      - name: season
+        data_tests:
+          - not_null
+      - name: round
+        data_tests:
+          - not_null
+      - name: driver_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('drivers')
+                field: driver_id
+      - name: constructor_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('constructors')
+                field: constructor_id
+
+  - name: qualifying
+    description: >
+      Qualifying classification.
+    columns:
+      - name: season
+        data_tests:
+          - not_null
+      - name: round
+        data_tests:
+          - not_null
+      - name: driver_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('drivers')
+                field: driver_id
+      - name: constructor_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('constructors')
+                field: constructor_id
+
+  - name: race_results_enriched
+    description: >
+      results left-joined to races (date, time_race, circuit_id, url).
+
+  - name: driver_standings_by_round
+    description: >
+      Cumulative driver standings after every round (sprint points included, sprint wins not).
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, driver_id]
+    columns:
+      - name: standing_rank
+        data_tests:
+          - not_null
+
+  - name: constructor_standings_by_round
+    description: >
+      Cumulative constructor standings after every round.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, constructor_id]
+    columns:
+      - name: standing_rank
+        data_tests:
+          - not_null
+
+  - name: final_driver_standings
+    description: >
+      Official season-end driver standings.
+    columns:
+      - name: driver_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('drivers')
+                field: driver_id
+      - name: constructor_id
+        description: (V) not_null.
+        data_tests:
+          - not_null
+
+  - name: final_constructor_standings
+    description: >
+      Official season-end constructor standings.
+    columns:
+      - name: constructor_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('constructors')
+                field: constructor_id
+
+  - name: raw_fastf1_laps
+    description: >
+      Every FastF1 lap, id-mapped by Driver code and Team name.
+    columns:
+      - name: season
+        description: (V)
+        data_tests:
+          - not_null
+      - name: round
+        description: (V)
+        data_tests:
+          - not_null
+      - name: driver_id
+        description: (V) not_null and -> drivers.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('drivers')
+                field: driver_id
+      - name: constructor_id
+        description: (V) -> constructors.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('constructors')
+                field: constructor_id
+      - name: Stint
+        description: A lap with no Stint cannot be grouped into one.
+        data_tests:
+          - not_null
+
+  - name: raw_fastf1_stints
+    description: >
+      One row per driver stint, derived from the laps.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [race_label, driver_id, stint_number]
+    columns:
+      - name: season
+        description: (V)
+        data_tests:
+          - not_null
+      - name: round
+        description: (V)
+        data_tests:
+          - not_null
+      - name: driver_id
+        description: (V) not_null and -> drivers.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('drivers')
+                field: driver_id
+      - name: constructor_id
+        description: (V) -> constructors.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('constructors')
+                field: constructor_id
+
+  - name: raw_fastf1_weather
+    description: >
+      FastF1 track weather samples.
+    columns:
+      - name: season
+        description: (V)
+        data_tests:
+          - not_null
+      - name: round
+        description: (V)
+        data_tests:
+          - not_null

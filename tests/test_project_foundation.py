@@ -10,7 +10,6 @@ import f1_analytics
 import f1_analytics.analysis
 import f1_analytics.data_sources
 import f1_analytics.database
-import f1_analytics.validation
 
 
 def test_package_and_subpackages_importable():
@@ -19,7 +18,6 @@ def test_package_and_subpackages_importable():
         f1_analytics.analysis,
         f1_analytics.data_sources,
         f1_analytics.database,
-        f1_analytics.validation,
     ):
         assert module.__file__
 

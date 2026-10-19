@@ -14,3 +14,5 @@ FASTF1_CACHE_DIR = RAW_DATA_DIR / "fastf1_cache"
 JOLPICA_CACHE_DIR = DATA_DIR / "cache" / "jolpica"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 DUCKDB_PATH = PROCESSED_DATA_DIR / "f1_analytics.duckdb"
+# The dbt project `uv run build` runs (its profiles.yml lives there too).
+DBT_DIR = PROJECT_ROOT / "dbt"

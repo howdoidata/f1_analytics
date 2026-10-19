@@ -25,3 +25,7 @@ jobs:
       # never needs F1TV/FastF1 credentials to run.
       - name: Run tests
         run: uv run pytest -v
+
+      # dbt build on the committed data/raw/: every model and test must pass.
+      - name: Build the DuckDB file
+        run: uv run build

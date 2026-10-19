@@ -14,6 +14,7 @@ from pathlib import Path
 
 import duckdb
 import jwt
+import pandas as pd
 import pytest
 from packaging.version import Version
 
@@ -25,7 +26,7 @@ from jolpica_responses import RecordedGetter, make_update_world, recorded_respon
 FIXTURES = Path(__file__).parent / "fixtures"
 CURATED_TABLES = {
     "races", "results", "sprint_results", "drivers", "constructors", "circuits", "qualifying",
-    "driver_standings_by_round", "constructor_standings_by_round",
+    "race_results_enriched", "driver_standings_by_round", "constructor_standings_by_round",
     "final_driver_standings", "final_constructor_standings",
     "raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather",
 }
@@ -40,17 +41,47 @@ def _extract(raw_dir: Path, season: int, dir_name: str, fixture: str = "normal_r
     return target
 
 
-@pytest.fixture
-def raw_dir(tmp_path: Path) -> Path:
-    raw = tmp_path / "raw"
+def _make_raw_dir(root: Path) -> Path:
+    raw = root / "raw"
     shutil.copytree(FIXTURES / "jolpica_raw", raw / "jolpica")
     _extract(raw, 2024, "01-bahrain-grand-prix")
     return raw
 
 
-def _tables(db_path: Path) -> set[str]:
+@pytest.fixture
+def raw_dir(tmp_path: Path) -> Path:
+    return _make_raw_dir(tmp_path)
+
+
+@pytest.fixture(scope="module")
+def built_db(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """One fixture-tree build shared by the module; copy it before writing to it."""
+    root = tmp_path_factory.mktemp("built")
+    raw = _make_raw_dir(root)
+    # Alonso drove for two teams in 2025: the first listed is kept.
+    standings = jolpica_fetch.read_raw_table(raw / "jolpica", "final_driver_standings")
+    standings.loc[(standings["driverId"] == "alonso") & (standings["season"] == "2025"), "constructorIds"] = "aston_martin;alpine"
+    jolpica_fetch.write_raw_table(raw / "jolpica", "final_driver_standings", standings)
+    db_path = root / "out.duckdb"
+    assert cli.build(["--raw-dir", str(raw), "--db", str(db_path)]) == 0
+    return db_path
+
+
+@pytest.fixture
+def existing_db(built_db: Path, tmp_path: Path) -> Path:
+    db_path = tmp_path / "existing.duckdb"
+    shutil.copy(built_db, db_path)
+    return db_path
+
+
+def _tables(db_path: Path, schema: str = "main") -> set[str]:
     with duckdb.connect(str(db_path), read_only=True) as conn:
-        return {row[0] for row in conn.execute("SELECT table_name FROM information_schema.tables").fetchall()}
+        return {row[0] for row in conn.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = ?", [schema]).fetchall()}
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _tree_hashes(directory: Path) -> dict[str, str]:
@@ -66,66 +97,157 @@ def _token(tmp_path: Path, *, exp_offset: float = 3600, raw: str | None = None) 
     return path
 
 
+def _assert_build_fails_unchanged(raw_dir: Path, db_path: Path, capsys) -> str:
+    """Run a build expected to fail; the DB must be byte-identical afterwards. Returns stderr."""
+    before = _sha256(db_path)
+    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 1
+    assert _sha256(db_path) == before
+    assert [p.name for p in db_path.parent.iterdir() if "-build-" in p.name] == []
+    return capsys.readouterr().err
+
+
 # --- build -------------------------------------------------------------------
 
 
-def test_build_writes_every_curated_table_from_raw_fixtures(raw_dir: Path, tmp_path: Path):
-    db_path = tmp_path / "out.duckdb"
-    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 0
+def test_build_writes_every_curated_table_from_raw_fixtures(built_db: Path):
+    assert _tables(built_db) == CURATED_TABLES
+    assert _tables(built_db, "staging")  # the stg_* views and seeds live apart from the marts
+    with duckdb.connect(str(built_db), read_only=True) as conn:
+        def types(table):
+            return dict(conn.execute(
+                "SELECT column_name, data_type FROM information_schema.columns "
+                "WHERE table_schema = 'main' AND table_name = ?", [table]).fetchall())
 
-    tables = _tables(db_path)
-    assert CURATED_TABLES <= tables
-    assert not any(t.startswith("combined") or "coverage" in t for t in tables)
-    with duckdb.connect(str(db_path), read_only=True) as conn:
-        types = dict(conn.execute(
-            "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'driver_standings_by_round'"
-        ).fetchall())
-        assert types["date"] == "DATE"
+        assert types("driver_standings_by_round")["date"] == "DATE"
+        assert types("results")["fastest_lap"] == "DOUBLE" and types("results")["position"] == "BIGINT"
+        assert types("raw_fastf1_laps")["LapNumber"] == "DOUBLE" and types("raw_fastf1_laps")["IsAccurate"] == "BOOLEAN"
         assert conn.execute("SELECT COUNT(*) FROM results").fetchone()[0] == 12
-        assert conn.execute("SELECT COUNT(*) FROM raw_fastf1_laps WHERE season = 2024 AND round = 1").fetchone()[0] > 0
-        result_types = dict(conn.execute(
-            "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'results'"
-        ).fetchall())
-        assert result_types["fastest_lap"] == "DOUBLE" and result_types["position"] == "BIGINT"
+        assert conn.execute("SELECT COUNT(*) FROM raw_fastf1_laps WHERE season = 2024 AND round = 1").fetchone()[0] == 6
+        assert conn.execute(
+            "SELECT DISTINCT race_label FROM raw_fastf1_stints").fetchall() == [("01-bahrain-grand-prix",)]
+
+        # Jolpica shaping, ported from the deleted pandas loader tests.
+        row = conn.execute(
+            "SELECT driver_name, constructor, points, position, fastest_lap, fastest_lap_rank, time, race_name "
+            "FROM results WHERE season = 2024 AND round = 1 AND driver_id = 'verstappen'").fetchone()
+        assert row == ("Max Verstappen", "Red Bull", 25.0, 1, 55.0, 1.0, "1:31:44.742", "Bahrain Grand Prix")
+        final = conn.execute(
+            "SELECT position, points, constructor, constructor_id, driver_name FROM final_driver_standings "
+            "WHERE season = 2025 AND driver_id = 'alonso'").fetchone()
+        assert final == (3.0, 21.0, "Aston Martin", "aston_martin", "Fernando Alonso")
+        # Race 25 + sprint 8 for Hamilton; the sprint win is not a race win.
+        r2 = conn.execute(
+            "SELECT race_points, race_wins, cumulative_points, standing_rank, date FROM driver_standings_by_round "
+            "WHERE season = 2025 AND round = 2 AND driver_id = 'hamilton'").fetchone()
+        assert r2 == (33.0, 1, 51.0, 1, date(2025, 3, 8))
+        assert conn.execute(
+            "SELECT cumulative_points FROM constructor_standings_by_round "
+            "WHERE season = 2025 AND round = 2 AND constructor_id = 'mercedes'").fetchone() == (51.0,)
+        assert conn.execute(
+            "SELECT url, time_race FROM race_results_enriched WHERE season = 2024 AND round = 2 LIMIT 1"
+        ).fetchone() == ("https://example.com/race/2024/2", "17:00:00")
 
 
-def test_build_drops_tables_an_earlier_pipeline_left_behind(raw_dir: Path, tmp_path: Path):
-    db_path = tmp_path / "out.duckdb"
-    with duckdb.connect(str(db_path)) as conn:
+def test_build_replaces_a_db_an_earlier_pipeline_wrote(existing_db: Path, raw_dir: Path):
+    with duckdb.connect(str(existing_db)) as conn:
         conn.execute("CREATE TABLE legacy_merged_results AS SELECT 1 AS x")
         conn.execute("CREATE VIEW legacy_source_coverage AS SELECT 1 AS x")
-    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 0
-    tables = _tables(db_path)
-    assert "legacy_merged_results" not in tables and "legacy_source_coverage" not in tables
-
-    # The append-only logs survive a rebuild.
-    with duckdb.connect(str(db_path), read_only=True) as conn:
-        first = conn.execute("SELECT COUNT(*) FROM validation_results").fetchone()[0]
-    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 0
-    with duckdb.connect(str(db_path), read_only=True) as conn:
-        assert conn.execute("SELECT COUNT(*) FROM validation_results").fetchone()[0] == 2 * first > 0
+    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(existing_db)]) == 0
+    assert _tables(existing_db) == CURATED_TABLES
 
 
-def test_build_names_a_missing_raw_file(raw_dir: Path, tmp_path: Path, capsys):
+def test_build_rejects_an_orphan_driver_id(existing_db: Path, raw_dir: Path, capsys):
+    drivers = jolpica_fetch.read_raw_table(raw_dir / "jolpica", "drivers")
+    jolpica_fetch.write_raw_table(raw_dir / "jolpica", "drivers", drivers[drivers["driverId"] != "alonso"])
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "relationships_results_driver_id" in err and "alonso" in err
+
+
+@pytest.mark.parametrize("column", ["season", "round"])
+def test_build_rejects_a_non_numeric_season_or_round(existing_db: Path, raw_dir: Path, capsys, column: str):
+    results = jolpica_fetch.read_raw_table(raw_dir / "jolpica", "results")
+    results.loc[0, column] = "not-a-number"
+    jolpica_fetch.write_raw_table(raw_dir / "jolpica", "results", results)
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert f"not_null_stg_jolpica__results_{column}" in err
+
+
+def test_build_names_a_missing_raw_file(existing_db: Path, raw_dir: Path, capsys):
     (raw_dir / "jolpica" / "sprint_results.csv").unlink()
-    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(tmp_path / "out.duckdb")]) == 1
-    assert "sprint_results.csv" in capsys.readouterr().err
+    assert "sprint_results.csv" in _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
 
 
-def test_build_is_offline_and_never_imports_fastf1_or_requests(raw_dir: Path, tmp_path: Path):
+def test_build_rejects_an_unmapped_fastf1_driver_code(existing_db: Path, raw_dir: Path, capsys):
+    _extract(raw_dir, 2024, "02-saudi-arabian-grand-prix", fixture="unmapped_driver", round_=2)
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "assert_fastf1_driver_codes_are_mapped" in err and "ZZZ" in err
+
+
+def test_build_rejects_an_ambiguous_fastf1_driver_code_with_no_override(existing_db: Path, raw_dir: Path, capsys):
+    # HAM now matches two drivers and has no row in the override seed.
+    drivers = jolpica_fetch.read_raw_table(raw_dir / "jolpica", "drivers")
+    clash = drivers[drivers["driverId"] == "hamilton"].assign(driverId="hamilton_senior")
+    jolpica_fetch.write_raw_table(raw_dir / "jolpica", "drivers", pd.concat([drivers, clash]))
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "assert_fastf1_ambiguous_driver_codes_have_an_override" in err and "HAM" in err
+
+
+@pytest.mark.parametrize(
+    ("fixture", "test_name"),
+    [("incomplete_laps", "assert_fastf1_laps_not_fewer_than_counts"),
+     ("missing_driver", "assert_fastf1_every_counted_driver_has_laps")],
+)
+def test_build_rejects_an_incomplete_fastf1_extract(existing_db: Path, raw_dir: Path, capsys, fixture: str, test_name: str):
+    _extract(raw_dir, 2024, "02-saudi-arabian-grand-prix", fixture=fixture, round_=2)
+    assert test_name in _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+
+
+def test_build_rejects_fewer_weather_rows_than_counts(existing_db: Path, raw_dir: Path, capsys):
+    counts_path = raw_dir / "fastf1" / "2024" / "01-bahrain-grand-prix" / "counts.json"
+    counts = json.loads(counts_path.read_text())
+    counts_path.write_text(json.dumps({**counts, "weather_count": counts["weather_count"] + 5}))
+    assert "assert_fastf1_weather_not_fewer_than_counts" in _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+
+
+def test_build_rejects_a_folder_round_that_differs_from_counts(existing_db: Path, raw_dir: Path, capsys):
+    _extract(raw_dir, 2024, "03-saudi-arabian-grand-prix", round_=2)
+    assert "assert_fastf1_folder_round_matches_counts" in _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+
+
+def test_build_rejects_a_lap_with_no_stint(existing_db: Path, raw_dir: Path, capsys):
+    laps_path = raw_dir / "fastf1" / "2024" / "01-bahrain-grand-prix" / "laps.csv"
+    laps = pd.read_csv(laps_path, dtype="string")
+    laps.loc[0, "Stint"] = pd.NA
+    laps.to_csv(laps_path, index=False)
+    assert "not_null_raw_fastf1_laps_Stint" in _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+
+
+@pytest.mark.parametrize("missing", ["laps.csv", "counts.json"])
+def test_build_names_a_missing_fastf1_extract_file(existing_db: Path, raw_dir: Path, capsys, missing: str):
+    _extract(raw_dir, 2024, "02-saudi-arabian-grand-prix", round_=2)
+    (raw_dir / "fastf1" / "2024" / "02-saudi-arabian-grand-prix" / missing).unlink()
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert err.startswith("[build] ") and "assert_fastf1_extract_files_complete" in err
+
+
+def test_build_is_offline_and_never_imports_fastf1(raw_dir: Path, tmp_path: Path):
+    # dbt itself imports `requests` (for its usage tracker, switched off in
+    # dbt_project.yml), so only fastf1 and the token decoder are checked here;
+    # the socket patch proves no connection is made.
     code = (
         "import sys, socket\n"
         "def deny(*a, **k): raise RuntimeError('network')\n"
         "socket.socket.connect = deny\n"
+        "socket.socket.connect_ex = deny\n"
         "from f1_analytics import cli\n"
         f"rc = cli.build(['--raw-dir', {str(raw_dir)!r}, '--db', {str(tmp_path / 'o.duckdb')!r}])\n"
         "assert rc == 0, rc\n"
-        "leaked = [m for m in ('fastf1', 'requests', 'jwt') if m in sys.modules]\n"
+        "leaked = [m for m in ('fastf1', 'jwt') if m in sys.modules]\n"
         "assert not leaked, leaked\n"
     )
     completed = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                                env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"})
-    assert completed.returncode == 0, completed.stderr
+    assert completed.returncode == 0, completed.stdout[-3000:] + completed.stderr
 
 
 # --- token check -------------------------------------------------------------
@@ -258,32 +380,22 @@ def test_dependency_pins():
     assert Version("2.2") <= pandas < Version("3")
     assert importlib.metadata.version("fastf1") == "3.8.3"
     assert Version(importlib.metadata.version("cryptography")) < Version("50")
+    assert importlib.metadata.version("dbt-duckdb") == "1.11.0"
+    assert Version("1.11") <= Version(importlib.metadata.version("dbt-core")) < Version("1.12")
 
 
-def test_build_refuses_to_shrink_a_landed_table(raw_dir: Path, tmp_path: Path, capsys):
-    db_path = tmp_path / "out.duckdb"
-    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 0
+def test_build_refuses_to_shrink_a_landed_table(existing_db: Path, raw_dir: Path, capsys):
     results = jolpica_fetch.read_raw_table(raw_dir / "jolpica", "results")
     jolpica_fetch.write_raw_table(raw_dir / "jolpica", "results", results.iloc[:-1])
-    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 1
-    assert "refusing to replace" in capsys.readouterr().err
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "results: this build has 11 row(s), fewer than the 12" in err and "refusing to replace" in err
+    assert "delete" in err and "and rebuild" in err
 
 
-def test_build_refuses_to_drop_landed_fastf1_tables_when_extracts_vanish(raw_dir: Path, tmp_path: Path, capsys):
-    db_path = tmp_path / "out.duckdb"
-    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 0
+def test_build_fails_when_every_fastf1_extract_vanishes(existing_db: Path, raw_dir: Path, capsys):
     shutil.rmtree(raw_dir / "fastf1")
-    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(db_path)]) == 1
-    assert "raw_fastf1_laps: this write has 0 row(s)" in capsys.readouterr().err
-    assert {"raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather"} <= _tables(db_path)
-
-
-@pytest.mark.parametrize("missing", ["laps.csv", "counts.json"])
-def test_build_names_a_missing_fastf1_extract_file(raw_dir: Path, tmp_path: Path, capsys, missing: str):
-    (raw_dir / "fastf1" / "2024" / "01-bahrain-grand-prix" / missing).unlink()
-    assert cli.build(["--raw-dir", str(raw_dir), "--db", str(tmp_path / "out.duckdb")]) == 1
-    err = capsys.readouterr().err
-    assert err.startswith("[build] ") and missing in err
+    assert "laps.csv" in _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert {"raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather"} <= _tables(existing_db)
 
 
 def test_a_round_with_any_extract_folder_is_not_refetched_after_a_race_rename(raw_dir: Path):

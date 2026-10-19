@@ -1,0 +1,10 @@
+# Repo-local profile: run dbt with `--profiles-dir dbt`, never ~/.dbt.
+# Relative paths resolve from the current directory (the repo root).
+f1_analytics:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ env_var('F1_DUCKDB_PATH', 'data/processed/f1_analytics.duckdb') }}"
+      schema: main
+      threads: 4

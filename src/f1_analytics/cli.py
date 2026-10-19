@@ -1,7 +1,10 @@
 """`uv run build` and `uv run refresh`.
 
-- `build` turns `data/raw/` into the DuckDB file. It is offline: it reads only
-  the committed CSVs, needs no credentials, and never imports `fastf1`.
+- `build` turns `data/raw/` into the DuckDB file by running `dbt build` (the
+  project in `dbt/`) into a fresh temporary DuckDB file, then swapping it in.
+  It is offline: it reads only the committed CSVs, needs no credentials, and
+  never imports `fastf1`. A failing dbt model or test, or a build that would
+  shrink a guarded table, leaves the previous DuckDB file untouched.
 - `refresh` checks the F1TV token first, then appends newly published rounds
   from Jolpica, fetches the FastF1 extract of every completed round that lacks
   one, and finally runs `build`.
@@ -10,48 +13,32 @@
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 import sys
+import tempfile
 import time
+from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Callable, Iterator, Sequence
 
+import duckdb
 import pandas as pd
 
-from f1_analytics.config import DUCKDB_PATH, FASTF1_CACHE_DIR, RAW_DATA_DIR
-from f1_analytics.data_sources.fastf1_loader import FastF1RaceLoadError, load_extracts
-from f1_analytics.data_sources.jolpica_loader import build_curated_tables, read_jolpica_raw
-from f1_analytics.database.duckdb_io import (
-    WriteRegressionError,
-    existing_row_count,
-    connect_duckdb,
-    write_dataframe,
-)
-from f1_analytics.validation.checks import run_validations
-from f1_analytics.validation.runner import load_present_tables, print_validation_findings
-from f1_analytics.validation.store import log_source_load, log_validation_results
+from f1_analytics.config import DBT_DIR, DUCKDB_PATH, FASTF1_CACHE_DIR, RAW_DATA_DIR
+from f1_analytics.database.duckdb_io import WriteRegressionError, existing_row_count
 
 
 LOGIN_COMMAND = "uv run python -m fastf1 auth f1tv --authenticate"
 
 # Tables fed by data that only ever grows; a build that would shrink one
-# means a raw file was truncated or lost, so the write is refused.
+# means a raw file was truncated or lost, so the swap is refused.
 REGRESSION_GUARDED_TABLES = frozenset(
     {"results", "sprint_results", "qualifying", "raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather"}
 )
-# Append-only logs (validation/store.py), kept across builds.
-LOG_TABLES = frozenset({"validation_results", "source_registry", "source_load_log"})
-VALIDATION_TABLES = (
-    "results",
-    "drivers",
-    "constructors",
-    "final_driver_standings",
-    "races",
-    "circuits",
-    "raw_fastf1_laps",
-    "raw_fastf1_stints",
-    "raw_fastf1_weather",
-)
+# Failing rows printed per failing dbt test.
+FAILURE_SAMPLE_ROWS = 5
 
 
 # --------------------------------------------------------------------------
@@ -59,65 +46,123 @@ VALIDATION_TABLES = (
 # --------------------------------------------------------------------------
 
 
-def build_tables(raw_dir: Path) -> dict[str, pd.DataFrame]:
-    """Every DuckDB table, built from `raw_dir` only."""
-    tables = build_curated_tables(read_jolpica_raw(raw_dir / "jolpica"))
-    extracts = load_extracts(raw_dir / "fastf1", tables["drivers"], tables["constructors"])
-    tables["raw_fastf1_laps"] = extracts["laps"]
-    tables["raw_fastf1_stints"] = extracts["stints"]
-    tables["raw_fastf1_weather"] = extracts["weather"]
-    return tables
+class BuildError(Exception):
+    """`dbt build` failed: a model errored or a test failed."""
 
 
-def _drop_stale_objects(conn, keep: set[str]) -> list[str]:
-    """Drop tables/views a previous pipeline left behind, so the DB mirrors `data/raw/`."""
+@contextmanager
+def _env(**values: str) -> Iterator[None]:
+    saved = {key: os.environ.get(key) for key in values}
+    os.environ.update(values)
+    try:
+        yield
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+def _main_table_names(conn) -> list[str]:
     rows = conn.execute(
-        "SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = 'main'"
+        "SELECT table_name FROM information_schema.tables "
+        "WHERE table_schema = 'main' AND table_type = 'BASE TABLE' ORDER BY table_name"
     ).fetchall()
-    dropped = []
-    for name, table_type in rows:
-        if name in keep or name in LOG_TABLES:
+    return [name for (name,) in rows]
+
+
+def _failure_sample(db_path: Path, compiled_sql: str | None) -> list[tuple]:
+    """A few of a failed test's offending rows, read back from the temp build."""
+    if not compiled_sql:
+        return []
+    try:
+        with duckdb.connect(str(db_path), read_only=True) as conn:
+            return conn.execute(f"SELECT * FROM ({compiled_sql}) LIMIT {FAILURE_SAMPLE_ROWS}").fetchall()
+    except duckdb.Error:
+        return []
+
+
+def _close_dbt_duckdb() -> None:
+    """Close the DuckDB handle dbt-duckdb keeps open after an in-process invocation.
+
+    Until it is closed the temp file can't be reopened read-only, and its WAL
+    may not be checkpointed before the swap.
+    """
+    from dbt.adapters.duckdb.connections import DuckDBConnectionManager
+
+    env = DuckDBConnectionManager._ENV
+    if env is not None:
+        env.close()
+    DuckDBConnectionManager.close_all_connections()
+
+
+def _run_dbt(raw_dir: Path, db_path: Path) -> None:
+    """`dbt build` from `raw_dir` into `db_path`; raises `BuildError` naming every failed node."""
+    from dbt.cli.main import dbtRunner
+
+    # No partial parsing: the sources read F1_RAW_DIR at parse time, and it changes between builds.
+    args = ["build", "--project-dir", str(DBT_DIR), "--profiles-dir", str(DBT_DIR), "--no-partial-parse"]
+    with _env(F1_DUCKDB_PATH=str(db_path), F1_RAW_DIR=str(raw_dir.resolve())):
+        try:
+            result = dbtRunner().invoke(args)
+        finally:
+            _close_dbt_duckdb()
+    if result.success:
+        return
+    if result.exception is not None:
+        raise BuildError(f"dbt build failed: {result.exception}")
+    failures = []
+    for node_result in getattr(result.result, "results", None) or []:
+        status = str(getattr(node_result.status, "value", node_result.status))
+        if status not in {"error", "fail"}:
             continue
-        conn.execute(f'DROP {"VIEW" if table_type == "VIEW" else "TABLE"} IF EXISTS "{name}"')
-        dropped.append(name)
-    return sorted(dropped)
+        node = node_result.node
+        line = f"{node.resource_type} {node.name} {status}: {node_result.message}"
+        if status == "fail":
+            for row in _failure_sample(db_path, getattr(node, "compiled_code", None)):
+                line += f"\n    {row}"
+        failures.append(line)
+    raise BuildError("dbt build failed:\n  " + "\n  ".join(failures or ["(no failing node reported)"]))
+
+
+def _check_regression(new_db: Path, current_db: Path) -> None:
+    """Refuse a build whose guarded tables have fewer rows than the current DB's."""
+    if not current_db.exists():
+        return
+    with duckdb.connect(str(new_db), read_only=True) as new, duckdb.connect(str(current_db), read_only=True) as old:
+        for name in sorted(REGRESSION_GUARDED_TABLES):
+            existing = existing_row_count(old, name)
+            # A guarded table the new build lacks counts as 0 rows.
+            new_count = existing_row_count(new, name) or 0
+            if existing is not None and new_count < existing:
+                raise WriteRegressionError(
+                    f"{name}: this build has {new_count} row(s), fewer than the "
+                    f"{existing} row(s) already landed -- refusing to replace"
+                )
 
 
 def run_build(raw_dir: Path = RAW_DATA_DIR, db_path: Path = DUCKDB_PATH, *, log: Callable[[str], None] = print) -> int:
-    tables = build_tables(raw_dir)
-    # With no FastF1 extracts at all, the raw_fastf1_* frames have no columns
-    # and there is no table to write.
-    tables = {name: frame for name, frame in tables.items() if len(frame.columns)}
-    with connect_duckdb(db_path) as conn:
-        # Check every guarded table before writing any, so a refused build
-        # leaves the previous database whole.
-        # A guarded table already landed but absent from this build counts as 0 rows.
-        for name in sorted(REGRESSION_GUARDED_TABLES):
-            existing = existing_row_count(conn, name)
-            new_count = len(tables[name]) if name in tables else 0
-            if existing is not None and new_count < existing:
-                raise WriteRegressionError(
-                    f"{name}: this write has {new_count} row(s), fewer than the "
-                    f"{existing} row(s) already landed -- refusing to replace"
-                )
-        for name, frame in tables.items():
-            write_dataframe(conn, name, frame)
-        dropped = _drop_stale_objects(conn, set(tables))
+    """Build into a temp DuckDB file next to `db_path`, guard it, then swap it in.
 
-        validation = run_validations(load_present_tables(conn, list(VALIDATION_TABLES)))
-        log_validation_results(conn, validation)
-        print_validation_findings("build", validation)
-        for name, frame in tables.items():
-            if name.startswith("raw_fastf1_"):
-                log_source_load(conn, "fastf1", name, len(frame))
-            else:
-                log_source_load(conn, "jolpica", name, len(frame))
+    Raises `BuildError` or `WriteRegressionError`; either way `db_path` is untouched.
+    """
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_dir = Path(tempfile.mkdtemp(prefix=f".{db_path.stem}-build-", dir=db_path.parent))
+    try:
+        tmp_db = tmp_dir / db_path.name
+        _run_dbt(raw_dir, tmp_db)
+        _check_regression(tmp_db, db_path)
+        with duckdb.connect(str(tmp_db), read_only=True) as conn:
+            counts = {name: conn.execute(f'SELECT COUNT(*) FROM main."{name}"').fetchone()[0] for name in _main_table_names(conn)}
+        os.replace(tmp_db, db_path)
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
     log(f"[build] DuckDB built: {db_path}")
-    for name, frame in tables.items():
-        log(f"[build]   {name}: {len(frame)} row(s)")
-    if dropped:
-        log(f"[build] dropped stale table(s)/view(s): {', '.join(dropped)}")
+    for name, count in counts.items():
+        log(f"[build]   {name}: {count} row(s)")
+    log(f"[build] dbt test results: {DBT_DIR / 'target' / 'run_results.json'}")
     return 0
 
 
@@ -128,8 +173,9 @@ def build(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     try:
         return run_build(args.raw_dir, args.db)
-    except (FileNotFoundError, FastF1RaceLoadError) as error:
+    except BuildError as error:
         print(f"[build] {error}", file=sys.stderr)
+        print(f"[build] {args.db} was left unchanged.", file=sys.stderr)
         return 1
     except WriteRegressionError as error:
         print(f"[build] {error}. If the raw data shrank on purpose, delete {args.db} and rebuild.", file=sys.stderr)
@@ -254,8 +300,13 @@ def refresh(
             print(f"[refresh] FastF1 {season} R{round_} ({dir_name}): FAILED ({status}) -- {detail}", file=sys.stderr)
 
     # 4. Build from the updated raw data.
-    run_build(raw_dir, db_path)
+    built = True
+    try:
+        run_build(raw_dir, db_path)
+    except (BuildError, WriteRegressionError) as error:
+        built = False
+        print(f"[refresh] build failed, {db_path} left unchanged: {error}", file=sys.stderr)
     if failed:
         print(f"[refresh] {len(failed)} round(s) failed: {', '.join(f'R{r}' for r in failed)}", file=sys.stderr)
         return 1
-    return 0
+    return 0 if built else 1

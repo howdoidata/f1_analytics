@@ -1,0 +1,31 @@
+# dbt project for `uv run build`: data/raw/ CSVs -> staging views -> marts in `main`.
+# Self-contained and offline: no packages.yml, so `dbt deps` is never needed.
+name: f1_analytics
+version: "1.0.0"
+profile: f1_analytics
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target"]
+
+flags:
+  send_anonymous_usage_stats: false
+
+models:
+  f1_analytics:
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +materialized: table
+
+seeds:
+  f1_analytics:
+    +schema: staging
+
+data_tests:
+  f1_analytics:
+    +severity: error
