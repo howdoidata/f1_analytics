@@ -1,0 +1,49 @@
+name: Pages
+
+# Publishes the committed report HTML and the generated gallery
+# (reports/index.html) to GitHub Pages. Nothing is rendered here: the HTML is
+# rendered locally and committed. Only the files staged below are published,
+# so data/raw/ and the rest of the repo stay out of the site.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy reports
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage the site
+        run: |
+          mkdir -p _site
+          cp reports/index.html _site/
+          for html in reports/*/report.html; do
+            folder="$(basename "$(dirname "$html")")"
+            mkdir -p "_site/$folder"
+            cp "$html" "reports/$folder/report.qmd" "_site/$folder/"
+          done
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

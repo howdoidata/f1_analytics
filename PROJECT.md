@@ -1,72 +1,40 @@
-# F1 Analytics Project
+# F1 Analytics
 
-## Purpose
+## What it is
 
-This project showcases data engineering, analytics, and data science skills through a modular Formula 1 analytics system. The project should use strong engineering standards without unnecessary over-engineering, and it should be designed so upstream choices support downstream analysis, storytelling, and repeatable outputs.
+A small, reproducible Formula 1 analytics project. It turns a committed copy of the public Jolpica results data and FastF1 lap extracts into a tested DuckDB database, answers questions about races with tested Python functions, and publishes each answer as a Quarto report. Anyone can clone it, rebuild the database offline with one command, and re-render the reports.
 
-Final insights should be usable for portfolio artifacts, GitHub documentation, dashboards, and LinkedIn-style data stories.
+It is a portfolio piece. It shows how the author handles data engineering (sourcing, modelling, testing, a guarded build), analysis (reusable, tested functions behind every number) and communication (short reports that state a question and answer it).
 
-## Audience
+## Who it is for
 
-Primary audience: hiring managers and analytics leaders evaluating technical, analytical, strategic, and communication skills.
+Hiring managers and analytics leads who want to see how the author works, and data people interested in F1 analysis they can reproduce.
 
-Secondary audience: LinkedIn followers, recruiters, and data professionals interested in Formula 1 analytics, practical data storytelling, and reusable analytics workflows.
+## What is in the code
 
-## Version 1 Goal
+| Area | Tools | Where |
+| --- | --- | --- |
+| Language and environment | Python 3.13, uv | `pyproject.toml`, `uv.lock` |
+| Data sources | Jolpica F1 API over `requests`; FastF1 for lap and weather data | `src/f1_analytics/data_sources/`, `scripts/dump_jolpica.py` |
+| Storage | DuckDB, one local file built from `data/raw/` | `src/f1_analytics/database/` |
+| Modelling and data tests | dbt with dbt-duckdb, in SQL | `dbt/` |
+| Analysis | pandas | `src/f1_analytics/analysis/` |
+| Figures | Plotly, with kaleido for the PDFs' static images | `src/f1_analytics/analysis/figures.py` |
+| Reports | Quarto, running Python through Jupyter (nbclient, ipykernel) | `reports/` |
+| Tests | pytest (offline) and the dbt tests | `tests/`, `dbt/` |
+| CI and publishing | GitHub Actions: one test job, and a GitHub Pages deploy of the committed report HTML | `.github/workflows/` |
 
-Version 1 should prove that the project can ingest Formula 1 data, structure it into clean reusable tables, run basic analysis, and produce one clear insight story.
+The commands are `uv run build` (raw data to DuckDB, offline), `uv run refresh` (new rounds, maintainer only), `uv run gallery` (the report gallery) and `uv run quarto render reports`. The README explains each one, and [`docs/decisions.md`](docs/decisions.md) explains why the project is built this way.
 
-The first version does not need to be exhaustive, but it should establish the project pattern for data ingestion, data modeling, analysis, documentation, and storytelling.
+## Scope
 
-## Version 1 Success Criteria
+- Results history from 1950 to the latest round, from Jolpica only. Standings after each round are derived from results.
+- Lap and weather data for each completed 2026 race, from FastF1.
+- Reports that each answer one question. Today there are three: Williams' combined finish at Zandvoort, Albon's grid-to-finish change at Singapore, and how often the championship leader at this point of the season goes on to win.
 
-Version 1 is successful when the project has:
+## Intentionally not used
 
-* A clean repo structure
-* A documented project charter
-* One ingested F1 dataset
-* Reusable cleaned tables
-* A basic exploratory analysis
-* Validation checks
-* One clear insight story that can be turned into a portfolio artifact or LinkedIn post
-
-## Initial Data Direction
-
-Version 1 uses free, accessible Formula 1 data: a committed dump of the Jolpica (Ergast-compatible) API covering 1950 to the latest round, kept current with `uv run refresh`, plus FastF1 lap and weather extracts. `uv run build` turns `data/raw/` into the local DuckDB file.
-
-Exact ingestion, storage, refresh, and modeling choices will be decided during project setup. The project should not lock into a data architecture before the dataset structure, quality, and downstream use cases are reviewed.
-
-## Technical Direction
-
-The project should generally showcase:
-
-* Airflow
-* Python
-* pandas
-* SQL
-* DuckDB
-* dbt
-* GitHub
-* Tableau
-* scikit-learn
-* Plotly
-* Practical visualization packages that support high-quality analysis and storytelling
-
-The stack may be introduced progressively. Version 1 does not need to implement every tool immediately, but the project should be structured so later sessions can add orchestration, modeling, dashboards, and machine learning without reworking the core foundation.
-
-## Standards
-
-Use modular, readable, reproducible workflows with clear folder structure, documented decisions, naming conventions, validation checks where useful, dashboard-ready outputs, and business-style explanations.
-
-Avoid isolated notebooks, unnecessary complexity, and solutions that solve one step while creating problems downstream.
-
-## Version 1 Non-Goals
-
-Version 1 should avoid:
-
-* Paid APIs
-* Large-scale package architecture
-* Betting or gambling analysis
-* Heavy infrastructure
-
-The initial build should stay lightweight, locally runnable, and focused on proving the end-to-end workflow from data ingestion to reusable tables, basic analysis, and one clear insight story.
+- **Airflow.** The pipeline is one command, `uv run build`, run by hand after each race on about 10 MB of data. A scheduler would add infrastructure without adding value.
+- **Tableau.** The reports live in the repo as Quarto documents so that every figure is reproducible from code. A Tableau Public dashboard, if one is made, lives outside the repo.
+- **scikit-learn.** No report question needs a machine-learning model yet. It is deferred until one does.
+- **Kaggle.** Results used to come from a Kaggle dataset merged with Jolpica. Jolpica alone covers 1950 to the latest round, so a single source removes the reconciliation between two datasets and the rules for choosing between them.
