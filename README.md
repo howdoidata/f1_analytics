@@ -23,18 +23,22 @@ You need these four tools to go from a fresh clone to rendered reports. Commands
 
 You also need `git`. The build and the tests need only uv; Quarto, TeX and Chrome are for rendering.
 
+To see what you already have: `uv --version`, `quarto --version`, and `quarto check`, which reports the LaTeX it finds. `quarto list tools` shows TinyTeX as "Not installed" even when another TeX is present; that is fine.
+
 ## Quick start
 
 ```bash
 git clone git@github.com:howdoidata/f1_analytics.git   # or the HTTPS URL
 cd f1_analytics
 uv sync                          # creates .venv/ with Python 3.13 and the pinned packages (needs network)
-uv run pytest                    # offline test suite
+uv run pytest                    # offline test suite, about 8 minutes
 uv run build                     # data/raw/ -> data/processed/f1_analytics.duckdb (offline, no credentials)
-uv run quarto render reports     # every report to report.html and report.pdf
+uv run quarto render reports     # every report to report.html and report.pdf, about 5 minutes
 ```
 
 Each report is then at `reports/<date>-<slug>/report.html` and `report.pdf`. Open the HTML in a browser; it loads plotly.js from its CDN, so the charts need an internet connection.
+
+The render prints Jupyter kernel warnings such as "Kernel is running over TCP without encryption"; they are expected and harmless. A render also rewrites the random chart IDs in the committed `report.html` files, so `git status` shows them as modified even when no number changed.
 
 `uv sync` downloads Python 3.13 if you don't have it. After that, `uv run build` and the tests make no network calls and need no credentials.
 
