@@ -62,6 +62,10 @@ def built_db(tmp_path_factory: pytest.TempPathFactory) -> Path:
     standings = jolpica_fetch.read_raw_table(raw / "jolpica", "final_driver_standings")
     standings.loc[(standings["driverId"] == "alonso") & (standings["season"] == "2025"), "constructorIds"] = "aston_martin;alpine"
     jolpica_fetch.write_raw_table(raw / "jolpica", "final_driver_standings", standings)
+    # Half points (a shortened race) survive the build.
+    results = jolpica_fetch.read_raw_table(raw / "jolpica", "results")
+    results.loc[(results["season"] == "2024") & (results["round"] == "1") & (results["driverId"] == "alonso"), "points"] = "12.5"
+    jolpica_fetch.write_raw_table(raw / "jolpica", "results", results)
     db_path = root / "out.duckdb"
     assert cli.build(["--raw-dir", str(raw), "--db", str(db_path)]) == 0
     return db_path
@@ -111,7 +115,7 @@ def _assert_build_fails_unchanged(raw_dir: Path, db_path: Path, capsys) -> str:
 
 def test_build_writes_every_curated_table_from_raw_fixtures(built_db: Path):
     assert _tables(built_db) == CURATED_TABLES
-    assert _tables(built_db, "staging")  # the stg_* views and seeds live apart from the marts
+    assert _tables(built_db, "staging")  # the stg_* tables and seeds live apart from the marts
     with duckdb.connect(str(built_db), read_only=True) as conn:
         def types(table):
             return dict(conn.execute(
@@ -131,6 +135,8 @@ def test_build_writes_every_curated_table_from_raw_fixtures(built_db: Path):
             "SELECT driver_name, constructor, points, position, fastest_lap, fastest_lap_rank, time, race_name "
             "FROM results WHERE season = 2024 AND round = 1 AND driver_id = 'verstappen'").fetchone()
         assert row == ("Max Verstappen", "Red Bull", 25.0, 1, 55.0, 1.0, "1:31:44.742", "Bahrain Grand Prix")
+        assert conn.execute(
+            "SELECT points FROM results WHERE season = 2024 AND round = 1 AND driver_id = 'alonso'").fetchone() == (12.5,)
         final = conn.execute(
             "SELECT position, points, constructor, constructor_id, driver_name FROM final_driver_standings "
             "WHERE season = 2025 AND driver_id = 'alonso'").fetchone()
@@ -163,6 +169,13 @@ def test_build_rejects_an_orphan_driver_id(existing_db: Path, raw_dir: Path, cap
     assert "relationships_results_driver_id" in err and "alonso" in err
 
 
+def test_build_rejects_an_orphan_constructor_id(existing_db: Path, raw_dir: Path, capsys):
+    constructors = jolpica_fetch.read_raw_table(raw_dir / "jolpica", "constructors")
+    jolpica_fetch.write_raw_table(raw_dir / "jolpica", "constructors", constructors[constructors["constructorId"] != "alpine"])
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "relationships_results_constructor_id" in err and "alpine" in err
+
+
 @pytest.mark.parametrize("column", ["season", "round"])
 def test_build_rejects_a_non_numeric_season_or_round(existing_db: Path, raw_dir: Path, capsys, column: str):
     results = jolpica_fetch.read_raw_table(raw_dir / "jolpica", "results")
@@ -190,6 +203,36 @@ def test_build_rejects_an_ambiguous_fastf1_driver_code_with_no_override(existing
     jolpica_fetch.write_raw_table(raw_dir / "jolpica", "drivers", pd.concat([drivers, clash]))
     err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
     assert "assert_fastf1_ambiguous_driver_codes_have_an_override" in err and "HAM" in err
+
+
+@pytest.mark.parametrize("team", ["Some New Team", None])
+def test_build_rejects_an_unmapped_or_missing_fastf1_team(existing_db: Path, raw_dir: Path, capsys, team):
+    laps_path = raw_dir / "fastf1" / "2024" / "01-bahrain-grand-prix" / "laps.csv"
+    laps = pd.read_csv(laps_path, dtype="string")
+    laps.loc[0, "Team"] = pd.NA if team is None else team
+    laps.to_csv(laps_path, index=False)
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "assert_fastf1_team_names_are_mapped" in err
+    if team is not None:
+        assert team in err
+
+
+def test_build_rejects_a_counts_json_with_no_round(existing_db: Path, raw_dir: Path, capsys):
+    counts_path = raw_dir / "fastf1" / "2024" / "01-bahrain-grand-prix" / "counts.json"
+    counts_path.write_text(json.dumps({**json.loads(counts_path.read_text()), "round": None}))
+    assert "not_null_stg_fastf1__counts_round" in _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+
+
+def test_build_rejects_a_corrupt_counts_json(existing_db: Path, raw_dir: Path, capsys):
+    (raw_dir / "fastf1" / "2024" / "01-bahrain-grand-prix" / "counts.json").write_text("{not valid json")
+    assert "counts.json" in _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+
+
+def test_build_fails_cleanly_when_the_db_is_locked(existing_db: Path, raw_dir: Path, capsys):
+    # A read-write connection held elsewhere blocks the guard's read-only open.
+    with duckdb.connect(str(existing_db)):
+        err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "was left unchanged" in err and "Traceback" not in err
 
 
 @pytest.mark.parametrize(
