@@ -26,6 +26,8 @@ LAST_ROUND = 11  # the data the pre-race report used
 RACE_ROUND = 12  # the 2026 Dutch Grand Prix
 RACE = "dutch"
 HISTORY_SEASONS = (2021, 2025)
+# The band most past Zandvoort totals land in (shaded in the history figure).
+HISTORY_BAND = (28, 33)
 
 # A judgement (Zandvoort report, section 5), not a computed answer.
 ESTIMATE = 31
@@ -283,3 +285,19 @@ def actual_text(actual: dict[str, object]) -> str:
         return "not yet raced"
     note = f"; {actual['note']}" if actual["note"] else ""
     return f"{actual['combined']} ({actual['result']}{note})"
+
+
+def classified_non_finishes_text(team: pd.DataFrame, k: int = 2) -> str:
+    """The first `k` non-finishing cars that still count: 'Chinese (albon, Did not start, classified P22) and ...'."""
+    rows = team[~team["finished"]].sort_values(["round", "position"]).head(k)
+    parts = [
+        f"{race_label(r.race_name)} ({r.driver_id}, {r.status}, classified P{int(r.position)})" for r in rows.itertuples()
+    ]
+    if not parts:
+        return "none so far"
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def band_text(band: tuple[int, int] = HISTORY_BAND) -> str:
+    """'28–33'."""
+    return f"{band[0]}–{band[1]}"

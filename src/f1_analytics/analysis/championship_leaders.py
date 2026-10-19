@@ -244,7 +244,7 @@ def conversion_report(
         "target_season": int(target_season),
         "cutoff_round": int(cutoff_round),
         "cutoff_race": first["race_name"],
-        "cutoff_date": pd.Timestamp(first["date"]).date(),
+        "cutoff_date": pd.Timestamp(first["date"]).date().isoformat(),
         "drivers": driver_table,
         "constructors": constructor_table,
         "driver_summary": summarize_conversion(driver_table),

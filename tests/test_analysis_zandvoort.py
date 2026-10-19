@@ -121,3 +121,19 @@ def test_lap_text():
 
 def test_revise_display_is_labelled_a_judgement():
     assert "judgement" in zv.revise_display().columns[1]
+
+
+def test_classified_non_finishes_text_and_band():
+    team = zv.team_rows(results_frame(
+        [
+            (2026, 2, "Chinese Grand Prix", "albon", "williams", 22, 22, "Did not start"),
+            (2026, 2, "Chinese Grand Prix", "sainz", "williams", 17, 9, "Finished"),
+            (2026, 5, "Canadian Grand Prix", "albon", "williams", 18, 21, "Retired"),
+            (2026, 6, "Monaco Grand Prix", "sainz", "williams", 10, 16, "Retired"),
+        ]
+    ))
+    assert zv.classified_non_finishes_text(team) == (
+        "Chinese (albon, Did not start, classified P22) and Canadian (albon, Retired, classified P21)"
+    )
+    assert zv.classified_non_finishes_text(team[team["finished"]]) == "none so far"
+    assert zv.band_text() == "28–33"

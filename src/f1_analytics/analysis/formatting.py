@@ -29,6 +29,11 @@ def pct(value, decimals: int = 1) -> str:
     return f"{value:.{decimals}f}%"
 
 
+def share(fraction) -> str:
+    """A 0-1 fraction as a whole percentage: 0.5 -> '50%'."""
+    return pct(float(fraction) * 100, 0)
+
+
 def pct0(value) -> str:
     return pct(value, 0)
 

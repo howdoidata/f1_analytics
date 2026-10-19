@@ -123,6 +123,10 @@ class SimulationReport:
     def races_per_run(self) -> int:
         return len(self.base.changes[0])
 
+    @property
+    def total_races(self) -> int:
+        return self.runs * self.races_per_run
+
     def scenario(self, assumption: str) -> dict[str, object]:
         """One row of the sensitivity table as a dict."""
         rows = self.sensitivity[self.sensitivity["assumption"] == assumption]
@@ -245,3 +249,20 @@ def actual_text(actual: dict[str, object]) -> str:
         return "not yet raced"
     note = "" if actual["finished"] else f" ({actual['status']})"
     return f"Grid {actual['grid']} → P{actual['finish']}, change {signed(actual['change'])}{note}"
+
+
+def top_outcomes(pooled: dict[str, object], k: int = 3) -> list[tuple[int, float]]:
+    """The `k` most common changes and their shares (%), most common first."""
+    shares = sorted(pooled["share_of"].items(), key=lambda item: (-item[1], -item[0]))
+    return shares[:k]
+
+
+def top_outcomes_text(pooled: dict[str, object], k: int = 3) -> str:
+    """'+3 (14.5%), +1 (13.2%) and 0 (11.1%)'."""
+    parts = [f"{signed(change)} ({pct(share)})" for change, share in top_outcomes(pooled, k)]
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def seeds_text(seeds=simulation.SEEDS) -> str:
+    """'0–24'."""
+    return f"{min(seeds)}–{max(seeds)}"

@@ -65,7 +65,7 @@ def test_actual_result_when_not_yet_raced(results):
 
 def test_simulation_report_small_run_and_displays(results):
     report = sg.simulation_report(sg.season_data(results), seeds=(0, 1), n=200)
-    assert (report.runs, report.races_per_run) == (2, 200)
+    assert (report.runs, report.races_per_run, report.total_races) == (2, 200, 400)
     assert report.scenario("Base case")["mean"] == pytest.approx(report.pooled["mean"])
     with pytest.raises(KeyError):
         report.scenario("nope")
@@ -73,3 +73,11 @@ def test_simulation_report_small_run_and_displays(results):
     assert sg.sensitivity_display(report.sensitivity)["Retire"].str.endswith("%").all()
     assert sg.grid_slots_display(report.grid_slots)["If he starts"].tolist()[0] == "P11"
     assert len(sg.revise_display(report.revise)) == 3
+
+
+def test_top_outcomes_and_seeds_text():
+    pooled = {"share_of": {-3: 9.0, 0: 11.1, 1: 13.2, 3: 14.5}}
+    assert sg.top_outcomes(pooled) == [(3, 14.5), (1, 13.2), (0, 11.1)]
+    assert sg.top_outcomes_text(pooled) == "+3 (14.5%), +1 (13.2%) and 0 (11.1%)"
+    assert sg.top_outcomes_text(pooled, k=1) == "+3 (14.5%)"
+    assert sg.seeds_text() == "0–24"

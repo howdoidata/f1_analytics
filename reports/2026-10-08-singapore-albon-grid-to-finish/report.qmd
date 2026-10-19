@@ -8,9 +8,10 @@ date-format: iso
 ```{python}
 #| label: setup
 from f1_analytics.analysis import figures
+from f1_analytics.analysis import simulation
 from f1_analytics.analysis import singapore as sg
 from f1_analytics.analysis.data import load_race_data
-from f1_analytics.analysis.formatting import count, markdown_table, num, pct, signed, signed1, span
+from f1_analytics.analysis.formatting import count, markdown_table, num, pct, share, signed, signed1, span
 
 figures.use_report_renderer()
 data = load_race_data()
@@ -41,7 +42,7 @@ actual = sg.actual_result(results)
 
 ## 1 · Type of analysis and why
 
-Method: Monte Carlo simulation. The race is simulated `{python} count(sim.runs * sim.races_per_run)` times (`{python} sim.runs` runs of `{python} count(sim.races_per_run)`). Each simulated race draws every uncertain ingredient at random from real 2026 results, and the answer is read from where the outcomes pile up.
+Method: Monte Carlo simulation. The race is simulated `{python} count(sim.total_races)` times (`{python} sim.runs` runs of `{python} count(sim.races_per_run)`). Each simulated race draws every uncertain ingredient at random from real 2026 results, and the answer is read from where the outcomes pile up.
 
 | Why a simulation, not a single formula | What it means here |
 |---|---|
@@ -53,9 +54,9 @@ Three draws per simulated race:
 
 | Draw | Source |
 |---|---|
-| 1 · Grid slot | His `{python} summary["starts"]` starting slots this season, recent races weighted more (weight halves every 6 races). |
+| 1 · Grid slot | His `{python} summary["starts"]` starting slots this season, recent races weighted more (weight halves every `{python} simulation.RECENCY_HALF_LIFE` races). |
 | 2 · Retires or finishes | His record of `{python} summary["non_finishes"]` non-finishes in `{python} summary["starts"]` blended with the field rate of `{python} pct(summary["field_non_finish_pct"], 0)`, giving a `{python} pct(pooled["retire"], 0)` retirement chance that itself varies from race to race. |
-| 3 · Places gained or lost | If he finishes: half the draws from his own `{python} summary["finishes"]` finishes, half from other 2026 finishers who started within two slots of him. If he retires: from 2026 retirements from a similar slot. |
+| 3 · Places gained or lost | If he finishes: `{python} share(simulation.OWN_FINISH_SHARE)` of the draws from his own `{python} summary["finishes"]` finishes, the rest from other `{python} sg.SEASON` finishers who started within `{python} simulation.PEER_WINDOW` slots of him. If he retires: from 2026 retirements from a similar slot. |
 
 ## 2 · Season to date: every round
 
@@ -86,13 +87,13 @@ figures.singapore_outcome_histogram(sim.histogram, pooled)
 |---:|---:|---:|---:|
 | `{python} pct(pooled["gains"])` | `{python} pct(pooled["level"])` | `{python} pct(pooled["loses"])` | `{python} pct(pooled["retire"])` |
 
-The lean toward a gain is weak. The three most likely single outcomes sit close together: +3 (`{python} pct(pooled["share_of"].get(3, 0.0))`), +1 (`{python} pct(pooled["share_of"].get(1, 0.0))`) and 0 (`{python} pct(pooled["share_of"].get(0, 0.0))`). The most common change is `{python} signed(pooled["mode"])`. The median, `{python} signed(pooled["median"])`, is the estimate because it is the value with half of all outcomes on either side. Mean change `{python} signed(pooled["mean"])`; middle half `{python} span(*pooled["middle_half"])`; middle 80% `{python} span(*pooled["middle_80"])`.
+The lean toward a gain is weak. The most likely single outcomes sit close together: `{python} sg.top_outcomes_text(pooled)`. The most common change is `{python} signed(pooled["mode"])`. The median, `{python} signed(pooled["median"])`, is the estimate because it is the value with half of all outcomes on either side. Mean change `{python} signed(pooled["mean"])`; middle half `{python} span(*pooled["middle_half"])`; middle 80% `{python} span(*pooled["middle_80"])`.
 
 ## 4 · Where repeated runs end up
 
 ```{python}
 #| label: fig-sg-running
-#| fig-cap: "Each line is one of the 25 independent runs. Early on the runs disagree by more than a full place; by 20,000 races they agree to within about a tenth of a place."
+#| fig-cap: "Each line is one independent run. Early on the runs disagree by more than a full place; by the end of a run they agree closely."
 figures.singapore_running_mean(sim.running_means, pooled["mean"])
 ```
 
@@ -144,4 +145,4 @@ His Singapore results before 2026 are too few and too scattered to tilt the mode
 - **No Singapore-specific or weather adjustment.** Safety cars, rain and penalties are represented only to the extent they shaped 2026 results so far.
 - **This is a pre-race estimate, not a computed answer.** The actual result above is read from `results` and shown for comparison; the simulation uses rounds 1–`{python} sg.LAST_ROUND` only.
 
-Generated from the local DuckDB file built by `uv run build` · `{python} sim.runs` runs × `{python} count(sim.races_per_run)` simulated races, seeds 0–24 · charts are interactive in the HTML version of this report.
+Generated from the local DuckDB file built by `uv run build` · `{python} sim.runs` runs × `{python} count(sim.races_per_run)` simulated races, seeds `{python} sg.seeds_text()` · charts are interactive in the HTML version of this report.

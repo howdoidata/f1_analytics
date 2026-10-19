@@ -57,7 +57,8 @@ def test_defaults_to_the_latest_round_of_the_latest_season():
     report = conversion_report(_tables())
     assert (report["target_season"], report["cutoff_round"]) == (2026, 2)
     assert report["cutoff_race"] == "Race 2"
-    assert str(report["cutoff_date"]) == "2026-05-02"
+    # The report prints this inline, so it must be the ISO text, not a date object.
+    assert report["cutoff_date"] == "2026-05-02"
 
 
 def test_tied_leaders_count_as_converted_if_either_wins():

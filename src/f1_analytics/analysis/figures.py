@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 
 from f1_analytics.analysis.formatting import signed
+from f1_analytics.analysis.zandvoort import HISTORY_BAND
 
 # Two categorical slots, in fixed order (validated light-mode palette): finishes, then retirements.
 BLUE = "#2a78d6"
@@ -216,7 +217,7 @@ def zandvoort_combined_by_round(rounds: pd.DataFrame, estimate: dict[str, object
     return fig
 
 
-def zandvoort_history(history: pd.DataFrame, band: tuple[int, int] = (28, 33)) -> go.Figure:
+def zandvoort_history(history: pd.DataFrame, band: tuple[int, int] = HISTORY_BAND) -> go.Figure:
     """Williams' combined total at Zandvoort each season, with the band most seasons land in."""
     seasons = history["season"].astype(str)
     lowest = history["combined"].min()

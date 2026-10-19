@@ -21,6 +21,7 @@ def test_signed_uses_minus_sign_and_no_sign_for_zero():
 def test_numbers():
     assert fmt.pct(54.44) == "54.4%"
     assert fmt.pct0(21.02) == "21%"
+    assert fmt.share(0.5) == "50%"
     assert fmt.num(16.4545) == "16.5"
     assert fmt.g(31.0) == "31" and fmt.g(11.5) == "11.5"
     assert fmt.count(500000) == "500,000"
