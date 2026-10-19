@@ -22,11 +22,20 @@ uv run build     # data/raw/ -> data/processed/f1_analytics.duckdb (offline, no 
 uv run refresh   # append new Jolpica rounds, fetch missing FastF1 extracts, then build
 ```
 
+Paths resolve from the package location, so `uv run build` writes to this repo's `data/processed/` whatever the current directory.
+
+Other scripts, run from the repo root:
+
+```bash
+uv run python scripts/golden_check.py   # compare the golden report values with the built DuckDB
+uv run python scripts/dump_jolpica.py   # one-time Jolpica dump (already committed; about 90 min at the API rate limit)
+```
+
 ## Credentials
 
 | Command | Credential |
 | --- | --- |
 | `uv run build` | None. It reads only `data/raw/` and makes no network calls. |
-| `uv run refresh` | An F1TV subscription login for FastF1. Run `python -m fastf1 auth f1tv --authenticate` first; `refresh` checks the token before doing anything and exits if it is missing or expired. Jolpica needs no credential. |
+| `uv run refresh` | An F1TV subscription login for FastF1. Run `uv run python -m fastf1 auth f1tv --authenticate` first (it waits for the browser login to finish); `refresh` checks the token before doing anything and exits if it is missing or expired. Jolpica needs no credential. |
 
 The test suite needs no credentials.
