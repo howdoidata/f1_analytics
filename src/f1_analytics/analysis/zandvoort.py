@@ -288,10 +288,10 @@ def actual_text(actual: dict[str, object]) -> str:
 
 
 def classified_non_finishes_text(team: pd.DataFrame, k: int = 2) -> str:
-    """The first `k` non-finishing cars that still count: 'Chinese (albon, Did not start, classified P22) and ...'."""
+    """The first `k` non-finishing cars that still count: 'Chinese (Albon, Did not start, classified P22) and ...'."""
     rows = team[~team["finished"]].sort_values(["round", "position"]).head(k)
     parts = [
-        f"{race_label(r.race_name)} ({r.driver_id}, {r.status}, classified P{int(r.position)})" for r in rows.itertuples()
+        f"{race_label(r.race_name)} ({r.driver_id.title()}, {r.status}, classified P{int(r.position)})" for r in rows.itertuples()
     ]
     if not parts:
         return "none so far"

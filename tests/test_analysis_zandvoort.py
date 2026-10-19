@@ -133,7 +133,7 @@ def test_classified_non_finishes_text_and_band():
         ]
     ))
     assert zv.classified_non_finishes_text(team) == (
-        "Chinese (albon, Did not start, classified P22) and Canadian (albon, Retired, classified P21)"
+        "Chinese (Albon, Did not start, classified P22) and Canadian (Albon, Retired, classified P21)"
     )
     assert zv.classified_non_finishes_text(team[team["finished"]]) == "none so far"
     assert zv.band_text() == "28–33"
