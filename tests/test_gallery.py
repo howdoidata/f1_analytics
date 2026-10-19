@@ -14,18 +14,41 @@ def _report(root: Path, folder: str, frontmatter: str) -> None:
     (root / folder / "report.qmd").write_text(f"---\n{frontmatter}---\n\nBody.\n", encoding="utf-8")
 
 
-def test_committed_gallery_matches_generated():
-    reports = gallery.find_reports()
+def _stale_gallery_files(reports_dir: Path) -> list[str]:
+    """The gallery files in `reports_dir` that differ from what the generator produces."""
+    reports = gallery.find_reports(reports_dir)
     expected = {
         "README.md": gallery.render_markdown(reports),
         "index.html": gallery.render_html(reports),
     }
-    for name, text in expected.items():
-        committed = gallery.REPORTS_DIR / name
-        assert committed.exists() and committed.read_text(encoding="utf-8") == text, (
-            f"reports/{name} is out of date with the reports' frontmatter; "
-            f"run `{gallery.REGENERATE_COMMAND}` and commit the result"
-        )
+    return [
+        name
+        for name, text in expected.items()
+        if not (reports_dir / name).exists() or (reports_dir / name).read_text(encoding="utf-8") != text
+    ]
+
+
+def _assert_gallery_current(reports_dir: Path) -> None:
+    stale = _stale_gallery_files(reports_dir)
+    assert not stale, (
+        f"{', '.join(stale)} out of date with the reports' frontmatter; "
+        f"run `{gallery.REGENERATE_COMMAND}` and commit the result"
+    )
+
+
+def test_committed_gallery_matches_generated():
+    _assert_gallery_current(gallery.REPORTS_DIR)
+
+
+def test_new_report_fails_check_naming_regenerate_command(tmp_path):
+    _report(tmp_path, "2026-01-01-one", 'title: "One"\ndate: 2026-01-01\n')
+    gallery.write_gallery(tmp_path)
+    _assert_gallery_current(tmp_path)
+
+    _report(tmp_path, "2026-02-01-two", 'title: "Two"\ndate: 2026-02-01\n')
+
+    with pytest.raises(AssertionError, match="uv run gallery"):
+        _assert_gallery_current(tmp_path)
 
 
 def test_committed_gallery_lists_every_report():
@@ -37,6 +60,7 @@ def test_committed_gallery_lists_every_report():
         assert f"{folder}/report.html" in markdown
         assert f"{folder}/report.qmd" in markdown
         assert f'href="{folder}/report.html"' in index
+        assert (gallery.REPORTS_DIR / folder / "report.html").exists(), f"reports/{folder} has no report.html"
 
 
 def test_entries_newest_first_with_title_date_and_subtitle(tmp_path):

@@ -38,7 +38,7 @@ CI runs the test suite and the build, but it does not render the reports: render
 
 ## Golden comparison
 
-`reports/golden/` holds the original Singapore and Zandvoort PDF reports. Whenever the pipeline changes, the values in those PDFs are regenerated from the current code and compared against them, within stated tolerances, and every difference is explained in the pull request. This keeps a refactor from silently changing a known answer. The comparison is a review step rather than a test in the suite, because its baselines are the PDFs, not code.
+`reports/golden/` holds the original Singapore and Zandvoort PDF reports. Whenever the pipeline changes, the values in those PDFs are regenerated from the current code and compared against them, within stated tolerances, and every difference is explained in the pull request. This keeps a refactor from silently changing a known answer. The comparison is a review step rather than a test in the suite, because its baselines are the PDFs, not code. The comparison script and its baseline values live outside the repo (they left with `golden_check.py` when the reports moved to Quarto), so the table in each pull request is the record a reader sees.
 
 ## The gallery is generated
 

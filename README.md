@@ -28,7 +28,7 @@ To see what you already have: `uv --version`, `quarto --version`, and `quarto ch
 ## Quick start
 
 ```bash
-git clone git@github.com:howdoidata/f1_analytics.git   # or the HTTPS URL
+git clone https://github.com/howdoidata/f1_analytics.git   # or git@github.com:howdoidata/f1_analytics.git; needs access while the repo is private
 cd f1_analytics
 uv sync                          # creates .venv/ with Python 3.13 and the pinned packages (needs network)
 uv run pytest                    # offline test suite, about 8 minutes
