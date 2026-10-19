@@ -13,3 +13,5 @@ Build the DuckDB file from the committed `data/raw/` with `uv run build` (offlin
 The test suite is offline: `tests/conftest.py` blocks all network access, so no credentials are needed.
 
 Reports are Quarto files at `reports/<date>-<slug>/report.qmd`; they only call `f1_analytics.analysis` (no plotly, SQL or computation in a `.qmd`), and `uv run quarto render reports` re-renders them after `uv run build`.
+
+`reports/README.md` and `reports/index.html` are generated: after adding a report or changing its frontmatter, run `uv run gallery` (a test fails until you do).

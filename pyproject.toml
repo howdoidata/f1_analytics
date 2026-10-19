@@ -26,6 +26,7 @@ dependencies = [
 [project.scripts]
 build = "f1_analytics.cli:build"
 refresh = "f1_analytics.cli:refresh"
+gallery = "f1_analytics.gallery:cli"
 
 [dependency-groups]
 dev = ["pytest>=9.1,<10"]
