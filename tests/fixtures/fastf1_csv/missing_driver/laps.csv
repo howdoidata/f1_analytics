@@ -1,7 +1,7 @@
-Time,Driver,DriverNumber,LapNumber,Stint,Compound,Team,IsAccurate,FastF1Generated
-0 days 00:01:30,VER,1,1,1,SOFT,Red Bull,True,False
-0 days 00:03:00,VER,1,2,1,SOFT,Red Bull,True,False
-0 days 00:04:35,VER,1,3,2,MEDIUM,Red Bull,True,False
-0 days 00:06:10,VER,1,4,2,MEDIUM,Red Bull,True,False
-0 days 00:01:31,HAM,44,1,1,SOFT,Mercedes,True,False
-0 days 00:03:02,HAM,44,2,1,SOFT,Mercedes,True,False
+Time,Driver,DriverNumber,LapTime,LapNumber,Stint,PitOutTime,PitInTime,Sector1Time,Sector2Time,Sector3Time,Sector1SessionTime,Sector2SessionTime,Sector3SessionTime,SpeedI1,SpeedI2,SpeedFL,SpeedST,IsPersonalBest,Compound,TyreLife,FreshTyre,Team,LapStartTime,LapStartDate,TrackStatus,Position,Deleted,DeletedReason,FastF1Generated,IsAccurate
+0 days 00:01:30,VER,1,,1,1,,,,,,,,,,,,,,SOFT,,,Red Bull,,,,,,,False,True
+0 days 00:03:00,VER,1,,2,1,,,,,,,,,,,,,,SOFT,,,Red Bull,,,,,,,False,True
+0 days 00:04:35,VER,1,,3,2,,,,,,,,,,,,,,MEDIUM,,,Red Bull,,,,,,,False,True
+0 days 00:06:10,VER,1,,4,2,,,,,,,,,,,,,,MEDIUM,,,Red Bull,,,,,,,False,True
+0 days 00:01:31,HAM,44,,1,1,,,,,,,,,,,,,,SOFT,,,Mercedes,,,,,,,False,True
+0 days 00:03:02,HAM,44,,2,1,,,,,,,,,,,,,,SOFT,,,Mercedes,,,,,,,False,True

@@ -1,0 +1,26 @@
+version: 2
+
+seeds:
+  - name: fastf1_driver_code_overrides
+    description: >
+      Jolpica `drivers.code` values that match more than one driver_id (codes are
+      reused across eras). Consulted only when a FastF1 `Driver` code is ambiguous;
+      an ambiguous code missing from this table fails the build -- never a heuristic.
+    config:
+      column_types: {code: varchar, driver_id: varchar}
+    columns:
+      - name: code
+        data_tests: [unique, not_null]
+      - name: driver_id
+        data_tests: [not_null]
+  - name: fastf1_team_aliases
+    description: >
+      FastF1 `Team` strings that do not exactly match a Jolpica `constructors.name`.
+      Used only after an exact name match fails; never a fuzzy match.
+    config:
+      column_types: {team: varchar, constructor_id: varchar}
+    columns:
+      - name: team
+        data_tests: [unique, not_null]
+      - name: constructor_id
+        data_tests: [not_null]

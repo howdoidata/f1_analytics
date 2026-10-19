@@ -1,0 +1,38 @@
+version: 2
+
+# Every raw file is read as VARCHAR (`all_varchar`) and typed in the stg_* views.
+# The raw root comes from F1_RAW_DIR (set by `uv run build`), defaulting to data/raw.
+sources:
+  - name: jolpica
+    description: Committed Jolpica (Ergast-compatible) CSVs under data/raw/jolpica/.
+    meta:
+      external_location: "read_csv('{{ env_var('F1_RAW_DIR', 'data/raw') }}/jolpica/{name}.csv', header=true, all_varchar=true)"
+    tables:
+      - name: races
+      - name: circuits
+      - name: drivers
+      - name: constructors
+      - name: results
+      - name: sprint_results
+      - name: qualifying
+      - name: final_driver_standings
+      - name: final_constructor_standings
+
+  - name: fastf1
+    description: >
+      Committed FastF1 extracts under data/raw/fastf1/<season>/<RR>-<slug>/, one
+      laps.csv, weather.csv and counts.json per race. `filename` carries the folder.
+      FastF1 writes a missing value as an empty field or a literal such as `None`;
+      `nullstr` reads the same strings as NULL that pandas' read_csv did in Stage 2.
+    meta:
+      formatter: template
+    tables:
+      - name: laps
+        meta:
+          external_location: "read_csv('{{ env_var('F1_RAW_DIR', 'data/raw') }}/fastf1/*/*/laps.csv', header=true, filename=true, union_by_name=true, all_varchar=true, nullstr=['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan', '1.#IND', '1.#QNAN', '<NA>', 'N/A', 'NA', 'NULL', 'NaN', 'None', 'n/a', 'nan', 'null'])"
+      - name: weather
+        meta:
+          external_location: "read_csv('{{ env_var('F1_RAW_DIR', 'data/raw') }}/fastf1/*/*/weather.csv', header=true, filename=true, union_by_name=true, all_varchar=true, nullstr=['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan', '1.#IND', '1.#QNAN', '<NA>', 'N/A', 'NA', 'NULL', 'NaN', 'None', 'n/a', 'nan', 'null'])"
+      - name: counts
+        meta:
+          external_location: "read_json('{{ env_var('F1_RAW_DIR', 'data/raw') }}/fastf1/*/*/counts.json', filename=true, format='auto', columns={race_label: 'VARCHAR', season: 'VARCHAR', round: 'VARCHAR', lap_count: 'VARCHAR', weather_count: 'VARCHAR', drivers: 'VARCHAR[]'})"

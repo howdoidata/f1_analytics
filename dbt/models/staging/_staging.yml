@@ -1,0 +1,54 @@
+version: 2
+
+# A Jolpica season/round that is empty or non-numeric would silently drop out of
+# every season/round join, so it fails the build here.
+models:
+  - name: stg_jolpica__races
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+  - name: stg_jolpica__results
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+  - name: stg_jolpica__sprint_results
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+  - name: stg_jolpica__qualifying
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+
+  # FastF1: the season folder must be a number, and every extract's counts.json
+  # must carry a numeric round.
+  - name: stg_fastf1__laps
+    columns:
+      - name: season
+        data_tests: [not_null]
+  - name: stg_fastf1__weather
+    columns:
+      - name: season
+        data_tests: [not_null]
+  - name: stg_fastf1__counts
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season_folder, race_label]
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+  - name: stg_fastf1__driver_code_map
+    description: One row per FastF1 Driver code seen in the laps, with its resolution.
+  - name: stg_fastf1__team_map
+    description: One row per FastF1 Team name seen in the laps, with its resolution.

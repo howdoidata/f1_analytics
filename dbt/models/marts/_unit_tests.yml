@@ -1,0 +1,268 @@
+version: 2
+
+# Ported from the Stage 2 pytest cases for the pandas standings and FastF1 loaders.
+unit_tests:
+
+  # --- standings -------------------------------------------------------------
+
+  - name: standings_accumulate_within_a_season_and_reset_per_season
+    description: >
+      a and b swap positions between 2024 rounds 1 and 2, so both end round 2
+      tied on points (43) and wins (1) and share rank 1. 2025 starts from zero.
+      The very first round of the frame ranks from 1.
+    model: driver_standings_by_round
+    given:
+      - input: ref('results')
+        rows:
+          - {season: 2024, round: 1, race_name: Bahrain, driver_id: a, driver_name: Driver A, points: 18, position: 2}
+          - {season: 2024, round: 1, race_name: Bahrain, driver_id: b, driver_name: Driver B, points: 25, position: 1}
+          - {season: 2024, round: 2, race_name: Saudi, driver_id: a, driver_name: Driver A, points: 25, position: 1}
+          - {season: 2024, round: 2, race_name: Saudi, driver_id: b, driver_name: Driver B, points: 18, position: 2}
+          - {season: 2025, round: 1, race_name: Bahrain, driver_id: a, driver_name: Driver A, points: 25, position: 1}
+          - {season: 2025, round: 1, race_name: Bahrain, driver_id: b, driver_name: Driver B, points: 18, position: 2}
+      - input: ref('sprint_results')
+        rows: []
+      - input: ref('races')
+        rows:
+          - {season: 2024, round: 1, date: 2024-03-02}
+          - {season: 2024, round: 2, date: 2024-03-09}
+          - {season: 2025, round: 1, date: 2025-03-01}
+    expect:
+      rows:
+        - {season: 2024, round: 1, driver_id: a, cumulative_points: 18, cumulative_wins: 0, standing_rank: 2}
+        - {season: 2024, round: 1, driver_id: b, cumulative_points: 25, cumulative_wins: 1, standing_rank: 1}
+        - {season: 2024, round: 2, driver_id: a, cumulative_points: 43, cumulative_wins: 1, standing_rank: 1}
+        - {season: 2024, round: 2, driver_id: b, cumulative_points: 43, cumulative_wins: 1, standing_rank: 1}
+        - {season: 2025, round: 1, driver_id: a, cumulative_points: 25, cumulative_wins: 1, standing_rank: 1}
+        - {season: 2025, round: 1, driver_id: b, cumulative_points: 18, cumulative_wins: 0, standing_rank: 2}
+
+  - name: standings_rank_after_a_tie_skips_the_consumed_position
+    description: >
+      Standard competition ranking ("1224"): b and c tie for 2nd on 25 points
+      and one win each, so d is 4th, not 3rd.
+    model: driver_standings_by_round
+    given:
+      - input: ref('results')
+        rows:
+          - {season: 2024, round: 1, race_name: Bahrain, driver_id: a, driver_name: A, points: 18, position: 2}
+          - {season: 2024, round: 1, race_name: Bahrain, driver_id: b, driver_name: B, points: 25, position: 1}
+          - {season: 2024, round: 1, race_name: Bahrain, driver_id: c, driver_name: C, points: 0, position: 11}
+          - {season: 2024, round: 1, race_name: Bahrain, driver_id: d, driver_name: D, points: 12, position: 3}
+          - {season: 2024, round: 2, race_name: Saudi, driver_id: a, driver_name: A, points: 25, position: 1}
+          - {season: 2024, round: 2, race_name: Saudi, driver_id: b, driver_name: B, points: 0, position: 12}
+          - {season: 2024, round: 2, race_name: Saudi, driver_id: c, driver_name: C, points: 25, position: 1}
+          - {season: 2024, round: 2, race_name: Saudi, driver_id: d, driver_name: D, points: 0, position: 13}
+      - input: ref('sprint_results')
+        rows: []
+      - input: ref('races')
+        rows:
+          - {season: 2024, round: 1, date: 2024-03-02}
+          - {season: 2024, round: 2, date: 2024-03-09}
+    expect:
+      rows:
+        - {season: 2024, round: 1, driver_id: b, standing_rank: 1}
+        - {season: 2024, round: 1, driver_id: a, standing_rank: 2}
+        - {season: 2024, round: 1, driver_id: d, standing_rank: 3}
+        - {season: 2024, round: 1, driver_id: c, standing_rank: 4}
+        - {season: 2024, round: 2, driver_id: a, standing_rank: 1}
+        - {season: 2024, round: 2, driver_id: b, standing_rank: 2}
+        - {season: 2024, round: 2, driver_id: c, standing_rank: 2}
+        - {season: 2024, round: 2, driver_id: d, standing_rank: 4}
+
+  - name: standings_more_points_outranks_more_wins
+    description: >
+      Points rank first and wins only break ties: after round 3, b (50 points,
+      1 win) is ahead of a (40 points, 3 wins). Ranking each column separately
+      and combining the results would tie them and leave rank 1 empty.
+    model: driver_standings_by_round
+    given:
+      - input: ref('results')
+        rows:
+          - {season: 2024, round: 1, race_name: R1, driver_id: a, driver_name: A, points: 15, position: 1}
+          - {season: 2024, round: 1, race_name: R1, driver_id: b, driver_name: B, points: 20, position: 2}
+          - {season: 2024, round: 1, race_name: R1, driver_id: c, driver_name: C, points: 10, position: 3}
+          - {season: 2024, round: 2, race_name: R2, driver_id: a, driver_name: A, points: 15, position: 1}
+          - {season: 2024, round: 2, race_name: R2, driver_id: b, driver_name: B, points: 20, position: 2}
+          - {season: 2024, round: 2, race_name: R2, driver_id: c, driver_name: C, points: 10, position: 3}
+          - {season: 2024, round: 3, race_name: R3, driver_id: a, driver_name: A, points: 10, position: 1}
+          - {season: 2024, round: 3, race_name: R3, driver_id: b, driver_name: B, points: 10, position: 1}
+          - {season: 2024, round: 3, race_name: R3, driver_id: c, driver_name: C, points: 10, position: 3}
+      - input: ref('sprint_results')
+        rows: []
+      - input: ref('races')
+        rows:
+          - {season: 2024, round: 1, date: 2024-03-02}
+          - {season: 2024, round: 2, date: 2024-03-09}
+          - {season: 2024, round: 3, date: 2024-03-16}
+    expect:
+      rows:
+        - {season: 2024, round: 1, driver_id: b, cumulative_points: 20, cumulative_wins: 0, standing_rank: 1}
+        - {season: 2024, round: 1, driver_id: a, cumulative_points: 15, cumulative_wins: 1, standing_rank: 2}
+        - {season: 2024, round: 1, driver_id: c, cumulative_points: 10, cumulative_wins: 0, standing_rank: 3}
+        - {season: 2024, round: 2, driver_id: b, cumulative_points: 40, cumulative_wins: 0, standing_rank: 1}
+        - {season: 2024, round: 2, driver_id: a, cumulative_points: 30, cumulative_wins: 2, standing_rank: 2}
+        - {season: 2024, round: 2, driver_id: c, cumulative_points: 20, cumulative_wins: 0, standing_rank: 3}
+        - {season: 2024, round: 3, driver_id: b, cumulative_points: 50, cumulative_wins: 1, standing_rank: 1}
+        - {season: 2024, round: 3, driver_id: a, cumulative_points: 40, cumulative_wins: 3, standing_rank: 2}
+        - {season: 2024, round: 3, driver_id: c, cumulative_points: 30, cumulative_wins: 0, standing_rank: 3}
+
+  - name: standings_wins_break_a_tie_on_equal_points
+    description: On equal points the driver with more wins ranks ahead, and the two are not tied.
+    model: driver_standings_by_round
+    given:
+      - input: ref('results')
+        rows:
+          - {season: 2024, round: 1, race_name: R1, driver_id: a, driver_name: A, points: 25, position: 1}
+          - {season: 2024, round: 1, race_name: R1, driver_id: b, driver_name: B, points: 25, position: 1}
+          - {season: 2024, round: 2, race_name: R2, driver_id: a, driver_name: A, points: 25, position: 2}
+          - {season: 2024, round: 2, race_name: R2, driver_id: b, driver_name: B, points: 25, position: 1}
+      - input: ref('sprint_results')
+        rows: []
+      - input: ref('races')
+        rows:
+          - {season: 2024, round: 1, date: 2024-03-02}
+          - {season: 2024, round: 2, date: 2024-03-09}
+    expect:
+      rows:
+        - {season: 2024, round: 1, driver_id: a, cumulative_points: 25, cumulative_wins: 1, standing_rank: 1}
+        - {season: 2024, round: 1, driver_id: b, cumulative_points: 25, cumulative_wins: 1, standing_rank: 1}
+        - {season: 2024, round: 2, driver_id: b, cumulative_points: 50, cumulative_wins: 2, standing_rank: 1}
+        - {season: 2024, round: 2, driver_id: a, cumulative_points: 50, cumulative_wins: 1, standing_rank: 2}
+
+  - name: standings_a_season_with_one_round
+    description: The first race weekend of a season (one season/round group) ranks normally.
+    model: driver_standings_by_round
+    given:
+      - input: ref('results')
+        rows:
+          - {season: 2026, round: 1, race_name: Australian, driver_id: a, driver_name: A, points: 25, position: 1}
+          - {season: 2026, round: 1, race_name: Australian, driver_id: b, driver_name: B, points: 18, position: 2}
+      - input: ref('sprint_results')
+        rows: []
+      - input: ref('races')
+        rows:
+          - {season: 2026, round: 1, date: 2026-03-08}
+    expect:
+      rows:
+        - {season: 2026, round: 1, driver_id: a, cumulative_points: 25, standing_rank: 1}
+        - {season: 2026, round: 1, driver_id: b, cumulative_points: 18, standing_rank: 2}
+
+  - name: standings_sprint_points_join_their_round_and_date_comes_from_races
+    description: >
+      Sprint points add to the round; a sprint win is not a race win. The date
+      comes from races.
+    model: driver_standings_by_round
+    given:
+      - input: ref('results')
+        rows:
+          - {season: 2025, round: 1, race_name: X Grand Prix, driver_id: a, driver_name: A, points: 18, position: 2}
+          - {season: 2025, round: 1, race_name: X Grand Prix, driver_id: b, driver_name: B, points: 25, position: 1}
+      - input: ref('sprint_results')
+        rows:
+          - {season: 2025, round: 1, race_name: X Grand Prix, driver_id: a, driver_name: A, points: 8, position: 1}
+          - {season: 2025, round: 1, race_name: X Grand Prix, driver_id: b, driver_name: B, points: 0, position: 9}
+      - input: ref('races')
+        rows:
+          - {season: 2025, round: 1, date: 2025-03-01}
+    expect:
+      rows:
+        - {season: 2025, round: 1, date: 2025-03-01, driver_id: a, race_points: 26, race_wins: 0, standing_rank: 1}
+        - {season: 2025, round: 1, date: 2025-03-01, driver_id: b, race_points: 25, race_wins: 1, standing_rank: 2}
+
+  # --- FastF1 id mapping -----------------------------------------------------
+
+  - name: fastf1_driver_codes_resolve_by_code_never_by_driver_number
+    description: >
+      DriverNumber is swapped against the real numbers, so mapping by number would
+      give the wrong ids. VER is ambiguous (vergne, max_verstappen) and resolves
+      through the override seed; MAG is ambiguous with no override and stays
+      unresolved; ZZZ and a missing code match nothing. HAR is ambiguous too but
+      absent from the laps, so it does not appear.
+    model: stg_fastf1__driver_code_map
+    given:
+      - input: ref('stg_fastf1__laps')
+        rows:
+          - {Driver: VER, DriverNumber: 44}
+          - {Driver: HAM, DriverNumber: 1}
+          - {Driver: MAG, DriverNumber: 20}
+          - {Driver: ZZZ, DriverNumber: 99}
+          - {Driver: null, DriverNumber: 98}
+      - input: ref('stg_jolpica__drivers')
+        rows:
+          - {driver_id: vergne, code: VER}
+          - {driver_id: max_verstappen, code: VER}
+          - {driver_id: hamilton, code: HAM}
+          - {driver_id: magnussen, code: MAG}
+          - {driver_id: kevin_magnussen, code: MAG}
+          - {driver_id: haryanto, code: HAR}
+          - {driver_id: brendon_hartley, code: HAR}
+          - {driver_id: fangio, code: null}
+      - input: ref('fastf1_driver_code_overrides')
+        rows:
+          - {code: VER, driver_id: max_verstappen}
+          - {code: ALB, driver_id: albon}
+    expect:
+      rows:
+        - {code: VER, matched_driver_count: 2, override_driver_id: max_verstappen, driver_id: max_verstappen}
+        - {code: HAM, matched_driver_count: 1, override_driver_id: null, driver_id: hamilton}
+        - {code: MAG, matched_driver_count: 2, override_driver_id: null, driver_id: null}
+        - {code: ZZZ, matched_driver_count: 0, override_driver_id: null, driver_id: null}
+        - {code: null, matched_driver_count: 0, override_driver_id: null, driver_id: null}
+
+  - name: fastf1_team_names_resolve_exact_then_alias
+    description: >
+      Exact constructors.name match first, then the alias seed, but only when the
+      alias target exists in constructors (cadillac is absent here). Unknown and
+      missing names stay unresolved.
+    model: stg_fastf1__team_map
+    given:
+      - input: ref('stg_fastf1__laps')
+        rows:
+          - {Team: Aston Martin}
+          - {Team: Alpine}
+          - {Team: Racing Bulls}
+          - {Team: Red Bull Racing}
+          - {Team: Cadillac}
+          - {Team: Some New Team}
+          - {Team: null}
+      - input: ref('stg_jolpica__constructors')
+        rows:
+          - {constructor_id: aston_martin, name: Aston Martin}
+          - {constructor_id: alpine, name: Alpine F1 Team}
+          - {constructor_id: rb, name: RB F1 Team}
+          - {constructor_id: red_bull, name: Red Bull}
+      - input: ref('fastf1_team_aliases')
+        rows:
+          - {team: Alpine, constructor_id: alpine}
+          - {team: Cadillac, constructor_id: cadillac}
+          - {team: Racing Bulls, constructor_id: rb}
+          - {team: Red Bull Racing, constructor_id: red_bull}
+    expect:
+      rows:
+        - {team: Aston Martin, constructor_id: aston_martin}
+        - {team: Alpine, constructor_id: alpine}
+        - {team: Racing Bulls, constructor_id: rb}
+        - {team: Red Bull Racing, constructor_id: red_bull}
+        - {team: Cadillac, constructor_id: null}
+        - {team: Some New Team, constructor_id: null}
+        - {team: null, constructor_id: null}
+
+  - name: fastf1_stints_group_by_driver_and_stint_with_lap_bounds
+    description: One row per driver stint, with its first constructor and compound and its lap bounds.
+    model: raw_fastf1_stints
+    given:
+      - input: ref('raw_fastf1_laps')
+        rows:
+          - {race_label: 01-test, season: 2026, round: 1, driver_id: verstappen, constructor_id: red_bull, Stint: 1, Compound: SOFT, LapNumber: 1}
+          - {race_label: 01-test, season: 2026, round: 1, driver_id: verstappen, constructor_id: red_bull, Stint: 1, Compound: SOFT, LapNumber: 2}
+          - {race_label: 01-test, season: 2026, round: 1, driver_id: verstappen, constructor_id: red_bull, Stint: 2, Compound: null, LapNumber: 3}
+          - {race_label: 01-test, season: 2026, round: 1, driver_id: verstappen, constructor_id: red_bull, Stint: 2, Compound: MEDIUM, LapNumber: 4}
+          - {race_label: 01-test, season: 2026, round: 1, driver_id: hamilton, constructor_id: mercedes, Stint: 1, Compound: SOFT, LapNumber: 1}
+          - {race_label: 01-test, season: 2026, round: 1, driver_id: hamilton, constructor_id: mercedes, Stint: 1, Compound: SOFT, LapNumber: 2}
+          - {race_label: 01-test, season: 2026, round: 1, driver_id: alonso, constructor_id: aston_martin, Stint: 1, Compound: MEDIUM, LapNumber: 1}
+    expect:
+      rows:
+        - {driver_id: verstappen, stint_number: 1, constructor_id: red_bull, compound: SOFT, lap_start: 1, lap_end: 2, lap_count: 2}
+        - {driver_id: verstappen, stint_number: 2, constructor_id: red_bull, compound: MEDIUM, lap_start: 3, lap_end: 4, lap_count: 2}
+        - {driver_id: hamilton, stint_number: 1, constructor_id: mercedes, compound: SOFT, lap_start: 1, lap_end: 2, lap_count: 2}
+        - {driver_id: alonso, stint_number: 1, constructor_id: aston_martin, compound: MEDIUM, lap_start: 1, lap_end: 1, lap_count: 1}

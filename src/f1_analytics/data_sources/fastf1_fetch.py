@@ -10,7 +10,7 @@ auth-header workaround, loads laps + weather, retries a
 `RateLimitExceededError` or a request failure with bounded exponential
 backoff, and -- only on a genuine data pass -- dumps `laps.csv` /
 `weather.csv` plus a `counts.json` sidecar (the session's own lap total and
-driver roster) for `fastf1_loader.py` to verify completeness against.
+driver roster) for the dbt tests in `dbt/tests/` to verify completeness against.
 """
 
 from __future__ import annotations

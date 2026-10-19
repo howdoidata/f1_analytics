@@ -8,7 +8,7 @@ Everything Jolpica-shaped lives here:
   no network. Requests never carry credentials.
 - Flatteners that turn Ergast `MRData` pages into the plain CSVs committed
   under `data/raw/jolpica/` (see `RAW_COLUMNS`). Column names are Ergast's
-  own field names; `jolpica_loader.py` shapes them into curated tables.
+  own field names; the dbt project in `dbt/` shapes them into curated tables.
 - `update_raw_dir` -- the incremental per-round update `uv run refresh` runs:
   it appends exactly the rounds whose results have been published since the
   last update, and refreshes the season-end standings of that season.
