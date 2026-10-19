@@ -1,6 +1,6 @@
 version: 2
 
-# Every raw file is read as VARCHAR (`all_varchar`) and typed in the stg_* views.
+# Every raw file is read as VARCHAR (`all_varchar`) and typed in the stg_* tables.
 # The raw root comes from F1_RAW_DIR (set by `uv run build`), defaulting to data/raw.
 sources:
   - name: jolpica

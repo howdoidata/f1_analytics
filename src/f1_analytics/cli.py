@@ -173,7 +173,7 @@ def build(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     try:
         return run_build(args.raw_dir, args.db)
-    except BuildError as error:
+    except (BuildError, duckdb.Error) as error:
         print(f"[build] {error}", file=sys.stderr)
         print(f"[build] {args.db} was left unchanged.", file=sys.stderr)
         return 1
@@ -303,7 +303,7 @@ def refresh(
     built = True
     try:
         run_build(raw_dir, db_path)
-    except (BuildError, WriteRegressionError) as error:
+    except (BuildError, WriteRegressionError, duckdb.Error) as error:
         built = False
         print(f"[refresh] build failed, {db_path} left unchanged: {error}", file=sys.stderr)
     if failed:

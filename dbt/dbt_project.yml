@@ -18,7 +18,8 @@ models:
   f1_analytics:
     staging:
       +schema: staging
-      +materialized: view
+      # Tables, not views: a view would keep the absolute raw path and break once the repo or DB moves.
+      +materialized: table
     marts:
       +materialized: table
 
