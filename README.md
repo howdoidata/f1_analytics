@@ -8,7 +8,7 @@ It is a portfolio project. It shows the full path from raw data to a published a
 
 ## Reports
 
-**[Report gallery](reports/README.md)**: every report, newest first, with links to the rendered HTML and the Quarto source.
+**[Report gallery](https://howdoidata.github.io/f1_analytics/)**: every report, newest first, rendered in the browser, with links to the Quarto source. In the repo, the same list is in [`reports/README.md`](reports/README.md).
 
 ## Prerequisites
 
