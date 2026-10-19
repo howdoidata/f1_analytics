@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-10-08">
+
+<title>Albon grid-to-finish change: 2026 Singapore GP</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+<script>
+window.PlotlyConfig = {MathJaxConfig: 'local'};
+if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}
+</script>
+<script type="module">import "https://cdn.plot.ly/plotly-3.7.0.min"</script>
+
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         color: #0b0b0b; max-width: 780px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  h1.title { margin-bottom: 0.2rem; }
+  p.subtitle { color: #52514e; margin-top: 0; }
+  h2 { border-bottom: 1px solid #e6e5e0; padding-bottom: 0.2rem; margin-top: 2.2rem; }
+  table { border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+  th, td { padding: 0.25rem 0.6rem; border-bottom: 1px solid #e6e5e0; vertical-align: top; }
+  th { border-bottom: 2px solid #b8b7b0; }
+  code { font-size: 0.9em; }
+  figcaption, .figure-caption { color: #52514e; font-size: 0.9rem; }
+</style>
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Albon grid-to-finish change: 2026 Singapore GP</h1>
+<p class="subtitle">Alex Albon, places gained or lost from grid. 2026 Singapore Grand Prix, Marina Bay, Sunday 2026-10-11</p>
+
+<p class="date">2026-10-08</p>
+</header>
+
+
+<h2 id="answer">Answer</h2>
+<p><strong>Estimated change, grid slot to finish: +1</strong> (middle half −2 to +3, middle 80% −4 to +5).</p>
+<p><strong>Actual result (R17, added after the race): Grid 16 → P18, change −2 (Retired).</strong></p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><strong>Question</strong></td>
+<td>How many positions will Alex Albon move relative to his starting position on the grid at the Singapore Grand Prix?</td>
+</tr>
+<tr class="even">
+<td><strong>Convention</strong></td>
+<td>Grid slot minus classified finishing position. Starts 18th, finishes 19th = −1. Positive means places gained.</td>
+</tr>
+<tr class="odd">
+<td><strong>Status</strong></td>
+<td>Pre-race analysis. Qualifying had not run, so his grid slot is unknown and is simulated. The actual result is shown alongside.</td>
+</tr>
+<tr class="even">
+<td><strong>Prepared</strong></td>
+<td>2026-10-08</td>
+</tr>
+<tr class="odd">
+<td><strong>Data</strong></td>
+<td>the local DuckDB file built by <code>uv run build</code>, 2026 rounds 1–16</td>
+</tr>
+</tbody>
+</table>
+<h2 id="type-of-analysis-and-why">1 · Type of analysis and why</h2>
+<p>Method: Monte Carlo simulation. The race is simulated 500,000 times (25 runs of 20,000). Each simulated race draws every uncertain ingredient at random from real 2026 results, and the answer is read from where the outcomes pile up.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Why a simulation, not a single formula</th>
+<th>What it means here</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>The outcome is two different races in one</td>
+<td>When Albon finishes he averages +1.5 places; when he retires, −3.3. An average of the two describes a race that rarely happens.</td>
+</tr>
+<tr class="even">
+<td>His grid slot is unknown</td>
+<td>Qualifying has not run and the starting slot changes the answer, so each simulated race draws a grid slot too.</td>
+</tr>
+<tr class="odd">
+<td>Only 16 races of evidence</td>
+<td>The simulation carries that uncertainty through to the result instead of hiding it in one number.</td>
+</tr>
+</tbody>
+</table>
+<p>Three draws per simulated race:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Draw</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1 · Grid slot</td>
+<td>His 16 starting slots this season, recent races weighted more (weight halves every 6 races).</td>
+</tr>
+<tr class="even">
+<td>2 · Retires or finishes</td>
+<td>His record of 6 non-finishes in 16 blended with the field rate of 21%, giving a 32% retirement chance that itself varies from race to race.</td>
+</tr>
+<tr class="odd">
+<td>3 · Places gained or lost</td>
+<td>If he finishes: half the draws from his own 10 finishes, half from other 2026 finishers who started within two slots of him. If he retires: from 2026 retirements from a similar slot.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="season-to-date-every-round">2 · Season to date: every round</h2>
+<div id="cell-fig-sg-rounds" class="cell" data-execution_count="2">
+<div id="fig-sg-rounds" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center">
+<figure class="quarto-float quarto-float-fig">
+<div aria-describedby="fig-sg-rounds-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div style="height:320px; width:720px;">            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>                <div id="8353cf8b-238b-429c-9636-2cced1ee360b" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("8353cf8b-238b-429c-9636-2cced1ee360b")) {                    Plotly.newPlot(                        "8353cf8b-238b-429c-9636-2cced1ee360b",                        [{"cliponaxis":false,"customdata":[["Australian Grand Prix",15,12,"Lapped"],["Japanese Grand Prix",17,20,"Lapped"],["Miami Grand Prix",15,10,"Finished"],["Monaco Grand Prix",11,8,"Finished"],["Barcelona Grand Prix",18,18,"Lapped"],["Austrian Grand Prix",18,17,"Lapped"],["Belgian Grand Prix",15,15,"Finished"],["Hungarian Grand Prix",19,17,"Lapped"],["Italian Grand Prix",20,17,"Lapped"],["Spanish Grand Prix",16,15,"Lapped"]],"hovertemplate":"%{customdata[0]}\u003cbr\u003eGrid %{customdata[1]} \u2192 P%{customdata[2]}\u003cbr\u003eChange %{y:+d} \u00b7 %{customdata[3]}\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#2a78d6","cornerradius":4,"line":{"color":"#ffffff","width":2}},"name":"Finished the race","text":["+3","\u22123","+5","+3","0","+1","0","+2","+3","+1"],"textfont":{"color":"#0b0b0b"},"textposition":"outside","x":["R1","R3","R4","R6","R7","R8","R10","R11","R13","R14"],"y":{"dtype":"i1","bdata":"A\u002f0FAwABAAIDAQ=="},"type":"bar"},{"cliponaxis":false,"customdata":[["Chinese Grand Prix",22,22,"Did not start"],["Canadian Grand Prix",18,21,"Retired"],["British Grand Prix",16,21,"Retired"],["Dutch Grand Prix",16,17,"Retired"],["Azerbaijan Grand Prix",12,20,"Retired"],["Bahrain Grand Prix in Malaysia",18,21,"Retired"]],"hovertemplate":"%{customdata[0]}\u003cbr\u003eGrid %{customdata[1]} \u2192 P%{customdata[2]}\u003cbr\u003eChange %{y:+d} \u00b7 %{customdata[3]}\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#eb6834","cornerradius":4,"line":{"color":"#ffffff","width":2}},"name":"Retired or did not start","text":["0","\u22123","\u22125","\u22121","\u22128","\u22123"],"textfont":{"color":"#0b0b0b"},"textposition":"outside","x":["R2","R5","R9","R12","R15","R16"],"y":{"dtype":"i1","bdata":"AP37\u002f\u002fj9"},"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"margin":{"l":56,"r":16,"t":40,"b":48},"font":{"family":"Helvetica, Arial, sans-serif","size":12,"color":"#52514e"},"legend":{"font":{"color":"#52514e"},"orientation":"h","x":0,"y":1.12,"traceorder":"normal"},"hoverlabel":{"font":{"color":"#0b0b0b"},"bgcolor":"#ffffff","bordercolor":"#e6e5e0"},"width":720,"height":320,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","bargap":0.18,"xaxis":{"showgrid":false,"linecolor":"#e6e5e0","tickcolor":"#e6e5e0","zeroline":false,"categoryorder":"array","categoryarray":["R1","R2","R3","R4","R5","R6","R7","R8","R9","R10","R11","R12","R13","R14","R15","R16"]},"yaxis":{"gridcolor":"#e6e5e0","zerolinecolor":"#b8b7b0","title":{"text":"Places gained (+) or lost (\u2212)"},"zeroline":true,"dtick":2}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('8353cf8b-238b-429c-9636-2cced1ee360b');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-sg-rounds-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Places gained or lost in each 2026 round. Finishes cluster just above zero; most losses of three or more places came from a retirement.
+</figcaption>
+</figure>
+</div>
+</div>
+<p>Mean change +1.5 when he finishes (10), −3.3 when he retires or does not start (6), −0.3 over all 16 rounds. Mean grid slot 16.6. Non-finishes: 6 in 16 starts. Field retirement rate (all cars, R1–R16): 21%.</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Round</th>
+<th style="text-align: left;">Race</th>
+<th style="text-align: right;">Grid</th>
+<th style="text-align: right;">Finish</th>
+<th style="text-align: right;">Change</th>
+<th style="text-align: left;">Note</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">R1</td>
+<td style="text-align: left;">Australian</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">P12</td>
+<td style="text-align: right;">+3</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R2</td>
+<td style="text-align: left;">Chinese</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">P22</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">Did not start</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R3</td>
+<td style="text-align: left;">Japanese</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">P20</td>
+<td style="text-align: right;">−3</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R4</td>
+<td style="text-align: left;">Miami</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">P10</td>
+<td style="text-align: right;">+5</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R5</td>
+<td style="text-align: left;">Canadian</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">P21</td>
+<td style="text-align: right;">−3</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R6</td>
+<td style="text-align: left;">Monaco</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">P8</td>
+<td style="text-align: right;">+3</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R7</td>
+<td style="text-align: left;">Barcelona</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">P18</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R8</td>
+<td style="text-align: left;">Austrian</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">P17</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R9</td>
+<td style="text-align: left;">British</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">P21</td>
+<td style="text-align: right;">−5</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R10</td>
+<td style="text-align: left;">Belgian</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">P15</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R11</td>
+<td style="text-align: left;">Hungarian</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">P17</td>
+<td style="text-align: right;">+2</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R12</td>
+<td style="text-align: left;">Dutch</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">P17</td>
+<td style="text-align: right;">−1</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R13</td>
+<td style="text-align: left;">Italian</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">P17</td>
+<td style="text-align: right;">+3</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R14</td>
+<td style="text-align: left;">Spanish</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">P15</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R15</td>
+<td style="text-align: left;">Azerbaijan</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">P20</td>
+<td style="text-align: right;">−8</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R16</td>
+<td style="text-align: left;">Bahrain in Malaysia*</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">P21</td>
+<td style="text-align: right;">−3</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+</tbody>
+</table>
+<p>* Round 16 arrived from Jolpica labelled “Bahrain Grand Prix in Malaysia”; see the caveats.</p>
+<h2 id="simulation-result">3 · Simulation result</h2>
+<div id="cell-fig-sg-outcomes" class="cell" data-execution_count="4">
+<div id="fig-sg-outcomes" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center">
+<figure class="quarto-float quarto-float-fig">
+<div aria-describedby="fig-sg-outcomes-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div style="height:340px; width:720px;">            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>                <div id="de2be9b6-e742-4ed9-be0b-707acddadc28" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("de2be9b6-e742-4ed9-be0b-707acddadc28")) {                    Plotly.newPlot(                        "de2be9b6-e742-4ed9-be0b-707acddadc28",                        [{"hovertemplate":"Change %{x:+d}\u003cbr\u003e%{y:.1f}% of simulated races\u003cextra\u003e%{fullData.name}\u003c\u002fextra\u003e","marker":{"color":"#2a78d6","line":{"color":"#ffffff","width":1}},"name":"Finishes the race","x":{"dtype":"i1","bdata":"8\u002fT19vf4+fv8\u002ff7\u002fAAECAwQFBgcICQoLDA4PEg=="},"y":{"dtype":"f8","bdata":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABGlvcEXJrM\u002fAU2EDU+vlD8AAAAAAAAAAKFns+pztdU\u002f5BQdyeU\u002fEEAcfGEyVTDwP7UV+8vuyQVAMQisHFpkIkCKjuTyH9ImQH\u002fZPXlYaCJAmlWfq60YKkAep+hILv8GQPcGX5hMlRZAFD\u002fG3LWEBEC2hHzQs1n5PzC7Jw8LtfY\u002fcM6I0t7g6z9Pr5RliGPVP9lfdk8eFuI\u002fKjqSy39Ivz9QHhZqTfPWP28Sg8DKocU\u002fvp8aL90k1j8="},"type":"bar"},{"hovertemplate":"Change %{x:+d}\u003cbr\u003e%{y:.1f}% of simulated races\u003cextra\u003e%{fullData.name}\u003c\u002fextra\u003e","marker":{"color":"#eb6834","line":{"color":"#ffffff","width":1}},"name":"Retires","x":{"dtype":"i1","bdata":"8\u002fT19vf4+fv8\u002ff7\u002fAAECAwQFBgcICQoLDA4PEg=="},"y":{"dtype":"f8","bdata":"ZapgVFInwD9pke18PzW+P6abxCCwcug\u002fDJOpglFJ5T\u002fCFyZTBaP0Pyh+jLlrCek\u002fAAAAAAAAAAB++zpwzogMQFInoImw4QZAKH6MuWsJFUBz1xLyQU8RQHHOiNLe4BlAkQ96Nqs+\u002fz8NvjCZKhj9P9IA3gIJit8\u002fO3DOiNLe9j9d\u002fkP67evAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="},"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"shapes":[{"fillcolor":"#f2f1ec","layer":"below","line":{"width":0},"type":"rect","x0":-2.5,"x1":3.5,"xref":"x","y0":0,"y1":1,"yref":"y domain"}],"annotations":[{"font":{"size":11},"showarrow":false,"text":"shaded = middle half (\u22122 to +3)","x":1,"xanchor":"right","xref":"paper","y":1.12,"yanchor":"bottom","yref":"paper"}],"margin":{"l":56,"r":16,"t":40,"b":48},"font":{"family":"Helvetica, Arial, sans-serif","size":12,"color":"#52514e"},"legend":{"font":{"color":"#52514e"},"orientation":"h","x":0,"y":1.12,"traceorder":"normal"},"hoverlabel":{"font":{"color":"#0b0b0b"},"bgcolor":"#ffffff","bordercolor":"#e6e5e0"},"width":720,"height":340,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","barmode":"stack","bargap":0.12,"xaxis":{"showgrid":false,"linecolor":"#e6e5e0","tickcolor":"#e6e5e0","zeroline":false,"title":{"text":"Places gained (+) or lost (\u2212) versus grid slot"},"dtick":1},"yaxis":{"gridcolor":"#e6e5e0","zerolinecolor":"#b8b7b0","title":{"text":"% of simulated races"},"ticksuffix":"%"}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('de2be9b6-e742-4ed9-be0b-707acddadc28');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-sg-outcomes-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Share of all simulated races at each outcome. Two overlapping shapes: finishes centred on small gains, retirements centred on losses.
+</figcaption>
+</figure>
+</div>
+</div>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: right;">Gains places</th>
+<th style="text-align: right;">No change</th>
+<th style="text-align: right;">Loses places</th>
+<th style="text-align: right;">Retirement chance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">54.4%</td>
+<td style="text-align: right;">11.1%</td>
+<td style="text-align: right;">34.5%</td>
+<td style="text-align: right;">32.1%</td>
+</tr>
+</tbody>
+</table>
+<p>The lean toward a gain is weak. The three most likely single outcomes sit close together: +3 (14.5%), +1 (13.2%) and 0 (11.1%). The most common change is +3. The median, +1, is the estimate because it is the value with half of all outcomes on either side. Mean change +0.72; middle half −2 to +3; middle 80% −4 to +5.</p>
+<h2 id="where-repeated-runs-end-up">4 · Where repeated runs end up</h2>
+<div id="cell-fig-sg-running" class="cell" data-execution_count="5">
+<div id="fig-sg-running" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center">
+<figure class="quarto-float quarto-float-fig">
+<div aria-describedby="fig-sg-running-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div style="height:300px; width:720px;">            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>                <div id="c8a9a4e5-68da-4518-914d-3a8fc796fe2d" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("c8a9a4e5-68da-4518-914d-3a8fc796fe2d")) {                    Plotly.newPlot(                        "c8a9a4e5-68da-4518-914d-3a8fc796fe2d",                        [{"hovertemplate":"Run 1\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"uB6F61G4rj+Wexphuaehvx4eHh4eHr4\u002f\u002fa4WN2F+1z\u002f1pje96U3fPxPaS2gvod0\u002fchzHcRzH4T8KXk7ByynoP0tqK6mtpOY\u002fDmO19bcH5j+5pxGWexrpP5nCrkkuQeU\u002fuQnzu1rc5D+nN73pTW\u002fkP3WSA0snOeA\u002f\u002f7nEI5Ia3D+6c+fOnTvXP6Oeyt1i0ds\u002f4e+8B8QQ3j+fT5AV15XfP04xavjbFNs\u002ffJeFjdjF2T+cb6CGMVfdP8LNfiFWlOA\u002f6NRbvwmf3j8nHKAuObXeP4slnTvUh+A\u002fcI6rI\u002fMq4T9suBd+MnjhP\u002f\u002fEtQViveE\u002fo+Nt96Od4z8TEwU1t1\u002fjP+GrbWPqv+M\u002fXKQnXKQn5D\u002f30yEF\u002fQnlP8hhLqyKzuQ\u002fF97AIL7h5D\u002fBQYamIHzkP341JtIDFeU\u002fAG+BBMWP5T8="},"type":"scatter"},{"hovertemplate":"Run 2\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"mpmZmZmZ8T\u002fuaYTlnkbwP6alpaWlpe0\u002fdWTPQFQ68j8AAAAAAADwP9pLaC+hvfA\u002fy7Isy7Is8z9orA+N9aHxPyW1ldRWUus\u002fuAc2eldk7j+NsNzTCMvtP\u002fh3b9YTZes\u002f05E9A1Hp6D+96U1vetPtPw9FqvdQpOo\u002fAulYyiTY5T9t2bJly5bpP9aIdLqQ5+g\u002fU4Bd658o5T\u002fN41womSXkP7y7u7u7u+M\u002f4n6w1D6h5T8bN99ADWPmP+bgZr8QK+Q\u002fGbWlj3jX5D9iu1meRKblP\u002fQ1aoGageU\u002fVsPFD2GQ4z+Xw\u002fRlRlvkPy9LNeg8wOQ\u002fbvKYuXmz5T+MIOpqSzfkPyO3eYygj+Q\u002fjKZKjKZK5D\u002fokdSM+JjkP9PeHN5LHeU\u002fhVhahEoY5T8F9bqiUiTlP4LK2S38KuU\u002f9dvXgXNG5T8="},"type":"scatter"},{"hovertemplate":"Run 3\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"7FG4HoXr0b\u002fUCMs9jbDMv2lpaWlpadm\u002f2TMQlY7sqT9Ob3rTm97EPxPaS2gvoc0\u002fu67ruq7r2j9xpXsDysTVP0xnMZ3FdNY\u002f198e2Ohd4T\u002fuaYTlnkbkP9YTZRvtq+Y\u002fz0BUOrJn6D84velNb3rnP3woUr2HIuU\u002foEs8IqnB4T+QHz9+\u002fPjhP60UIWhzheU\u002fe4U1oZ6y5z\u002fcHRaoMNjnP0J7Ce0ltOc\u002f67F\u002fpMWc5z+XyZFBfuXpP9+pazm42ec\u002fedc0Q8\u002fk5j9trJQ9\u002fhXlP0eyC8qVfuU\u002fRZwEcxoN5j+uTeCalXnlP88D7Cjpd+Y\u002fPwKSDWdG5j9JhFTLOtDmPylaG4HZLeY\u002fbeNFbeNF5T+aZP+UDGTlP7Q\u002f\u002foRGbuY\u002fOsL7Jglb5j9PkzCV9E\u002fmP3qgcnYLX+Y\u002ffPKwUGua5j8="},"type":"scatter"},{"hovertemplate":"Run 4\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"uB6F61G4zj9HWO5phOXOPwAAAAAAAOA\u002f2TMQlY7s2T+nN73pTW\u002faPxzHcRzHcdw\u002fXdd1Xdd13T9nRy1C\u002fprdP0ltJbWV1NY\u002fOYzV1t8e2D+fRljuaYTVP12CKv3MaeA\u002fvFrchPld3T8WspCFLGTlPzZlTVlT1uQ\u002fZ\u002ftE9aCR5z+zZcuWLVvmP\u002fr2VyYK3eQ\u002fXHXyqGLD5T9fbASI1sTkP0jWufKAZOU\u002fWsx5u7Jz5T\u002fB1KFoNm7mPymNj0ygd+Y\u002f8a5php7J5T9XP+iowBfnP1TZgCm02eY\u002fI5tqokiW5j\u002fRwGygpQTnP\u002f1OIREmOOc\u002fArVao7sV5z9YRgKlN07nP7TxOtsLnOc\u002foAiZnwiZ5z9xhGB1L9zmP8h4CK24guY\u002fpF8xCW1l5j+dK56AWvDmP5lID1TOzuY\u002fgnNGlPYG5z8="},"type":"scatter"},{"hovertemplate":"Run 5\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"uB6F61G4vj+WexphuaehP1paWlpaWro\u002fpSN7BqLS0T+RhSxkIQvhP47jOI7jON4\u002fFEVRFEVR5D\u002f3BpSJK93rP3sK6ymsp\u002fA\u002f+9sDG70r8j+E5Z5GWO7xPzn8uzfrifI\u002feLW4CfO78j9ZyEIWspDyP4KlkxxYOvE\u002fJh6R1OAo8D9p0qRJkybtPy1IQM2uF+k\u002fcwZOY34s5z+C2x0WqDDoP8Wo4W9TjOY\u002f6KQ\u002fleY25j\u002faKXySsgDpP02gd+paDug\u002fzlo1CFAM6D\u002fLk8g0bDfnP2bvt3XQ6+Y\u002fWXCvM3VD5j8qtWT8m2XlP7YFYr3ds+U\u002fcJ3dlIEy5T+g9MbpeBvlPzSrCw\u002f5nuU\u002fjsl6jsl65j+PvcvsI+vlPyvVaDnjX+Y\u002fcFyjApJz5z8\u002fU+1MTGDnP0V6oHJ26+Y\u002f1QloImx45z8="},"type":"scatter"},{"hovertemplate":"Run 6\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"exSuR+F6pD98GmG5pxHGPzw8PDw8PNw\u002fzO9qcRPm5z8tZCELWcjqPxPaS2gvoe0\u002fOY7jOI7j6D\u002fh5RS8nILnPy2ms5jOYuo\u002fEn5yIepm8D+E5Z5GWO7tP4RMYdckl\u002fA\u002fsmcgKh3Z6z9ZyEIWspDpP5uypqwpa+o\u002fotey2oSM6T+MGDFixIjpPyDMeVz69uc\u002fZfTZ5oJJ5j+QRDz96vnkPx6QrHPlAeU\u002fg+6BQxwf5T8Wr8vkyCDnPymNj0ygd+o\u002fqGj8nHrr5z+AuuTUmnDoP1lDh3\u002fM1Og\u002fLl2AMUx66D89NlavYCrnP7h79rEZOeg\u002fafHKJ2I25z+TD5FVocrmP\u002f7zv1zomeY\u002f74xl74xl5z8DF8ELdWnnP0roVD57VOc\u002fhZLUw0Kq5j\u002f61AeG3+HmPwgqZ7fwi+c\u002fZDvfT42X5z8="},"type":"scatter"},{"hovertemplate":"Run 7\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"MzMzMzMz8z8aYbmnEZbzP9PS0tLS0vI\u002fhfldLW7C7D9Ob3rTm97sPxPaS2gvod0\u002fchzHcRzH4T\u002f9NTtqEfLnP09hPYX1FOY\u002fz6mkgISf7D98GmG5pxHuP+Y0uPMidew\u002fGohKR\u002fYM7D\u002fTm970pjfpP4XwulUIr+s\u002fS\u002fbmzFNs7D\u002fLli1btmztP3wtr36XJew\u002fmR\u002fLGTiN6T\u002fvsECFwb7pP4e\u002fTTFq+Oc\u002foqxNBmML6D\u002f2YFvTv2PnP9ovxIrS+OY\u002fb\u002f0mfDq65z9e5zP3bSHmP8oaOvxjpuY\u002f12KCRGXM5T9a+4gbGULlP4prC8R6u+U\u002fQK3W6G7F5T\u002fgB8U2cU\u002fmPz8NSRPS9+U\u002fXsdXXsdX5j\u002fdf61IxdfmP7N+K0k25eU\u002fXXApyjpZ5T85oKKAfeHkP5WzW\u002fjVGOU\u002f+u3rwDkj5j8="},"type":"scatter"},{"hovertemplate":"Run 8\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"4XoUrkfh6r8Jyz2NsNzjv6alpaWlpdW\u002fVDqyZyAqvb8LWchCFrKwP0xoL6G9hNY\u002fWZZlWZZlyT+e53me53neP1hPYT2F9eQ\u002fFZDwkwtR5z\u002fLPY2w3NPoPyWXoEo\u002fc+o\u002fi5swv6vF5T9kIQtZyELmPwrIaJiAjOY\u002fY4Z1cqDu6T84cODAgQPnP4ajBQmo2eU\u002fY8NVJ48q5j9WXFf+jC\u002fmP8Pfphg1\u002fOU\u002fXeXIbHuj5D9BDWOuWmLlP7uWg5v9QuY\u002fTr31m\u002fDp6D9MTq0JB6jnP\u002fJ7q78oyOc\u002fv5QF9zpT5z93rXEL0S7nP4prC8R6u+c\u002fvo6tx8fC5z8iuRITBTXnP0PPtAv4C+c\u002fp0qMpkqM5j\u002fvxwctMInmP8awSYthk+Y\u002fELsS8xqw5j+A4IkWDdDmP42J9EDlbOc\u002fJCh+jLlr5z8="},"type":"scatter"},{"hovertemplate":"Run 9\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"mpmZmZmZyT9huacRlnu6Pzw8PDw8PMw\u002fnDC\u002fq8VN2D+nN73pTW\u002faP+Q4juM4jtM\u002flmVZlmVZ1j\u002fmFLycgpfTP0B\u002fAf0F9Nc\u002fEn5yIepm4D8AAAAAAADkP3\u002fmNLjzIuU\u002fR\u002fYMRKUj4z9ZyEIWspDjP8HSSQ4sneQ\u002ffBYEGO1w5z\u002fLli1btmzlP\u002f6ViUI3JeU\u002fJOj49sVB4j+xQIXBvqnjP2WdKw9I1uU\u002fu3X3\u002fZ0l5T+xHmxr+nfkPxhiRWl8ZOQ\u002fAk+CdsMx5T8ZzAiS3qHkP8UXirTP\u002f+Q\u002fGNlUE0Wy5D9mfdBGyX7kP9MqXwz\u002fxOU\u002fwfhiDj\u002fu5T9U0iKPopnmPwBctB8Va+Y\u002fNoVxNoVx5j\u002fdf61IxdfmP0EsOUjKjuc\u002fOl2C2JWY5z8gPSgYxGnnPxd+NSbSY+c\u002fuB6F61G45z8="},"type":"scatter"},{"hovertemplate":"Run 10\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"mpmZmZmZ6T+oEZZ7GmHpP7W0tLS0tOw\u002fFzdhfleL6z8WspCFLGTpP6G9hPYS2us\u002fCIIgCIIg6D+W7g0oE1fqP0hwH8F9BOc\u002fpYCEn1yI6j\u002fd0wjLPY3oPxvtqxaYsew\u002fhfldLW7C7D8LWchCFrLqPyG8bhXC6+Y\u002ftqw2IWOG5T8AAAAAAADkPxoqEE17+OM\u002fQFEKsGv94z82AkRrYlLlP8sDknWuPOQ\u002f8O8sqUDG4z8PRbNx8w3kP9A7dS0HN+M\u002fpQV3iLLM4z+tCQeoS07lP7MBU2iz7eQ\u002fQhCjoFYF5j+bUkvGv1nmP5Zq0HmAHec\u002fS6BRYJBd5z+ouf1ayLHoP2NdYduv5+c\u002fx0p\u002fx0p\u002f5z\u002fxzmYnCrjnP23K60qxnuc\u002fl0TUvKEy5z92LRxZALzmP2\u002fhV2MineY\u002f0gDeAgmK5j8="},"type":"scatter"},{"hovertemplate":"Run 11\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"j8L1KFyP4j8aYbmnEZbbPzw8PDw8PNw\u002fnDC\u002fq8VN2D+c3vSmN73hP6G9hPYS2uM\u002foyiKoiiK4j\u002fFle4NKBPnP0ltJbWV1OY\u002fDmO19bcH5j+NsNzTCMvhP3\u002fmNLjzIuU\u002fGohKR\u002fYM5D+ykIUsZCHhPxj0BX1BX+A\u002fN8SAdCxl4j+JESNGjBjhP66wGpFOF+I\u002fRLMSL1M75D9WXFf+jC\u002fmP3TlAck6V+Y\u002f8eMdB1f85T9RNBs330DlP\u002fKRCfROXeU\u002fHqIs88Js5D8HqEtOrQnjP0XkXq2N1eQ\u002fwAJ2sUaO5T86X6nitHDlP3u7Zx+bkeU\u002f6WSvbQG65T+qc+3lEgzlP5TZ\u002f1u0H+U\u002f\u002fR0r\u002fR0r5T8kLXK12DfkP9Bcd2YrC+Q\u002fXXSWphlw5D\u002f+ol9F9pLkP0ykBypnV+Q\u002f4L4OnDOi5D8="},"type":"scatter"},{"hovertemplate":"Run 12\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"CtejcD0K5z8+jbDc0wjrPx4eHh4eHt4\u002fICod2TMQ1T+GLGQhC1ngPya0l9BeQts\u002fFEVRFEVR1D\u002f9NTtqEfLXP09hPYX1FNY\u002fdCopIOEnxz\u002fLPY2w3NPIP7SvWmDG8tE\u002fUenInoGo1D9vetOb3vTePxj0BX1BX+A\u002fbuXj+qHX4j+sV69evXrlP18y6qncLeY\u002fdHz74iBB5z8M9k0dRQ3oP0J7Ce0ltOc\u002ftzdK+SL86D8Kn6QsQJzoP8vBzX4hVuo\u002f+sP2JfI46z96h2IwI0jqPwFxzTtPzOk\u002f587qveSE6T8JBjtHN2npP0WY4GRuvOo\u002fkg1nRoZM6j+Ke7IchFvrP958ANX1WOs\u002fwkV6wkV66j9h2HHvUxHqP64cYgfkbuk\u002fVibpafsN6T8Xs9aQxtPoP\u002fxqTKQHyug\u002fat5xio7k6D8="},"type":"scatter"},{"hovertemplate":"Run 13\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"9ihcj8L18D\u002fUCMs9jbDsP3h4eHh4eOg\u002fJHsGotKR7T9DFrKQhSzwP4X2EtpLaO8\u002fCIIgCIIg8D91b0CZuNLtP\u002fcR3EdwH\u002fE\u002fNnpXZL408T\u002fLPY2w3NPwP1k+YuhWHO4\u002fv6vFTZjf7T+nN73pTW\u002fuP3Jg6SQHlu4\u002f4m4rH9cP7T\u002fkx48fP37oP8oP5jwufes\u002fj29fHCTo6D\u002fLn\u002fHFRoDoPzFq+NsUo+Y\u002fsB3K2mQw5j+zcfMN1DDmP\u002fYLsaI0PuQ\u002fV9KCO0RZ5j8uxOt85r7lP9pixCt4D+Y\u002f7DYtBcAC5j+kg0IDs4HmPxZNq3wx\u002fOc\u002fQnFSODg96D\u002fmINyazd\u002fnPz0v4\u002f9Ex+c\u002fiG3Jh23J5z9Ede2v9JLnPzyjp+piFuc\u002fkIoMulDa5j\u002ffUSDjLlLmP1z41ZhI7+Y\u002fAd4CCYof5z8="},"type":"scatter"},{"hovertemplate":"Run 14\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"7FG4HoXrwT+Wexphuaehvx4eHh4eHq6\u002f2TMQlY7smT9kIQtZyEKGv3sJ7SW0l8A\u002fkiRJkiRJ0j8QjfWhsT7kP0hwH8F9BOc\u002fUC5E3Qxa5j+5pxGWexrtP8xYPmLoVuw\u002fv6vFTZjf7T9vetOb3vTwP8homICMhvE\u002fk2BX4csN8T9p0qRJkybxP9bvsoQHDPA\u002f5JbuRlpE7j8UNWAOOrnvP1D6pE\u002f6pO8\u002fGr2aVVFQ7z9xgotI6P3sP5BMoHfqWuw\u002fj7NWDQIU6z+DGUHSOxTrP0\u002fMWbRUu+s\u002fK\u002fKmsNgd6z9IpVNeEDzqP87IoS5LNeo\u002fip3YiZ3Y6T9mD5g9YPboP7VqfBTyVOg\u002fKfSrKPSr6D8VPgU\u002fNrfoP5dhsmdRSOg\u002fDdpBlRNt5z98tMbrIXfnPxsT6YHKeec\u002f0NVW7C+75z8="},"type":"scatter"},{"hovertemplate":"Run 15\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"ZmZmZmZm9j\u002fUCMs9jbD0P9PS0tLS0vI\u002fewai0pE98z9kIQtZyELyPxPaS2gvofE\u002fapqmaZqm8T8J+Wt21CL0PxnNZTSX0ew\u002f1tbfHtjo7T8jLPc0wnLrP1G20b5qgek\u002fJHsGotKR5T+96U1vetPnP9itQnjdKuQ\u002f35x5io1f4T8SI0aMGDHiP0GbK6xGpOM\u002fKcCu9U+U4j8z7T1wu8PiP\u002fcS2ktoL+E\u002fB5R4Tcnm4z8N8ivPGVXiP\u002fKRCfROXeM\u002flnlhNpJR4z\u002fnM\u002fdtIV7jPwHimneemOM\u002f0LvGk4HW5D\u002flVKjPavTkP\u002f\u002fEtQViveU\u002fvqLZVy\u002fw5j+oshWcnIfnP00x8g\u002fRZOc\u002fh7sDh7sD5z9V36\u002fTfJbnP52UPACblec\u002fmKFzUlfH5z\u002fiQmng2mDnPxd+NSbSY+c\u002fgQTFjzF35z8="},"type":"scatter"},{"hovertemplate":"Run 16\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"7FG4HoXr8T8s9zTCck\u002fjPzw8PDw8PNw\u002fsmcgKh3Z4z9ZyEIWspDlP76E9hLaS+g\u002fBEEQBEEQ5D\u002fY7KhFyF\u002fjP0ltJbWV1OY\u002fG70rMl+a6D8+jbDc0wjrP2HXJJegSu8\u002fYX5Xi5sw7z8LWchCFrLuP8dPi238tPA\u002fCdP3zyUe8T+2bNmyZcvwPwAAAAAAAPA\u002f4qqTRxUb7j\u002fxIxFPv3ruP\u002fjbFKOGv+0\u002fK0dm2xul7D9cRELvZ8XrP9A7dS0HN+0\u002fXtMMPZPb7D\u002fvUAxmBEnrP+XPeskksek\u002frd5LTpjp6D\u002fXoBPv2xfoP+1jM3Koy+g\u002fT86C9tAA6D+rUGUrODnnP\u002fI62wucV+c\u002f+Bgm+Bgm6D+PxXx1cQjpPzOhckp7c+g\u002f6Wn7DbkX6T\u002fKTDTXhxfoP5lID1TOLug\u002fuY0G8BZI6D8="},"type":"scatter"},{"hovertemplate":"Run 17\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"uB6F61G4zj\u002fUCMs9jbDMPwAAAAAAANA\u002fXi1uwvyutj\u002fqTW9605veP\u002fcS2ktoL+E\u002f9DzP8zzP4z+8nIKXU\u002fDiP38B\u002fQX0F+A\u002fCDZ6V2S+5D8Jyz2NsNznPwERMoVdk+w\u002fXi1uwvyu5j8hC1nIQhbmP3sPRar3UOQ\u002f4OK0ZvtE5T9ixIgRI0bkPz78+Y8ZXOM\u002fEEP4O+8B4T+ZVOmGNI\u002fjP1D6pE\u002f6pOM\u002f1jKSU+915D\u002fMVUusB9viP4HeqWs5uOE\u002fQDHgSdBu4D+ARRsrZY\u002ffP7G4YeKQAOE\u002fqn5Kkz\u002fG4T9Lg5Hq3tbiP0m\u002fU0iECeQ\u002fGhQnhYPT4z9gEiHVsg7kP99UxhZ31uQ\u002f1c5l1c5l5T89q\u002f85e9nlP1vl0pgDNOU\u002f1oHusUAU5j+EDE1B+CjmP7Rb+NWYqOU\u002f001iEFg55j8="},"type":"scatter"},{"hovertemplate":"Run 18\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"hetRuB6F8z9zTyMs9zTyP2lpaWlpafE\u002f\u002fa4WN2F+9z9605ve9Kb3PwntJbSX0Po\u002fNU3TNE3T9D8etQj5a3b0P2E9hfUU1vM\u002fciHqZtCy8z+oEZZ7GmHxPyjKNtpXLfA\u002fVDqyZyAq5T+RhSxkIQvnP2mYgIyGCeg\u002fChkzrJMD5T+sV69evXrlP3WIDXzGcOQ\u002faFbiZWqH5j8aX2wEiNbkPx6QrHPlAeU\u002ffcjygnSJ5D+eM6q0U\u002fjkP9+pazm42eM\u002fY8CToN1w5D8tTyLTsN3kP6FSciobMOU\u002f4XQXdrwe5D\u002fXGrcQ7XLlP4umVb4Y\u002fuU\u002fAd2yw4pw5T9eUUmLPIrmP1NYguKd8OU\u002f5kEA5kEA5j9vfQF7Va3lP+GHqcIPU+U\u002fgLndHvmU5T+yl6Tz7TjlP8dEeqBy1uQ\u002fIo51cRsN5T8="},"type":"scatter"},{"hovertemplate":"Run 19\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"hetRuB6F6z+WexphuafhP5eWlpaWlvI\u002fwvyuFjdh7j8LWchCFrLoPwAAAAAAAOA\u002ft23btm3b1j9nRy1C\u002fprdP09hPYX1FOY\u002fyXxp4jBW6z8aYbmnEZbrPwIiZAq7Juk\u002fOrJnICod6T9605ve9KblP2mYgIyGCeg\u002fDxp5529x6j8AAAAAAADoPznBzkoRguY\u002ffEAM4e+85z8n9+9SdrbqP4pRw9+mGOk\u002f7srOVY7M5j+Zq5ZYD7blP8kEeqeu5eI\u002fUlv6iHdN4z+WJ5Fp2G7iP4IVxn7gwuM\u002fX2fqhqyn4z\u002f2\u002fuy1g\u002f\u002fkPzSt8sXwT+Y\u002fO6wIV1dI5z\u002fPrq+MBErnP5AaZEwUZeY\u002fRm3jRW3j5T+IZoKbQpflP+\u002fMVhYokeU\u002fw8\u002fuuOGL5T8WxTSI9p\u002flPzKRHqicfeU\u002fL90kBoGV5T8="},"type":"scatter"},{"hovertemplate":"Run 20\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"exSuR+F69D\u002fd0wjLPY34P6alpaWlpfU\u002fnDC\u002fq8VN+D9Ob3rTm978Py+hvYT2Evo\u002fEARBEARB+D801ofG+tD4P72G8hrKa\u002fg\u002fRN0MWnY89z\u002fCck8jLPf0P+2rFpixfPQ\u002fICod2TMQ8T+nN73pTW\u002fxP9NJDiyd5PA\u002fKjZ+RZi+7z8SI0aMGDHuPy9LeMAAzuw\u002f5VHFhqtO7j\u002fZ2apF3jLsP8Wo4W9TjOo\u002fxpCoiVGN6z8KLiKh97PqPwr0Tl3Lwek\u002fm2bomdzm6j8QOirwxdXrP5GFLGQhC+k\u002fS9VPafLH6D8j4XZqQ5zpPx4l\u002fU4hEeo\u002fzAQV+iF\u002f6j+ox83YHwbrP1AV+PRpSOo\u002fc86Mcs6M6j8a4H0JLN7qPyneam6DR+k\u002ft0c+ZeVo6T\u002fH6yF315ToP6wxkR6ofOg\u002fAJF++zpw6D8="},"type":"scatter"},{"hovertemplate":"Run 21\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"AAAAAAAA8D+WexphuafxP0tLS0tLS\u002fM\u002fgqh0ZM9A9D9kIQtZyEL2P+Q4juM4jvc\u002fv+\u002f7vu\u002f79j9jfWisD431P9BfQH8B\u002ffU\u002fnUoKSPjJ9T\u002fLPY2w3NP0Pzn8uzfrifI\u002fXi1uwvyu7j84velNb3rxPwEZDROQ0fA\u002f47Rm+0T18D\u002f8+PHjx4\u002fxPzLqqdwtFu0\u002fspyB05gf6z\u002fdkOZxLpTsP5J1rjwgWes\u002fiOOjDijx6j\u002fS3V4ITB3qP6eu5eBmv+o\u002fvKYZeia36T+GeJ3P3LfpP\u002fflsRVBw+k\u002f7Fe1VhCu6D\u002fWB22U7EfpP+g8wI6Sfuk\u002fPISwNojt6D8btbPrKyPpP1U8iMc21Og\u002f+b0M+b0M6T\u002fyQQtMoh3pP\u002fivOijuWOk\u002fd0x4aPxG6j\u002fgP8Lr\u002foXpP0kPVM5u4ek\u002fBaOSOgFN6T8="},"type":"scatter"},{"hovertemplate":"Run 22\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"mpmZmZmZ2T8Jyz2NsNzjP2lpaWlpadk\u002fv6vFTZjf1T+nN73pTW\u002fiP7SX0F5Ce9k\u002f6Hme53me5z9VVVVVVVXlPzCgv4D+Auo\u002fVlt\u002fe2Cj5z8+jbDc0wjrPwq7JrkEVeo\u002fVDqyZyAq7T\u002f1pje96U3rPxJ3xB1xR+w\u002fRjvcbeXj6j8\u002ffvz48ePrPyysRqTThew\u002frE4eVWy46j9QYbBv6ijqP97d3d3d3ek\u002f7KVwAtzS6T8Kn6QsQJzoP7jZL8SK0ug\u002fry4Hxgop6D+uftBRgS\u002fmP5qVAyEV0OU\u002fkdTs0P3W5j+s\u002fI+s2GTmP0BxbYFYb+c\u002flw412J3J6D9wjr45+uboPwWXYVEhOOg\u002f2Mr418r45z+r94jyi+jmP4sj8fl\u002fcOc\u002fI20S7Hk45z+ZzQ8kSLPnP\u002fjVmEgPNOc\u002ffh04Z0Rp5z8="},"type":"scatter"},{"hovertemplate":"Run 23\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"mpmZmZmZ+T8jLPc0wnL3P+Lh4eHh4fU\u002fS0f2DESl8z\u002ff9KY3ven1PxPaS2gvofU\u002f0zRN0zRN8z+6N6BMXOnuPx\u002fBfQT3Eew\u002feldkvjRx6D\u002fuaYTlnkbkP0GVfuY0uOM\u002fnDC\u002fq8VN4D\u002ff9KY3venjP01ZU9aUNeU\u002fmWGdHKh75j88d+7cuXPrP7EakU4X8uw\u002fw5pQT9kr7D+Al7KzVYvsPzMzMzMzM+s\u002fvV3ZucqR6T\u002fAYx\u002fd7YXoP0OsKI2PTOY\u002fHI4pVb5\u002f5T+WJ5Fp2G7mP3Xk2fH27+g\u002f3J5kdNVl6T9\u002fRcLt1IboPw+wo6TfKeg\u002fg+y6OCQR6D8T\u002fkz4M+HnP8IjYWU+l+c\u002fELT1D7T15z+mXcGw497nPyIwJ0RgTug\u002fLUIljMpl6D9voEbOZODnPypnt\u002fCrsec\u002f1sVtNIC35z8="},"type":"scatter"},{"hovertemplate":"Run 24\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"9ihcj8L18D+oEZZ7GmHpPwAAAAAAAPA\u002fR\u002fYMRKUj6z\u002fIQhaykIXkP+0ltJfQXuI\u002fmqZpmqZp6j9VVVVVVVXlP1JbSW0lteU\u002fDmO19bcH5j9qhOWeRljePwzdisO\u002fe+M\u002f4ybM72px4z+c3vSmN73hP60pa8qasuY\u002f2LLahIwZ5j8uW7Zs2bLlP2HO49K3v+I\u002fWBPqKXuF5T+EH4l4+tXjPw1\u002fm2LU8OM\u002feruyc5Uj4z+nf8c+utvjP4HeqWs5uOU\u002f6NRbvwmf5j\u002fhAHXJqTXlP2oQzUXG+eQ\u002fDanOyTWT5D8iPBdTdoLlP2P4J64tEOc\u002fHxoA+\u002fQb5j+OzAl4Pj3mP9qmd32QA+c\u002fTi0gTi0g5j\u002fS+Y9RhsLlP8HKxIKVieU\u002fd0FqFF785D+g\u002fHlDD+fkP\u002fjVmEgPlOQ\u002fsHJoke185D8="},"type":"scatter"},{"hovertemplate":"Run 25\u003cbr\u003eafter %{x:,} races: mean %{y:+.2f}\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2a78d6","width":1.5},"mode":"lines","opacity":0.45,"showlegend":false,"x":{"dtype":"i2","bdata":"MgA6AEQATwBcAGwAfgCTAKsAxwDoAA8BPAFwAa4B9QFIAqkCGgOeAzgE6wS8BbAGzAcYCZoKXQxrDtAQmhPcFqcaFB8+JEIqRzF1OQBDIE4="},"y":{"dtype":"f8","bdata":"cT0K16Nw7T+fRljuaYTlP7W0tLS0tOw\u002fFzdhfleL6z8hC1nIQhbqP3Icx3Ecx\u002fE\u002fr+u6ruu67j\u002fmFLycgpfzP+E+gvsI7vM\u002fBi07nlNJ8T\u002f3NMJyTyPyP5rT4M6L1PE\u002f8GpxE+Z38T+ykIUsZCHxP8mBpZMcWPI\u002flAN1z4IA8z81adKkSZPyP3Dmo2xHcvA\u002fyqOKDVed7D+kqAFz0MntP1D6pE\u002f6pO8\u002fIOMpFvnl7z+L12VyZJDvPx+ZQO\u002fUte4\u002fff86f9i+7D\u002fwxdUPOirsP\u002fL27yhDDOs\u002fWpE3hcXu6D\u002fH9s4IwwzoPziZG69oWuc\u002fzpYiYWgF5z+\u002fFnIsDsnlP2xU2jPWFeY\u002f3puB3ZuB5T+xJQsKdrvlP88Pctatx+U\u002fm4axjD0h5j91lDbA7MnmP1A5u4Vf7eY\u002fKVyPwvUo5z8="},"type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"shapes":[{"line":{"color":"#0b0b0b","dash":"dot","width":1},"type":"line","x0":0,"x1":1,"xref":"x domain","y0":0.716062,"y1":0.716062,"yref":"y"}],"annotations":[{"font":{"color":"#0b0b0b"},"showarrow":false,"text":"all 25 runs settle at +0.72","x":0.99,"xanchor":"right","xref":"paper","y":0.716062,"yshift":12}],"margin":{"l":56,"r":16,"t":40,"b":48},"font":{"family":"Helvetica, Arial, sans-serif","size":12,"color":"#52514e"},"legend":{"font":{"color":"#52514e"},"orientation":"h","x":0,"y":1.12,"traceorder":"normal"},"hoverlabel":{"font":{"color":"#0b0b0b"},"bgcolor":"#ffffff","bordercolor":"#e6e5e0"},"width":720,"height":300,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","xaxis":{"showgrid":false,"linecolor":"#e6e5e0","tickcolor":"#e6e5e0","zeroline":false,"title":{"text":"Simulated races completed within a run (log scale)"},"type":"log","tickvals":[50,100,300,1000,3000,10000,20000],"ticktext":["50","100","300","1,000","3,000","10,000","20,000"]},"yaxis":{"gridcolor":"#e6e5e0","zerolinecolor":"#b8b7b0","title":{"text":"Running mean change"}}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('c8a9a4e5-68da-4518-914d-3a8fc796fe2d');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-sg-running-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Each line is one of the 25 independent runs. Early on the runs disagree by more than a full place; by 20,000 races they agree to within about a tenth of a place.
+</figcaption>
+</figure>
+</div>
+</div>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Measure</th>
+<th style="text-align: right;">Average of 25 runs</th>
+<th style="text-align: right;">Lowest run</th>
+<th style="text-align: right;">Highest run</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Median change</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">+1</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Most common change</td>
+<td style="text-align: right;">+3</td>
+<td style="text-align: right;">+3</td>
+<td style="text-align: right;">+3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Mean change</td>
+<td style="text-align: right;">+0.72</td>
+<td style="text-align: right;">+0.64</td>
+<td style="text-align: right;">+0.79</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Chance of gaining places</td>
+<td style="text-align: right;">54.4%</td>
+<td style="text-align: right;">53.5%</td>
+<td style="text-align: right;">55.0%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Chance of losing places</td>
+<td style="text-align: right;">34.5%</td>
+<td style="text-align: right;">33.5%</td>
+<td style="text-align: right;">35.3%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="changing-the-assumptions-does-not-move-the-median">Changing the assumptions does not move the median</h3>
+<table class="caption-top" style="width:100%;">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Assumption changed</th>
+<th style="text-align: right;">Retire</th>
+<th style="text-align: right;">Median</th>
+<th style="text-align: right;">Mean</th>
+<th style="text-align: right;">Gains</th>
+<th style="text-align: right;">Level</th>
+<th style="text-align: right;">Loses</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Base case</td>
+<td style="text-align: right;">32.1%</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">+0.72</td>
+<td style="text-align: right;">54.4%</td>
+<td style="text-align: right;">11.1%</td>
+<td style="text-align: right;">34.5%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Exclude round 16</td>
+<td style="text-align: right;">29.3%</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">+0.82</td>
+<td style="text-align: right;">55.5%</td>
+<td style="text-align: right;">11.7%</td>
+<td style="text-align: right;">32.8%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">No recency weighting on grid slots</td>
+<td style="text-align: right;">32.1%</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">+0.78</td>
+<td style="text-align: right;">54.5%</td>
+<td style="text-align: right;">11.2%</td>
+<td style="text-align: right;">34.3%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Finishing change from field peers only</td>
+<td style="text-align: right;">32.1%</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">+1.29</td>
+<td style="text-align: right;">57.3%</td>
+<td style="text-align: right;">6.8%</td>
+<td style="text-align: right;">35.9%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Finishing change from Albon’s own finishes only</td>
+<td style="text-align: right;">32.1%</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">+0.14</td>
+<td style="text-align: right;">51.5%</td>
+<td style="text-align: right;">15.5%</td>
+<td style="text-align: right;">33.0%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Retirement rate = field average</td>
+<td style="text-align: right;">21.1%</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">+1.27</td>
+<td style="text-align: right;">61.2%</td>
+<td style="text-align: right;">12.0%</td>
+<td style="text-align: right;">26.8%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Retirement rate = Albon’s own record</td>
+<td style="text-align: right;">37.6%</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">+0.43</td>
+<td style="text-align: right;">51.0%</td>
+<td style="text-align: right;">10.8%</td>
+<td style="text-align: right;">38.3%</td>
+</tr>
+</tbody>
+</table>
+<h2 id="grid-slot-is-the-biggest-lever">5 · Grid slot is the biggest lever</h2>
+<div id="cell-fig-sg-grid" class="cell" data-execution_count="8">
+<div id="fig-sg-grid" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center">
+<figure class="quarto-float quarto-float-fig">
+<div aria-describedby="fig-sg-grid-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div style="height:320px; width:720px;">            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>                <div id="97f2cf4b-00a9-4eee-bbf4-39e118ec19a4" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("97f2cf4b-00a9-4eee-bbf4-39e118ec19a4")) {                    Plotly.newPlot(                        "97f2cf4b-00a9-4eee-bbf4-39e118ec19a4",                        [{"customdata":{"dtype":"f8","bdata":"AAAAAAAAJsAAAAAAAAAIQC9uowG85UVAvw6cM6K0RkAAAAAAAAAiwAAAAAAAABBACRueXimLRkBm9+RhobZFQAAAAAAAACLAAAAAAAAAFED\u002fsnvysABHQKMBvAUSZEVAAAAAAAAAFMAAAAAAAAAUQCS5\u002fIf0m0dAt9EA3gL5REAAAAAAAAAQwAAAAAAAABRATYQNT6+kR0Dgvg6cMzJFQAAAAAAAAAjAAAAAAAAAFEC30QDeArlJQBx8YTJVcENAAAAAAAAACMAAAAAAAAAUQELPZtXnCktArkfhehQeQkAAAAAAAAAIwAAAAAAAABRAtmJ\u002f2T1JTUBTBaOSOsE+QAAAAAAAAADAAAAAAAAAGEDgC5OpgjFOQNnO91Pj5TlAAAAAAAAAAMAAAAAAAAAcQEtZhjjWrVBA33GKjuRyMkA=","shape":"10, 4"},"error_y":{"array":{"dtype":"i1","bdata":"AwQFBQUEBAQFBQ=="},"arrayminus":{"dtype":"i1","bdata":"CwkJBQQEBAQDBA=="},"color":"#2a78d6","symmetric":false,"thickness":2,"type":"data","width":0},"hovertemplate":"Starts P%{x}\u003cbr\u003eMedian %{y:+d}\u003cbr\u003eMiddle 80%: %{customdata[0]:+d} to %{customdata[1]:+d}\u003cbr\u003eGains %{customdata[2]:.0f}% \u00b7 loses %{customdata[3]:.0f}%\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#2a78d6","line":{"color":"#ffffff","width":2},"size":11},"mode":"markers+text","showlegend":false,"text":["0","0","0","0","0","+1","+1","+1","+1","+2"],"textfont":{"color":"#0b0b0b"},"textposition":"middle right","x":{"dtype":"i1","bdata":"CwwNDg8QERITFA=="},"y":{"dtype":"i1","bdata":"AAAAAAABAQEBAg=="},"type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"margin":{"l":56,"r":16,"t":40,"b":48},"font":{"family":"Helvetica, Arial, sans-serif","size":12,"color":"#52514e"},"legend":{"font":{"color":"#52514e"},"orientation":"h","x":0,"y":1.12,"traceorder":"normal"},"hoverlabel":{"font":{"color":"#0b0b0b"},"bgcolor":"#ffffff","bordercolor":"#e6e5e0"},"width":720,"height":320,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","xaxis":{"showgrid":false,"linecolor":"#e6e5e0","tickcolor":"#e6e5e0","zeroline":false,"title":{"text":"Grid slot at Singapore"},"dtick":1},"yaxis":{"gridcolor":"#e6e5e0","zerolinecolor":"#b8b7b0","title":{"text":"Places gained (+) or lost (\u2212)"},"zeroline":true,"dtick":2}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('97f2cf4b-00a9-4eee-bbf4-39e118ec19a4');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-sg-grid-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Median change (dot) and middle 80% of outcomes (bar) if his grid slot were known. From 15th or better a retirement costs many places and little can be gained; from the back the opposite holds.
+</figcaption>
+</figure>
+</div>
+</div>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">If he starts</th>
+<th style="text-align: right;">Median</th>
+<th style="text-align: right;">Middle 80%</th>
+<th style="text-align: right;">Gains</th>
+<th style="text-align: right;">Level</th>
+<th style="text-align: right;">Loses</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">P11</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">−11 to +3</td>
+<td style="text-align: right;">43.8%</td>
+<td style="text-align: right;">10.8%</td>
+<td style="text-align: right;">45.4%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P12</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">−9 to +4</td>
+<td style="text-align: right;">45.1%</td>
+<td style="text-align: right;">11.5%</td>
+<td style="text-align: right;">43.4%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">P13</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">−9 to +5</td>
+<td style="text-align: right;">46.0%</td>
+<td style="text-align: right;">11.2%</td>
+<td style="text-align: right;">42.8%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P14</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">−5 to +5</td>
+<td style="text-align: right;">47.2%</td>
+<td style="text-align: right;">10.8%</td>
+<td style="text-align: right;">41.9%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">P15</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">−4 to +5</td>
+<td style="text-align: right;">47.3%</td>
+<td style="text-align: right;">10.3%</td>
+<td style="text-align: right;">42.4%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P16</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">−3 to +5</td>
+<td style="text-align: right;">51.4%</td>
+<td style="text-align: right;">9.7%</td>
+<td style="text-align: right;">38.9%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">P17</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">−3 to +5</td>
+<td style="text-align: right;">54.1%</td>
+<td style="text-align: right;">9.7%</td>
+<td style="text-align: right;">36.2%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P18</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">−3 to +5</td>
+<td style="text-align: right;">58.6%</td>
+<td style="text-align: right;">10.7%</td>
+<td style="text-align: right;">30.8%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">P19</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: right;">−2 to +6</td>
+<td style="text-align: right;">60.4%</td>
+<td style="text-align: right;">13.7%</td>
+<td style="text-align: right;">25.9%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P20</td>
+<td style="text-align: right;">+2</td>
+<td style="text-align: right;">−2 to +7</td>
+<td style="text-align: right;">66.7%</td>
+<td style="text-align: right;">14.8%</td>
+<td style="text-align: right;">18.4%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="revise-once-qualifying-lands">Revise once qualifying lands</h3>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">If Albon qualifies</th>
+<th style="text-align: right;">Then estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">15th or better</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">16th to 19th</td>
+<td style="text-align: right;">+1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">20th or worse</td>
+<td style="text-align: right;">+2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="albon-at-singapore">Albon at Singapore</h3>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: right;">Season</th>
+<th style="text-align: right;">Grid</th>
+<th style="text-align: right;">Finish</th>
+<th style="text-align: right;">Change</th>
+<th style="text-align: left;">Note</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">2019</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">P6</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2022</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">P17</td>
+<td style="text-align: right;">+1</td>
+<td style="text-align: left;">Collision damage</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2023</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">P11</td>
+<td style="text-align: right;">+3</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2024</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">P20</td>
+<td style="text-align: right;">−9</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2025</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">P14</td>
+<td style="text-align: right;">+6</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+<p>His Singapore results before 2026 are too few and too scattered to tilt the model, so no circuit adjustment is applied.</p>
+<h2 id="caveats">6 · Caveats</h2>
+<ul>
+<li><strong>Qualifying had not run.</strong> Grid slot is the largest single input and is simulated, not known.</li>
+<li><strong>Round 16 is unresolved.</strong> Jolpica returned a full round 16 result labelled “Bahrain Grand Prix in Malaysia”, while the original calendar listed round 16 as Singapore on 2026-10-11. The base case includes it; excluding it keeps the median at +1.</li>
+<li><strong>No Singapore-specific or weather adjustment.</strong> Safety cars, rain and penalties are represented only to the extent they shaped 2026 results so far.</li>
+<li><strong>This is a pre-race estimate, not a computed answer.</strong> The actual result above is read from <code>results</code> and shown for comparison; the simulation uses rounds 1–16 only.</li>
+</ul>
+<p>Generated from the local DuckDB file built by <code>uv run build</code> · 25 runs × 20,000 simulated races, seeds 0–24 · charts are interactive in the HTML version of this report.</p>
+
+
+
+
+
+</body></html>

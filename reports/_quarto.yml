@@ -1,0 +1,38 @@
+# `uv run quarto render reports` renders every report to HTML and PDF.
+# The HTML is committed; the PDFs are gitignored. Python runs through the
+# Jupyter engine in the uv venv, and every value comes from f1_analytics.analysis.
+project:
+  type: default
+  render:
+    - "*/report.qmd"
+
+jupyter: python3
+
+execute:
+  echo: false
+  warning: false
+
+format:
+  html:
+    # One self-contained file per report: no report_files/ folder, and
+    # plotly.js loads from its CDN (no embed-resources, so the file stays small).
+    minimal: true
+    html-math-method: plain
+    include-in-header:
+      text: |
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+                 color: #0b0b0b; max-width: 780px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+          h1.title { margin-bottom: 0.2rem; }
+          p.subtitle { color: #52514e; margin-top: 0; }
+          h2 { border-bottom: 1px solid #e6e5e0; padding-bottom: 0.2rem; margin-top: 2.2rem; }
+          table { border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+          th, td { padding: 0.25rem 0.6rem; border-bottom: 1px solid #e6e5e0; vertical-align: top; }
+          th { border-bottom: 2px solid #b8b7b0; }
+          code { font-size: 0.9em; }
+          figcaption, .figure-caption { color: #52514e; font-size: 0.9rem; }
+        </style>
+  pdf:
+    documentclass: article
+    geometry: margin=2cm
+    fig-pos: H

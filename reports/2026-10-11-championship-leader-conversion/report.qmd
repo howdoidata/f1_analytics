@@ -1,0 +1,66 @@
+---
+title: "Championship leader conversion at the current-season cutoff"
+subtitle: "How often did the driver or constructor leading at this point in the season go on to win the championship?"
+date: 2026-10-11
+date-format: iso
+---
+
+```{python}
+#| label: setup
+from f1_analytics.analysis.championship_leaders import (
+    conversion_display,
+    leader_conversion,
+    leaders_display,
+    rate_text,
+)
+from f1_analytics.analysis.data import open_database
+from f1_analytics.analysis.formatting import markdown_table
+
+with open_database() as con:
+    report = leader_conversion(con)
+```
+
+## Answer
+
+At the cutoff (round `{python} report["cutoff_round"]` of `{python} report["target_season"]`, the `{python} report["cutoff_race"]` on `{python} report["cutoff_date"]`):
+
+- **Drivers:** the championship leader after round `{python} report["cutoff_round"]` became champion in `{python} rate_text(report["driver_summary"])` of historical seasons.
+- **Constructors:** the leader became champion in `{python} rate_text(report["constructor_summary"])` of historical seasons.
+
+## Cutoff definition
+
+"This point in the season" is the latest `{python} report["target_season"]` round with results in the local data (`driver_standings_by_round`), not a scheduled future race. Historical seasons are compared at the same round number; seasons that never reached that round drop out.
+
+## Current `{python} report["target_season"]` leaders
+
+The `{python} report["target_season"]` championships are not decided in the local data, so the current leaders are reported separately rather than counted as converted.
+
+```{python}
+#| output: asis
+print(markdown_table(leaders_display(report["current_leaders"]), "llrr"))
+```
+
+## Drivers
+
+Conversion: **`{python} rate_text(report["driver_summary"])`**.
+
+```{python}
+#| output: asis
+print(markdown_table(conversion_display(report["drivers"]), "rlrrll"))
+```
+
+## Constructors
+
+Conversion: **`{python} rate_text(report["constructor_summary"])`**.
+
+```{python}
+#| output: asis
+print(markdown_table(conversion_display(report["constructors"]), "rlrrll"))
+```
+
+## Data limitations
+
+- The cutoff is the latest round with results in the local DuckDB file (`uv run build`), so the numbers move as rounds are added.
+- Historical comparisons use the same round number as the cutoff and exclude seasons without that many completed rounds.
+- Tied leaders are included as co-leaders when they share first place; the season counts as converted if either becomes champion.
+- Constructors' championship conversion counts only seasons that have constructor standings and a constructors' champion.

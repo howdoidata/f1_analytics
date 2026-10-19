@@ -25,3 +25,10 @@ __pycache__/
 dbt/target/
 dbt/logs/
 dbt/.user.yml
+
+# Quarto: rendered PDFs (the HTML is committed; reports/golden/ PDFs are baselines), caches and side folders
+reports/**/*.pdf
+!reports/golden/*.pdf
+.quarto/
+*_files/
+**/*.quarto_ipynb

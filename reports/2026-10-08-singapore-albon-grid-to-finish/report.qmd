@@ -1,0 +1,147 @@
+---
+title: "Albon grid-to-finish change: 2026 Singapore GP"
+subtitle: "Alex Albon, places gained or lost from grid. 2026 Singapore Grand Prix, Marina Bay, Sunday 2026-10-11"
+date: 2026-10-08
+date-format: iso
+---
+
+```{python}
+#| label: setup
+from f1_analytics.analysis import figures
+from f1_analytics.analysis import singapore as sg
+from f1_analytics.analysis.data import load_race_data
+from f1_analytics.analysis.formatting import count, markdown_table, num, pct, signed, signed1, span
+
+figures.use_report_renderer()
+data = load_race_data()
+results = data["results"]
+season = sg.season_data(results)
+rounds = sg.driver_rounds(season)
+summary = sg.driver_summary(season)
+history = sg.driver_at_race(results)
+sim = sg.simulation_report(season)
+pooled = sim.pooled
+actual = sg.actual_result(results)
+```
+
+## Answer
+
+**Estimated change, grid slot to finish: `{python} signed(pooled["median"])`**
+(middle half `{python} span(*pooled["middle_half"])`, middle 80% `{python} span(*pooled["middle_80"])`).
+
+**Actual result (R`{python} sg.RACE_ROUND`, added after the race): `{python} sg.actual_text(actual)`.**
+
+| | |
+|---|---|
+| **Question** | How many positions will Alex Albon move relative to his starting position on the grid at the Singapore Grand Prix? |
+| **Convention** | Grid slot minus classified finishing position. Starts 18th, finishes 19th = −1. Positive means places gained. |
+| **Status** | Pre-race analysis. Qualifying had not run, so his grid slot is unknown and is simulated. The actual result is shown alongside. |
+| **Prepared** | 2026-10-08 |
+| **Data** | the local DuckDB file built by `uv run build`, 2026 rounds 1–`{python} sg.LAST_ROUND` |
+
+## 1 · Type of analysis and why
+
+Method: Monte Carlo simulation. The race is simulated `{python} count(sim.runs * sim.races_per_run)` times (`{python} sim.runs` runs of `{python} count(sim.races_per_run)`). Each simulated race draws every uncertain ingredient at random from real 2026 results, and the answer is read from where the outcomes pile up.
+
+| Why a simulation, not a single formula | What it means here |
+|---|---|
+| The outcome is two different races in one | When Albon finishes he averages `{python} signed1(summary["mean_change_finished"])` places; when he retires, `{python} signed1(summary["mean_change_non_finished"])`. An average of the two describes a race that rarely happens. |
+| His grid slot is unknown | Qualifying has not run and the starting slot changes the answer, so each simulated race draws a grid slot too. |
+| Only `{python} summary["starts"]` races of evidence | The simulation carries that uncertainty through to the result instead of hiding it in one number. |
+
+Three draws per simulated race:
+
+| Draw | Source |
+|---|---|
+| 1 · Grid slot | His `{python} summary["starts"]` starting slots this season, recent races weighted more (weight halves every 6 races). |
+| 2 · Retires or finishes | His record of `{python} summary["non_finishes"]` non-finishes in `{python} summary["starts"]` blended with the field rate of `{python} pct(summary["field_non_finish_pct"], 0)`, giving a `{python} pct(pooled["retire"], 0)` retirement chance that itself varies from race to race. |
+| 3 · Places gained or lost | If he finishes: half the draws from his own `{python} summary["finishes"]` finishes, half from other 2026 finishers who started within two slots of him. If he retires: from 2026 retirements from a similar slot. |
+
+## 2 · Season to date: every round
+
+```{python}
+#| label: fig-sg-rounds
+#| fig-cap: "Places gained or lost in each 2026 round. Finishes cluster just above zero; most losses of three or more places came from a retirement."
+figures.singapore_change_by_round(rounds)
+```
+
+Mean change `{python} signed1(summary["mean_change_finished"])` when he finishes (`{python} summary["finishes"]`), `{python} signed1(summary["mean_change_non_finished"])` when he retires or does not start (`{python} summary["non_finishes"]`), `{python} signed1(summary["mean_change_all"])` over all `{python} summary["starts"]` rounds. Mean grid slot `{python} num(summary["mean_grid"])`. Non-finishes: `{python} summary["non_finishes"]` in `{python} summary["starts"]` starts. Field retirement rate (all cars, R1–R`{python} sg.LAST_ROUND`): `{python} pct(summary["field_non_finish_pct"], 0)`.
+
+```{python}
+#| output: asis
+print(markdown_table(sg.rounds_display(rounds), "llrrrl"))
+```
+
+\* Round 16 arrived from Jolpica labelled "Bahrain Grand Prix in Malaysia"; see the caveats.
+
+## 3 · Simulation result
+
+```{python}
+#| label: fig-sg-outcomes
+#| fig-cap: "Share of all simulated races at each outcome. Two overlapping shapes: finishes centred on small gains, retirements centred on losses."
+figures.singapore_outcome_histogram(sim.histogram, pooled)
+```
+
+| Gains places | No change | Loses places | Retirement chance |
+|---:|---:|---:|---:|
+| `{python} pct(pooled["gains"])` | `{python} pct(pooled["level"])` | `{python} pct(pooled["loses"])` | `{python} pct(pooled["retire"])` |
+
+The lean toward a gain is weak. The three most likely single outcomes sit close together: +3 (`{python} pct(pooled["share_of"].get(3, 0.0))`), +1 (`{python} pct(pooled["share_of"].get(1, 0.0))`) and 0 (`{python} pct(pooled["share_of"].get(0, 0.0))`). The most common change is `{python} signed(pooled["mode"])`. The median, `{python} signed(pooled["median"])`, is the estimate because it is the value with half of all outcomes on either side. Mean change `{python} signed(pooled["mean"])`; middle half `{python} span(*pooled["middle_half"])`; middle 80% `{python} span(*pooled["middle_80"])`.
+
+## 4 · Where repeated runs end up
+
+```{python}
+#| label: fig-sg-running
+#| fig-cap: "Each line is one of the 25 independent runs. Early on the runs disagree by more than a full place; by 20,000 races they agree to within about a tenth of a place."
+figures.singapore_running_mean(sim.running_means, pooled["mean"])
+```
+
+```{python}
+#| output: asis
+print(markdown_table(sg.run_table_display(sim.run_table), "lrrr"))
+```
+
+### Changing the assumptions does not move the median
+
+```{python}
+#| output: asis
+print(markdown_table(sg.sensitivity_display(sim.sensitivity), "lrrrrrr"))
+```
+
+## 5 · Grid slot is the biggest lever
+
+```{python}
+#| label: fig-sg-grid
+#| fig-cap: "Median change (dot) and middle 80% of outcomes (bar) if his grid slot were known. From 15th or better a retirement costs many places and little can be gained; from the back the opposite holds."
+figures.singapore_grid_slot(sim.grid_slots)
+```
+
+```{python}
+#| output: asis
+print(markdown_table(sg.grid_slots_display(sim.grid_slots), "lrrrrr"))
+```
+
+### Revise once qualifying lands
+
+```{python}
+#| output: asis
+print(markdown_table(sg.revise_display(sim.revise), "lr"))
+```
+
+### Albon at Singapore
+
+```{python}
+#| output: asis
+print(markdown_table(sg.history_display(history), "rrrrl"))
+```
+
+His Singapore results before 2026 are too few and too scattered to tilt the model, so no circuit adjustment is applied.
+
+## 6 · Caveats
+
+- **Qualifying had not run.** Grid slot is the largest single input and is simulated, not known.
+- **Round 16 is unresolved.** Jolpica returned a full round 16 result labelled "Bahrain Grand Prix in Malaysia", while the original calendar listed round 16 as Singapore on 2026-10-11. The base case includes it; excluding it keeps the median at `{python} signed(sim.scenario("Exclude round 16")["median"])`.
+- **No Singapore-specific or weather adjustment.** Safety cars, rain and penalties are represented only to the extent they shaped 2026 results so far.
+- **This is a pre-race estimate, not a computed answer.** The actual result above is read from `results` and shown for comparison; the simulation uses rounds 1–`{python} sg.LAST_ROUND` only.
+
+Generated from the local DuckDB file built by `uv run build` · `{python} sim.runs` runs × `{python} count(sim.races_per_run)` simulated races, seeds 0–24 · charts are interactive in the HTML version of this report.
