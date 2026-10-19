@@ -32,7 +32,7 @@ from f1_analytics.validation.runner import load_present_tables, print_validation
 from f1_analytics.validation.store import log_source_load, log_validation_results
 
 
-LOGIN_COMMAND = "python -m fastf1 auth f1tv --authenticate"
+LOGIN_COMMAND = "uv run python -m fastf1 auth f1tv --authenticate"
 
 # Tables fed by data that only ever grows; a build that would shrink one
 # means a raw file was truncated or lost, so the write is refused.
