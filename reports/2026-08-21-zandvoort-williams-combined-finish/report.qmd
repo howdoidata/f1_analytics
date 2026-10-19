@@ -1,0 +1,145 @@
+---
+title: "Williams combined finishing position: 2026 Dutch GP"
+subtitle: "2026 Dutch Grand Prix, Zandvoort, round 12, Sunday 2026-08-23"
+date: 2026-08-21
+date-format: iso
+---
+
+```{python}
+#| label: setup
+from f1_analytics.analysis import figures
+from f1_analytics.analysis import zandvoort as zv
+from f1_analytics.analysis.data import load_race_data
+from f1_analytics.analysis.formatting import g, markdown_table, num, pct
+
+figures.use_report_renderer()
+data = load_race_data()
+results, standings, laps = data["results"], data["standings"], data["laps"]
+team = zv.team_rows(results)
+rounds = zv.round_table(team)
+stats = zv.season_stats(rounds)
+windows = zv.window_means(rounds)
+checks = zv.validation_answers(results, laps)
+history = zv.race_history(results)
+volatility = zv.race_volatility(results)
+table_after = zv.standings_after(standings)
+standing = zv.team_standing(table_after)
+estimate = zv.estimate(results, standings)
+inputs = estimate["inputs"]
+actual = zv.actual_result(results)
+```
+
+## Answer
+
+| Estimate (a judgement, made before the race) | Actual R`{python} zv.RACE_ROUND` combined finish (from `results`) |
+|:---:|:---:|
+| **`{python} estimate["text"]`** | **`{python} zv.actual_text(actual)`** |
+
+The estimate `{python} estimate["estimate"]` and its range are a stated judgement, not a computed answer; they are kept as named constants in `f1_analytics.analysis.zandvoort` and shown next to the computed inputs they were weighed from (section 5).
+
+| | |
+|---|---|
+| **Question** | What will be the combined finishing position total for Williams Racing in the upcoming Zandvoort race? |
+| **Convention** | Plain sum of the two classified finishing positions; lower is better (P1+P2=3, P4+P5=9). |
+| **Status** | Pre-race analysis. Qualifying had not run, so grid position was the dominant unknown. The actual result is shown alongside. |
+| **Prepared** | 2026-08-21 |
+| **Data** | the local DuckDB file built by `uv run build`, 2026 rounds 1–`{python} zv.LAST_ROUND` |
+
+## 1 · Method
+
+Every number in this report comes from a function in `f1_analytics.analysis` run read-only against the local DuckDB file. Nothing is hand-entered except the estimate itself, which is labelled as a judgement.
+
+**Counting rule.** A retired or non-starting car is still *classified* and its position counts normally: no exclusion, no penalty. For example: `{python} zv.classified_non_finishes_text(team)`.
+
+**Validation.** The data reproduces three independently supplied answers: Miami combined finish `{python} checks["miami_combined"]` (`{python} checks["miami_parts"]`), Canada best Williams finish `{python} checks["canada_best"]`, Melbourne fastest Williams lap `{python} checks["melbourne_fastest_lap"]` (`{python} checks["melbourne_fastest_driver"]`, from the FastF1 laps).
+
+## 2 · Season to date: every round
+
+```{python}
+#| label: fig-zv-rounds
+#| fig-cap: "Williams combined total by round, 2026 (lower is better). Orange = the season best. The diamond is the pre-race estimate with its range (a judgement); the grey bar is the actual race total. Dashed line = season mean."
+figures.zandvoort_combined_by_round(rounds, estimate, actual)
+```
+
+**n=`{python} stats["n"]` · min `{python} stats["min"]` · max `{python} stats["max"]` · mean `{python} num(stats["mean"])` · median `{python} g(stats["median"])` · stdev `{python} num(stats["stdev"])`**
+
+```{python}
+#| output: asis
+print(markdown_table(zv.rounds_display(rounds), "llrlrl"))
+```
+
+### The trend is worsening
+
+```{python}
+#| output: asis
+print(markdown_table(zv.windows_display(windows), "llr"))
+```
+
+## 3 · Zandvoort history
+
+```{python}
+#| label: fig-zv-history
+#| fig-cap: "Williams combined total at Zandvoort by season. The shaded band is where most seasons land; orange = the lowest (best) season."
+figures.zandvoort_history(history)
+```
+
+```{python}
+#| output: asis
+print(markdown_table(zv.history_display(history), "rllr"))
+```
+
+### Why the circuit compresses outcomes
+
+Zandvoort `{python} zv.HISTORY_SEASONS[0]`–`{python} zv.HISTORY_SEASONS[1]`, all teams, `{python} volatility["starts"]` starts (grid > 0): median position change **`{python} g(volatility["median_change"])` places**, mean `{python} num(volatility["mean_change"])`. Only **`{python} volatility["moved_5_plus"]` of `{python} volatility["starts"]` (`{python} pct(volatility["moved_5_plus_pct"], 0)`)** moved 5 or more places. Low overtaking caps both the upside and the disasters.
+
+### Grid position drives the total
+
+```{python}
+#| label: fig-zv-grid
+#| fig-cap: "Each dot is a 2026 round: grid sum of both cars against the combined total. A better grid gives a better total, loosely."
+figures.zandvoort_grid_vs_result(rounds)
+```
+
+## 4 · Competitive context
+
+```{python}
+#| label: fig-zv-standings
+#| fig-cap: "Constructors' points after the last pre-race round. Williams highlighted."
+figures.zandvoort_constructor_standings(table_after)
+```
+
+Williams sit **P`{python} standing["rank"]` of `{python} standing["of"]` on `{python} g(standing["points"])` points**. Mean grid `{python} num(inputs["mean_grid_season"])` across the season, drifting to `{python} num(inputs["mean_grid_last_4"])` over the last four rounds.
+
+## 5 · How the estimate resolves to `{python} estimate["estimate"]`
+
+The estimate is a judgement: **`{python} estimate["text"]`**. It was weighed from these computed inputs:
+
+```{python}
+#| output: asis
+print(markdown_table(zv.estimate_inputs_display(estimate), "lr"))
+```
+
+| Pulls worse (33–35) | Pulls better (28–30) |
+|---|---|
+| Last 4 rounds average `{python} num(inputs["last_4_mean"])` | Zandvoort clusters `{python} zv.band_text()` across `{python} zv.HISTORY_SEASONS[0]`–`{python} zv.HISTORY_SEASONS[1]` |
+| P`{python} inputs["standing_rank"]` of `{python} inputs["standing_of"]` constructors, `{python} g(inputs["standing_points"])` points | Median position change only `{python} g(inputs["race_median_change"])` places |
+| Qualifying drifted `{python} num(inputs["mean_grid_season"])` → `{python} num(inputs["mean_grid_last_4"])` | Low overtaking caps disaster scenarios |
+| DNF or DNS in `{python} inputs["rounds_with_non_finish"]` of `{python} inputs["rounds"]` rounds | `{python} inputs["last_race_season"]` Zandvoort was `{python} inputs["last_race_combined"]` with this same pairing |
+
+`{python} estimate["estimate"]` is where the two forces meet: the season median (`{python} g(inputs["season_median"])`), inside the Zandvoort band, and a modest concession to poor current form.
+
+### Revise once qualifying lands
+
+```{python}
+#| output: asis
+print(markdown_table(zv.revise_display(), "lr"))
+```
+
+## 6 · Caveats
+
+- **Qualifying had not run.** Grid position is the dominant input and it was unknown when the estimate was made.
+- **Retirement risk is real but already priced in.** Williams had a DNF or DNS in `{python} inputs["rounds_with_non_finish"]` of `{python} inputs["rounds"]` rounds; a single retirement costs roughly 6–8 on the total. Those rounds are included in the mean, not excluded from it.
+- **This is a pre-race estimate, not a computed answer.** The actual round `{python} zv.RACE_ROUND` result is read from `results` and shown next to it; every other figure uses rounds 1–`{python} zv.LAST_ROUND` only.
+- **Standings points differ from the original report.** Standings are now derived from results; Williams' rank and points after round `{python} zv.LAST_ROUND` are unchanged.
+
+Generated from the local DuckDB file built by `uv run build` · charts are interactive in the HTML version of this report.

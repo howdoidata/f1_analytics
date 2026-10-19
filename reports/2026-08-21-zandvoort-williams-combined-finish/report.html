@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-08-21">
+
+<title>Williams combined finishing position: 2026 Dutch GP</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+<script>
+window.PlotlyConfig = {MathJaxConfig: 'local'};
+if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}
+</script>
+<script type="module">import "https://cdn.plot.ly/plotly-3.7.0.min"</script>
+
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         color: #0b0b0b; max-width: 780px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  h1.title { margin-bottom: 0.2rem; }
+  p.subtitle { color: #52514e; margin-top: 0; }
+  h2 { border-bottom: 1px solid #e6e5e0; padding-bottom: 0.2rem; margin-top: 2.2rem; }
+  table { border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+  th, td { padding: 0.25rem 0.6rem; border-bottom: 1px solid #e6e5e0; vertical-align: top; }
+  th { border-bottom: 2px solid #b8b7b0; }
+  code { font-size: 0.9em; }
+  figcaption, .figure-caption { color: #52514e; font-size: 0.9rem; }
+</style>
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Williams combined finishing position: 2026 Dutch GP</h1>
+<p class="subtitle">2026 Dutch Grand Prix, Zandvoort, round 12, Sunday 2026-08-23</p>
+
+<p class="date">2026-08-21</p>
+</header>
+
+
+<h2 id="answer">Answer</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Estimate (a judgement, made before the race)</th>
+<th style="text-align: center;">Actual R12 combined finish (from <code>results</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><strong>31 (29–33)</strong></td>
+<td style="text-align: center;"><strong>33 (P16 + P17; Retired)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The estimate 31 and its range are a stated judgement, not a computed answer; they are kept as named constants in <code>f1_analytics.analysis.zandvoort</code> and shown next to the computed inputs they were weighed from (section 5).</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><strong>Question</strong></td>
+<td>What will be the combined finishing position total for Williams Racing in the upcoming Zandvoort race?</td>
+</tr>
+<tr class="even">
+<td><strong>Convention</strong></td>
+<td>Plain sum of the two classified finishing positions; lower is better (P1+P2=3, P4+P5=9).</td>
+</tr>
+<tr class="odd">
+<td><strong>Status</strong></td>
+<td>Pre-race analysis. Qualifying had not run, so grid position was the dominant unknown. The actual result is shown alongside.</td>
+</tr>
+<tr class="even">
+<td><strong>Prepared</strong></td>
+<td>2026-08-21</td>
+</tr>
+<tr class="odd">
+<td><strong>Data</strong></td>
+<td>the local DuckDB file built by <code>uv run build</code>, 2026 rounds 1–11</td>
+</tr>
+</tbody>
+</table>
+<h2 id="method">1 · Method</h2>
+<p>Every number in this report comes from a function in <code>f1_analytics.analysis</code> run read-only against the local DuckDB file. Nothing is hand-entered except the estimate itself, which is labelled as a judgement.</p>
+<p><strong>Counting rule.</strong> A retired or non-starting car is still <em>classified</em> and its position counts normally: no exclusion, no penalty. For example: Chinese (Albon, Did not start, classified P22) and Canadian (Albon, Retired, classified P21).</p>
+<p><strong>Validation.</strong> The data reproduces three independently supplied answers: Miami combined finish 19 (Sainz P9 + Albon P10), Canada best Williams finish P9, Melbourne fastest Williams lap 1:23.590 (sainz, from the FastF1 laps).</p>
+<h2 id="season-to-date-every-round">2 · Season to date: every round</h2>
+<div id="cell-fig-zv-rounds" class="cell" data-execution_count="2">
+<div id="fig-zv-rounds" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center">
+<figure class="quarto-float quarto-float-fig">
+<div aria-describedby="fig-zv-rounds-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div style="height:340px; width:720px;">            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>                <div id="efe2fc8c-d2fc-40b3-a72b-433aed64829b" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("efe2fc8c-d2fc-40b3-a72b-433aed64829b")) {                    Plotly.newPlot(                        "efe2fc8c-d2fc-40b3-a72b-433aed64829b",                        [{"cliponaxis":false,"customdata":[["Australian","P12 + P15"],["Chinese","P9 + P22"],["Japanese","P15 + P20"],["Miami","P9 + P10"],["Canadian","P9 + P21"],["Monaco","P8 + P16"],["Barcelona","P12 + P18"],["Austrian","P17 + P20"],["British","P17 + P21"],["Belgian","P15 + P16"],["Hungarian","P17 + P18"]],"hovertemplate":"%{customdata[0]}: %{customdata[1]} = %{y}\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":["#2a78d6","#2a78d6","#2a78d6","#eb6834","#2a78d6","#2a78d6","#2a78d6","#2a78d6","#2a78d6","#2a78d6","#2a78d6"],"cornerradius":4,"line":{"color":"#ffffff","width":2}},"name":"Combined total","text":{"dtype":"f8","bdata":"AAAAAAAAO0AAAAAAAAA\u002fQAAAAAAAgEFAAAAAAAAAM0AAAAAAAAA+QAAAAAAAADhAAAAAAAAAPkAAAAAAAIBCQAAAAAAAAENAAAAAAAAAP0AAAAAAAIBBQA=="},"textfont":{"color":"#0b0b0b"},"textposition":"outside","x":["R1","R2","R3","R4","R5","R6","R7","R8","R9","R10","R11"],"y":{"dtype":"i1","bdata":"Gx8jEx4YHiUmHyM="},"type":"bar"},{"error_y":{"array":[2],"arrayminus":[2],"color":"#0b0b0b","symmetric":false,"type":"data","width":6},"hovertemplate":"Estimate 31 (29\u201333)\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#0b0b0b","size":10,"symbol":"diamond"},"mode":"markers","name":"Estimate (judgement) 31 (29\u201333)","x":["R12 est."],"y":[31],"type":"scatter"},{"cliponaxis":false,"hovertemplate":"Actual: P16 + P17 = 33\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#52514e","cornerradius":4},"name":"Actual R12: 33","text":["33"],"textfont":{"color":"#0b0b0b"},"textposition":"outside","x":["R12 actual"],"y":[33],"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"shapes":[{"line":{"color":"#52514e","dash":"dash","width":1},"type":"line","x0":0,"x1":1,"xref":"x domain","y0":30.636363636363637,"y1":30.636363636363637,"yref":"y"}],"annotations":[{"showarrow":false,"text":"mean 30.6","x":0,"xanchor":"left","xref":"x domain","y":30.636363636363637,"yanchor":"bottom","yref":"y"}],"margin":{"l":56,"r":16,"t":40,"b":48},"font":{"family":"Helvetica, Arial, sans-serif","size":12,"color":"#52514e"},"legend":{"font":{"color":"#52514e"},"orientation":"h","x":0,"y":1.12,"traceorder":"normal"},"hoverlabel":{"font":{"color":"#0b0b0b"},"bgcolor":"#ffffff","bordercolor":"#e6e5e0"},"width":720,"height":340,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","bargap":0.2,"xaxis":{"showgrid":false,"linecolor":"#e6e5e0","tickcolor":"#e6e5e0","zeroline":false,"tickangle":0},"yaxis":{"gridcolor":"#e6e5e0","zerolinecolor":"#b8b7b0","title":{"text":"Combined total (lower is better)"},"rangemode":"tozero"}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('efe2fc8c-d2fc-40b3-a72b-433aed64829b');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-zv-rounds-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Williams combined total by round, 2026 (lower is better). Orange = the season best. The diamond is the pre-race estimate with its range (a judgement); the grey bar is the actual race total. Dashed line = season mean.
+</figcaption>
+</figure>
+</div>
+</div>
+<p><strong>n=11 · min 19 · max 38 · mean 30.6 · median 31 · stdev 5.7</strong></p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Round</th>
+<th style="text-align: left;">Race</th>
+<th style="text-align: right;">Grid sum</th>
+<th style="text-align: left;">Result</th>
+<th style="text-align: right;">Total</th>
+<th style="text-align: left;">Note</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">R1</td>
+<td style="text-align: left;">Australian</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: left;">P12 + P15</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R2</td>
+<td style="text-align: left;">Chinese</td>
+<td style="text-align: right;">39</td>
+<td style="text-align: left;">P9 + P22</td>
+<td style="text-align: right;">31</td>
+<td style="text-align: left;">Did not start</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R3</td>
+<td style="text-align: left;">Japanese</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: left;">P15 + P20</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R4</td>
+<td style="text-align: left;">Miami</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: left;">P9 + P10</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R5</td>
+<td style="text-align: left;">Canadian</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: left;">P9 + P21</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R6</td>
+<td style="text-align: left;">Monaco</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: left;">P8 + P16</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R7</td>
+<td style="text-align: left;">Barcelona</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: left;">P12 + P18</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R8</td>
+<td style="text-align: left;">Austrian</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: left;">P17 + P20</td>
+<td style="text-align: right;">37</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R9</td>
+<td style="text-align: left;">British</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: left;">P17 + P21</td>
+<td style="text-align: right;">38</td>
+<td style="text-align: left;">Retired</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">R10</td>
+<td style="text-align: left;">Belgian</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: left;">P15 + P16</td>
+<td style="text-align: right;">31</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R11</td>
+<td style="text-align: left;">Hungarian</td>
+<td style="text-align: right;">37</td>
+<td style="text-align: left;">P17 + P18</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-trend-is-worsening">The trend is worsening</h3>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Window</th>
+<th style="text-align: left;">Values</th>
+<th style="text-align: right;">Mean</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">All 11 rounds</td>
+<td style="text-align: left;">—</td>
+<td style="text-align: right;">30.6</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Last 6 (R6–R11)</td>
+<td style="text-align: left;">24, 30, 37, 38, 31, 35</td>
+<td style="text-align: right;">32.5</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Last 4 (R8–R11)</td>
+<td style="text-align: left;">37, 38, 31, 35</td>
+<td style="text-align: right;">35.2</td>
+</tr>
+</tbody>
+</table>
+<h2 id="zandvoort-history">3 · Zandvoort history</h2>
+<div id="cell-fig-zv-history" class="cell" data-execution_count="5">
+<div id="fig-zv-history" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center">
+<figure class="quarto-float quarto-float-fig">
+<div aria-describedby="fig-zv-history-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div style="height:300px; width:720px;">            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>                <div id="a382bbfb-cc7a-4430-ae31-c251d9441196" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("a382bbfb-cc7a-4430-ae31-c251d9441196")) {                    Plotly.newPlot(                        "a382bbfb-cc7a-4430-ae31-c251d9441196",                        [{"cliponaxis":false,"customdata":[["0+11","P16 + P17"],["15+20","P12 + P18"],["4+10","P8 + P20"],["19+18","P14 + P16"],["15+9","P5 + P13"]],"hovertemplate":"%{x}: grid %{customdata[0]}, %{customdata[1]} = %{y}\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":["#2a78d6","#2a78d6","#2a78d6","#2a78d6","#eb6834"],"cornerradius":4},"showlegend":false,"text":{"dtype":"f8","bdata":"AAAAAACAQEAAAAAAAAA+QAAAAAAAADxAAAAAAAAAPkAAAAAAAAAyQA=="},"textfont":{"color":"#0b0b0b"},"textposition":"outside","x":["2021","2022","2023","2024","2025"],"y":{"dtype":"i1","bdata":"IR4cHhI="},"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"shapes":[{"fillcolor":"#f2f1ec","layer":"below","line":{"width":0},"type":"rect","x0":0,"x1":1,"xref":"x domain","y0":28,"y1":33,"yref":"y"}],"annotations":[{"font":{"size":11},"showarrow":false,"text":"shaded = 28\u201333 band","x":1,"xanchor":"right","xref":"paper","y":1.08,"yanchor":"bottom","yref":"paper"}],"margin":{"l":56,"r":16,"t":40,"b":48},"font":{"family":"Helvetica, Arial, sans-serif","size":12,"color":"#52514e"},"legend":{"font":{"color":"#52514e"},"orientation":"h","x":0,"y":1.12,"traceorder":"normal"},"hoverlabel":{"font":{"color":"#0b0b0b"},"bgcolor":"#ffffff","bordercolor":"#e6e5e0"},"width":720,"height":300,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","bargap":0.35,"xaxis":{"showgrid":false,"linecolor":"#e6e5e0","tickcolor":"#e6e5e0","zeroline":false,"type":"category"},"yaxis":{"gridcolor":"#e6e5e0","zerolinecolor":"#b8b7b0","title":{"text":"Combined total at Zandvoort"},"rangemode":"tozero"}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('a382bbfb-cc7a-4430-ae31-c251d9441196');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-zv-history-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Williams combined total at Zandvoort by season. The shaded band is where most seasons land; orange = the lowest (best) season.
+</figcaption>
+</figure>
+</div>
+</div>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: right;">Season</th>
+<th style="text-align: left;">Grid</th>
+<th style="text-align: left;">Result</th>
+<th style="text-align: right;">Total</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">2021</td>
+<td style="text-align: left;">0+11</td>
+<td style="text-align: left;">P16 + P17</td>
+<td style="text-align: right;">33</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2022</td>
+<td style="text-align: left;">15+20</td>
+<td style="text-align: left;">P12 + P18</td>
+<td style="text-align: right;">30</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2023</td>
+<td style="text-align: left;">4+10</td>
+<td style="text-align: left;">P8 + P20</td>
+<td style="text-align: right;">28</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2024</td>
+<td style="text-align: left;">19+18</td>
+<td style="text-align: left;">P14 + P16</td>
+<td style="text-align: right;">30</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2025</td>
+<td style="text-align: left;">15+9</td>
+<td style="text-align: left;">P5 + P13</td>
+<td style="text-align: right;">18</td>
+</tr>
+</tbody>
+</table>
+<h3 id="why-the-circuit-compresses-outcomes">Why the circuit compresses outcomes</h3>
+<p>Zandvoort 2021–2025, all teams, 97 starts (grid &gt; 0): median position change <strong>3 places</strong>, mean 3.6. Only <strong>30 of 97 (31%)</strong> moved 5 or more places. Low overtaking caps both the upside and the disasters.</p>
+<h3 id="grid-position-drives-the-total">Grid position drives the total</h3>
+<div id="cell-fig-zv-grid" class="cell" data-execution_count="7">
+<div id="fig-zv-grid" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center">
+<figure class="quarto-float quarto-float-fig">
+<div aria-describedby="fig-zv-grid-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div style="height:320px; width:720px;">            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>                <div id="ed417475-1ebb-47bc-852d-c923e9744812" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("ed417475-1ebb-47bc-852d-c923e9744812")) {                    Plotly.newPlot(                        "ed417475-1ebb-47bc-852d-c923e9744812",                        [{"customdata":[["Australian","P12 + P15"],["Chinese","P9 + P22"],["Japanese","P15 + P20"],["Miami","P9 + P10"],["Canadian","P9 + P21"],["Monaco","P8 + P16"],["Barcelona","P12 + P18"],["Austrian","P17 + P20"],["British","P17 + P21"],["Belgian","P15 + P16"],["Hungarian","P17 + P18"]],"hovertemplate":"%{customdata[0]}\u003cbr\u003eGrid sum %{x} \u2192 %{customdata[1]} = %{y}\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#2a78d6","line":{"color":"#ffffff","width":2},"size":10},"mode":"markers+text","showlegend":false,"text":["R1","R2","R3","R4","R5","R6","R7","R8","R9","R10","R11"],"textfont":{"size":10},"textposition":"top center","x":{"dtype":"i1","bdata":"JCchHCEXIiMeIiU="},"y":{"dtype":"i1","bdata":"Gx8jEx4YHiUmHyM="},"type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"margin":{"l":56,"r":16,"t":40,"b":48},"font":{"family":"Helvetica, Arial, sans-serif","size":12,"color":"#52514e"},"legend":{"font":{"color":"#52514e"},"orientation":"h","x":0,"y":1.12,"traceorder":"normal"},"hoverlabel":{"font":{"color":"#0b0b0b"},"bgcolor":"#ffffff","bordercolor":"#e6e5e0"},"width":720,"height":320,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","xaxis":{"showgrid":false,"linecolor":"#e6e5e0","tickcolor":"#e6e5e0","zeroline":false,"title":{"text":"Grid sum (both cars)"}},"yaxis":{"gridcolor":"#e6e5e0","zerolinecolor":"#b8b7b0","title":{"text":"Combined total"}}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('ed417475-1ebb-47bc-852d-c923e9744812');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-zv-grid-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Each dot is a 2026 round: grid sum of both cars against the combined total. A better grid gives a better total, loosely.
+</figcaption>
+</figure>
+</div>
+</div>
+<h2 id="competitive-context">4 · Competitive context</h2>
+<div id="cell-fig-zv-standings" class="cell" data-execution_count="8">
+<div id="fig-zv-standings" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center">
+<figure class="quarto-float quarto-float-fig">
+<div aria-describedby="fig-zv-standings-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div style="height:360px; width:720px;">            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>                <div id="7c94a19b-918c-4204-97db-56ca53fb34b2" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("7c94a19b-918c-4204-97db-56ca53fb34b2")) {                    Plotly.newPlot(                        "7c94a19b-918c-4204-97db-56ca53fb34b2",                        [{"cliponaxis":false,"hovertemplate":"%{y}: %{x:g} pts\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":["#2a78d6","#2a78d6","#eb6834","#2a78d6","#2a78d6","#2a78d6","#2a78d6","#2a78d6","#2a78d6","#2a78d6","#2a78d6"],"cornerradius":4},"orientation":"h","showlegend":false,"text":["0","1","11","12","21","52","70","180","222","307","379"],"textfont":{"color":"#0b0b0b"},"textposition":"outside","x":{"dtype":"f8","bdata":"AAAAAAAAAAAAAAAAAADwPwAAAAAAACZAAAAAAAAAKEAAAAAAAAA1QAAAAAAAAEpAAAAAAACAUUAAAAAAAIBmQAAAAAAAwGtAAAAAAAAwc0AAAAAAALB3QA=="},"y":["Cadillac F1 Team","Aston Martin","Williams","Audi","Haas F1 Team","Alpine F1 Team","RB F1 Team","Red Bull","McLaren","Ferrari","Mercedes"],"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"margin":{"l":130,"r":16,"t":40,"b":48},"font":{"family":"Helvetica, Arial, sans-serif","size":12,"color":"#52514e"},"legend":{"font":{"color":"#52514e"},"orientation":"h","x":0,"y":1.12,"traceorder":"normal"},"hoverlabel":{"font":{"color":"#0b0b0b"},"bgcolor":"#ffffff","bordercolor":"#e6e5e0"},"width":720,"height":360,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","bargap":0.25,"xaxis":{"showgrid":false,"linecolor":"#e6e5e0","tickcolor":"#e6e5e0","zeroline":false,"title":{"text":"Constructors' points"}},"yaxis":{"gridcolor":"#e6e5e0","zerolinecolor":"#b8b7b0"}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('7c94a19b-918c-4204-97db-56ca53fb34b2');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-zv-standings-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Constructors’ points after the last pre-race round. Williams highlighted.
+</figcaption>
+</figure>
+</div>
+</div>
+<p>Williams sit <strong>P9 of 11 on 11 points</strong>. Mean grid 16.5 across the season, drifting to 17.0 over the last four rounds.</p>
+<h2 id="how-the-estimate-resolves-to-31">5 · How the estimate resolves to 31</h2>
+<p>The estimate is a judgement: <strong>31 (29–33)</strong>. It was weighed from these computed inputs:</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Input (computed)</th>
+<th style="text-align: right;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Season median combined total</td>
+<td style="text-align: right;">31</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Last 4 rounds mean</td>
+<td style="text-align: right;">35.2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Rounds with a DNF or DNS</td>
+<td style="text-align: right;">5 of 11</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Mean grid slot, season (both cars)</td>
+<td style="text-align: right;">16.5</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Mean grid slot, last 4 rounds (both cars)</td>
+<td style="text-align: right;">17.0</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Constructors’ standings after R11</td>
+<td style="text-align: right;">P9 of 11, 11 pts</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Zandvoort median position change</td>
+<td style="text-align: right;">3 places</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2025 Zandvoort combined total</td>
+<td style="text-align: right;">18</td>
+</tr>
+</tbody>
+</table>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Pulls worse (33–35)</th>
+<th>Pulls better (28–30)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Last 4 rounds average 35.2</td>
+<td>Zandvoort clusters 28–33 across 2021–2025</td>
+</tr>
+<tr class="even">
+<td>P9 of 11 constructors, 11 points</td>
+<td>Median position change only 3 places</td>
+</tr>
+<tr class="odd">
+<td>Qualifying drifted 16.5 → 17.0</td>
+<td>Low overtaking caps disaster scenarios</td>
+</tr>
+<tr class="even">
+<td>DNF or DNS in 5 of 11 rounds</td>
+<td>2025 Zandvoort was 18 with this same pairing</td>
+</tr>
+</tbody>
+</table>
+<p>31 is where the two forces meet: the season median (31), inside the Zandvoort band, and a modest concession to poor current form.</p>
+<h3 id="revise-once-qualifying-lands">Revise once qualifying lands</h3>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">If Williams qualify</th>
+<th style="text-align: right;">Then estimate (judgement)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Both cars in the top 12</td>
+<td style="text-align: right;">26–28</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Grid sum near 32 (typical)</td>
+<td style="text-align: right;">31</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Both cars 17th or worse again</td>
+<td style="text-align: right;">34–36</td>
+</tr>
+</tbody>
+</table>
+<h2 id="caveats">6 · Caveats</h2>
+<ul>
+<li><strong>Qualifying had not run.</strong> Grid position is the dominant input and it was unknown when the estimate was made.</li>
+<li><strong>Retirement risk is real but already priced in.</strong> Williams had a DNF or DNS in 5 of 11 rounds; a single retirement costs roughly 6–8 on the total. Those rounds are included in the mean, not excluded from it.</li>
+<li><strong>This is a pre-race estimate, not a computed answer.</strong> The actual round 12 result is read from <code>results</code> and shown next to it; every other figure uses rounds 1–11 only.</li>
+<li><strong>Standings points differ from the original report.</strong> Standings are now derived from results; Williams’ rank and points after round 11 are unchanged.</li>
+</ul>
+<p>Generated from the local DuckDB file built by <code>uv run build</code> · charts are interactive in the HTML version of this report.</p>
+
+
+
+
+
+</body></html>

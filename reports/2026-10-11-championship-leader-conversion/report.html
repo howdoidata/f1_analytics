@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-10-11">
+
+<title>Championship leader conversion at the current-season cutoff</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         color: #0b0b0b; max-width: 780px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  h1.title { margin-bottom: 0.2rem; }
+  p.subtitle { color: #52514e; margin-top: 0; }
+  h2 { border-bottom: 1px solid #e6e5e0; padding-bottom: 0.2rem; margin-top: 2.2rem; }
+  table { border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+  th, td { padding: 0.25rem 0.6rem; border-bottom: 1px solid #e6e5e0; vertical-align: top; }
+  th { border-bottom: 2px solid #b8b7b0; }
+  code { font-size: 0.9em; }
+  figcaption, .figure-caption { color: #52514e; font-size: 0.9rem; }
+</style>
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Championship leader conversion at the current-season cutoff</h1>
+<p class="subtitle">How often did the driver or constructor leading at this point in the season go on to win the championship?</p>
+
+<p class="date">2026-10-11</p>
+</header>
+
+
+<h2 id="answer">Answer</h2>
+<p>At the cutoff (round 17 of 2026, the Singapore Grand Prix on 2026-10-11):</p>
+<ul>
+<li><strong>Drivers:</strong> the championship leader after round 17 became champion in 25 of 28 (89.3%) of historical seasons.</li>
+<li><strong>Constructors:</strong> the leader became champion in 26 of 28 (92.9%) of historical seasons.</li>
+</ul>
+<h2 id="cutoff-definition">Cutoff definition</h2>
+<p>“This point in the season” is the latest 2026 round with results in the local data (<code>driver_standings_by_round</code>), not a scheduled future race. Historical seasons are compared at the same round number; seasons that never reached that round drop out.</p>
+<h2 id="current-2026-leaders">Current 2026 leaders</h2>
+<p>The 2026 championships are not decided in the local data, so the current leaders are reported separately rather than counted as converted.</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Championship</th>
+<th style="text-align: left;">Leader</th>
+<th style="text-align: right;">Points</th>
+<th style="text-align: right;">Wins</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">driver</td>
+<td style="text-align: left;">Andrea Kimi Antonelli</td>
+<td style="text-align: right;">340</td>
+<td style="text-align: right;">8</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">constructor</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: right;">578</td>
+<td style="text-align: right;">11</td>
+</tr>
+</tbody>
+</table>
+<h2 id="drivers">Drivers</h2>
+<p>Conversion: <strong>25 of 28 (89.3%)</strong>.</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: right;">Season</th>
+<th style="text-align: left;">Leader(s) at cutoff</th>
+<th style="text-align: right;">Points</th>
+<th style="text-align: right;">Wins</th>
+<th style="text-align: left;">Champion</th>
+<th style="text-align: left;">Converted</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1977</td>
+<td style="text-align: left;">Jody Scheckter</td>
+<td style="text-align: right;">55</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">Niki Lauda</td>
+<td style="text-align: left;">no</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1995</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: right;">102</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">1997</td>
+<td style="text-align: left;">Jacques Villeneuve</td>
+<td style="text-align: right;">81</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Jacques Villeneuve</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2000</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: right;">108</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2001</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2002</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: right;">144</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2004</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: right;">146</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">Michael Schumacher</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2005</td>
+<td style="text-align: left;">Fernando Alonso</td>
+<td style="text-align: right;">117</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">Fernando Alonso</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2006</td>
+<td style="text-align: left;">Fernando Alonso</td>
+<td style="text-align: right;">126</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Fernando Alonso</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2007</td>
+<td style="text-align: left;">Kimi Räikkönen</td>
+<td style="text-align: right;">110</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">Kimi Räikkönen</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2008</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: right;">94</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2009</td>
+<td style="text-align: left;">Jenson Button</td>
+<td style="text-align: right;">95</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">Jenson Button</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2010</td>
+<td style="text-align: left;">Fernando Alonso</td>
+<td style="text-align: right;">231</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">Sebastian Vettel</td>
+<td style="text-align: left;">no</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2011</td>
+<td style="text-align: left;">Sebastian Vettel</td>
+<td style="text-align: right;">374</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Sebastian Vettel</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2012</td>
+<td style="text-align: left;">Sebastian Vettel</td>
+<td style="text-align: right;">240</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">Sebastian Vettel</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2013</td>
+<td style="text-align: left;">Sebastian Vettel</td>
+<td style="text-align: right;">347</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Sebastian Vettel</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2014</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: right;">316</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2015</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: right;">345</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2016</td>
+<td style="text-align: left;">Nico Rosberg</td>
+<td style="text-align: right;">313</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Nico Rosberg</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2017</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: right;">331</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2018</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: right;">331</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2019</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: right;">338</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2020</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: right;">347</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Lewis Hamilton</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2021</td>
+<td style="text-align: left;">Max Verstappen</td>
+<td style="text-align: right;">287.5</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">Max Verstappen</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2022</td>
+<td style="text-align: left;">Max Verstappen</td>
+<td style="text-align: right;">341</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Max Verstappen</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2023</td>
+<td style="text-align: left;">Max Verstappen</td>
+<td style="text-align: right;">433</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: left;">Max Verstappen</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2024</td>
+<td style="text-align: left;">Max Verstappen</td>
+<td style="text-align: right;">313</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Max Verstappen</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2025</td>
+<td style="text-align: left;">Oscar Piastri</td>
+<td style="text-align: right;">324</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Lando Norris</td>
+<td style="text-align: left;">no</td>
+</tr>
+</tbody>
+</table>
+<h2 id="constructors">Constructors</h2>
+<p>Conversion: <strong>26 of 28 (92.9%)</strong>.</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: right;">Season</th>
+<th style="text-align: left;">Leader(s) at cutoff</th>
+<th style="text-align: right;">Points</th>
+<th style="text-align: right;">Wins</th>
+<th style="text-align: left;">Champion</th>
+<th style="text-align: left;">Converted</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1977</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: right;">114</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1995</td>
+<td style="text-align: left;">Benetton</td>
+<td style="text-align: right;">147</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Benetton</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">1997</td>
+<td style="text-align: left;">Williams</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">Williams</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2000</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: right;">170</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2001</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: right;">179</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2002</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: right;">221</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2004</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: right;">254</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2005</td>
+<td style="text-align: left;">McLaren</td>
+<td style="text-align: right;">164</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Renault</td>
+<td style="text-align: left;">no</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2006</td>
+<td style="text-align: left;">Renault</td>
+<td style="text-align: right;">195</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">Renault</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2007</td>
+<td style="text-align: left;">McLaren</td>
+<td style="text-align: right;">218</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: left;">no</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2008</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: right;">156</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Ferrari</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2009</td>
+<td style="text-align: left;">Brawn</td>
+<td style="text-align: right;">172</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">Brawn</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2010</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: right;">426</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2011</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: right;">595</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2012</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: right;">407</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2013</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: right;">513</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2014</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: right;">608</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2015</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: right;">617</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2016</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: right;">593</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2017</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: right;">575</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2018</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: right;">538</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2019</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: right;">612</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2020</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: right;">573</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2021</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: right;">460.5</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">Mercedes</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2022</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: right;">576</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2023</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: right;">657</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: left;">Red Bull</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2024</td>
+<td style="text-align: left;">McLaren</td>
+<td style="text-align: right;">476</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">McLaren</td>
+<td style="text-align: left;">yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2025</td>
+<td style="text-align: left;">McLaren</td>
+<td style="text-align: right;">623</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: left;">McLaren</td>
+<td style="text-align: left;">yes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="data-limitations">Data limitations</h2>
+<ul>
+<li>The cutoff is the latest round with results in the local DuckDB file (<code>uv run build</code>), so the numbers move as rounds are added.</li>
+<li>Historical comparisons use the same round number as the cutoff and exclude seasons without that many completed rounds.</li>
+<li>Tied leaders are included as co-leaders when they share first place; the season counts as converted if either becomes champion.</li>
+<li>Constructors’ championship conversion counts only seasons that have constructor standings and a constructors’ champion.</li>
+</ul>
+
+
+
+
+
+</body></html>

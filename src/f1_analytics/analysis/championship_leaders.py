@@ -5,12 +5,16 @@ given round go on to win it? Every function here takes DataFrames shaped like
 the standings tables (`driver_standings_by_round`,
 `constructor_standings_by_round`, `final_driver_standings`,
 `final_constructor_standings`) and returns a DataFrame or a dict. None of them
-reads from DuckDB or the filesystem; callers load the tables.
+reads from DuckDB or the filesystem except `leader_conversion`, which loads the
+four tables through `analysis.data` and hands them to `conversion_report`.
 """
 
 from __future__ import annotations
 
+import duckdb
 import pandas as pd
+
+from f1_analytics.analysis.data import load_standings_tables
 
 
 def determine_cutoff_round(standings: pd.DataFrame, target_season: int) -> int:
@@ -197,3 +201,95 @@ def build_constructor_comeback_cases(
         ["points_deficit_overcome", "season", "champion_constructor"],
         ascending=[False, False, True],
     )
+
+
+def conversion_report(
+    tables: dict[str, pd.DataFrame],
+    cutoff_round: int | None = None,
+    target_season: int | None = None,
+) -> dict[str, object]:
+    """Driver and constructor conversion at the cutoff, plus the current leaders.
+
+    `tables` holds the four standings marts (keys as in
+    `analysis.data.load_standings_tables`). `target_season` defaults to the
+    latest season in the driver standings, and `cutoff_round` to its latest
+    round (`determine_cutoff_round`).
+    """
+    drivers = tables["driver_standings"]
+    constructors = tables["constructor_standings"]
+    if target_season is None:
+        target_season = int(drivers["season"].max())
+    if cutoff_round is None:
+        cutoff_round = determine_cutoff_round(drivers, target_season)
+
+    cutoff_rows = drivers[(drivers["season"] == target_season) & (drivers["round"] == cutoff_round)]
+    if cutoff_rows.empty:
+        raise ValueError(f"No {target_season} driver standings after round {cutoff_round}.")
+
+    driver_table = build_conversion_table(
+        drivers, tables["driver_final"], cutoff_round, target_season, "driver_id", "driver_name"
+    )
+    constructor_table = build_conversion_table(
+        constructors, tables["constructor_final"], cutoff_round, target_season, "constructor_id", "constructor"
+    )
+    leaders = pd.concat(
+        [
+            current_leaders(drivers, target_season, cutoff_round, "driver_id", "driver_name", "driver"),
+            current_leaders(constructors, target_season, cutoff_round, "constructor_id", "constructor", "constructor"),
+        ],
+        ignore_index=True,
+    )
+    first = cutoff_rows.iloc[0]
+    return {
+        "target_season": int(target_season),
+        "cutoff_round": int(cutoff_round),
+        "cutoff_race": first["race_name"],
+        "cutoff_date": pd.Timestamp(first["date"]).date().isoformat(),
+        "drivers": driver_table,
+        "constructors": constructor_table,
+        "driver_summary": summarize_conversion(driver_table),
+        "constructor_summary": summarize_conversion(constructor_table),
+        "current_leaders": leaders,
+    }
+
+
+def leader_conversion(
+    con: duckdb.DuckDBPyConnection,
+    cutoff_round: int | None = None,
+    target_season: int | None = None,
+) -> dict[str, object]:
+    """Load the four standings marts from `con` and run `conversion_report`."""
+    return conversion_report(load_standings_tables(con), cutoff_round, target_season)
+
+
+def conversion_display(conversion: pd.DataFrame) -> pd.DataFrame:
+    """A conversion table as report strings."""
+    return pd.DataFrame(
+        {
+            "Season": conversion["season"],
+            "Leader(s) at cutoff": conversion["leader_names"],
+            "Points": [f"{p:g}" for p in conversion["leader_points"]],
+            "Wins": conversion["leader_wins"],
+            "Champion": conversion["champion_names"],
+            "Converted": ["yes" if c else "no" for c in conversion["converted"]],
+        }
+    )
+
+
+def leaders_display(leaders: pd.DataFrame) -> pd.DataFrame:
+    """Current leaders as report strings."""
+    return pd.DataFrame(
+        {
+            "Championship": leaders["entity_type"],
+            "Leader": leaders["leader_name"],
+            "Points": [f"{p:g}" for p in leaders["leader_points"]],
+            "Wins": leaders["leader_wins"],
+        }
+    )
+
+
+def rate_text(summary: dict[str, int | float | None]) -> str:
+    """'25 of 28 (89.3%)', or 'no seasons' when there are none."""
+    if not summary["total"]:
+        return "no seasons"
+    return f"{summary['converted']} of {summary['total']} ({summary['rate'] * 100:.1f}%)"

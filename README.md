@@ -35,9 +35,20 @@ Paths resolve from the package location, so `uv run build` writes to this repo's
 Other scripts, run from the repo root:
 
 ```bash
-uv run python scripts/golden_check.py   # compare the golden report values with the built DuckDB
 uv run python scripts/dump_jolpica.py   # one-time Jolpica dump (already committed; about 90 min at the API rate limit)
 ```
+
+## Reports
+
+Each report is `reports/<date>-<slug>/report.qmd`, a Quarto document whose figures, tables and numbers all come from `f1_analytics.analysis` (tested in `tests/test_analysis_*.py`). Rendering needs the [Quarto CLI](https://quarto.org) (`brew install --cask quarto`), a TeX install for the PDFs, and Google Chrome (kaleido uses it to draw the PDFs' static charts). Build the DuckDB file first:
+
+```bash
+uv sync
+uv run build
+uv run quarto render reports   # every report to report.html and report.pdf
+```
+
+Quarto runs the Python through the Jupyter engine in the uv venv and reads the DuckDB file read-only; without it the render stops with an error that names the path and says to run `uv run build`. The HTML is committed and loads plotly.js from its CDN; the PDFs are gitignored. `reports/golden/` holds the original PDF reports the Singapore and Zandvoort values are compared against. CI does not render.
 
 ## Credentials
 
