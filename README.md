@@ -62,7 +62,7 @@ To run dbt directly, from the repo root (this writes straight to `data/processed
 uv run dbt build --project-dir dbt --profiles-dir dbt
 ```
 
-The Jolpica dump was made once with `uv run python scripts/dump_jolpica.py` (already committed; about 90 minutes at the API rate limit).
+The Jolpica dump was made once with `uv run python scripts/dump_jolpica.py` (already committed; about 90 minutes at the API rate limit). Pit stops (2011 onwards) were backfilled into `pit_stops.csv` with `uv run python scripts/dump_jolpica.py --only pit_stops --first 2011`, which reads the rounds from the committed `results.csv` and writes only that file. It rewrites the file with only the `--first`/`--last` range, so a partial run leaves only that range: run the full range last before committing. `uv run refresh` keeps it current.
 
 ### Reports
 
@@ -87,7 +87,7 @@ A test fails while the committed gallery is out of date. On each push to `main`,
 
 ## Data and attribution
 
-- Results, qualifying, standings, drivers, constructors and circuits come from the [Jolpica F1 API](https://github.com/jolpica/jolpica-f1), which continues the Ergast dataset. They are licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/): non-commercial use only, and derived data must be shared under the same licence.
+- Results, qualifying, pit stops, standings, drivers, constructors and circuits come from the [Jolpica F1 API](https://github.com/jolpica/jolpica-f1), which continues the Ergast dataset. They are licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/): non-commercial use only, and derived data must be shared under the same licence.
 - Lap and weather data is Formula 1 timing data, obtained with [FastF1](https://github.com/theOehrly/Fast-F1). F1 timing data © Formula One World Championship Limited. This project is unofficial and is not associated in any way with the Formula 1 companies. The extracts are kept for non-commercial analysis only.
 
 Details are in [`data/raw/NOTICE.md`](data/raw/NOTICE.md).

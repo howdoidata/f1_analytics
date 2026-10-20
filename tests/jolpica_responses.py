@@ -69,6 +69,10 @@ def _qualifying(position, driver, constructor):
             "Q1": "1:16.000", "Q2": "1:15.500", "Q3": "1:15.000"}
 
 
+def _pit_stop(driver, stop, lap):
+    return {"driverId": driver, "lap": str(lap), "stop": str(stop), "time": f"15:{lap:02d}:00", "duration": "22.500"}
+
+
 def _standings(season, round_, key, entries):
     return {"MRData": {"limit": "100", "offset": "0", "total": str(len(entries)),
                        "StandingsTable": {"season": str(season), "round": str(round_),
@@ -83,6 +87,8 @@ def recorded_responses(*, round3_run: bool = True, next_season: list | None = No
                _result(3, "hamilton", "mercedes", 15, 3)] if round3_run else []
     qualifying = [_qualifying(1, "piastri", "mclaren"), _qualifying(2, "verstappen", "red_bull"),
                   _qualifying(3, "hamilton", "mercedes")] if round3_run else []
+    pit_stops = [_pit_stop("piastri", 1, 18), _pit_stop("hamilton", 1, 19), _pit_stop("verstappen", 1, 21),
+                 _pit_stop("piastri", 2, 40)] if round3_run else []
     driver_entries = [
         {"position": "1", "positionText": "1", "points": "69", "wins": "1", "Driver": DRIVERS["hamilton"], "Constructors": [CONSTRUCTORS["mercedes"]]},
         {"position": "2", "positionText": "2", "points": "68", "wins": "1", "Driver": DRIVERS["verstappen"], "Constructors": [CONSTRUCTORS["red_bull"]]},
@@ -98,6 +104,7 @@ def recorded_responses(*, round3_run: bool = True, next_season: list | None = No
         "2025/3/results": _race_table([_race(2025, *r3, Results=results)] if results else [], row_key="Results"),
         "2025/3/sprint": _race_table([], row_key="SprintResults"),
         "2025/3/qualifying": _race_table([_race(2025, *r3, QualifyingResults=qualifying)] if qualifying else [], row_key="QualifyingResults"),
+        "2025/3/pitstops": _race_table([_race(2025, *r3, PitStops=pit_stops)] if pit_stops else [], row_key="PitStops"),
         "2025/4/results": _race_table([], row_key="Results"),
         "2025/driverstandings": _standings(2025, 3, "DriverStandings", driver_entries),
         "2025/constructorstandings": _standings(2025, 3, "ConstructorStandings", constructor_entries),
