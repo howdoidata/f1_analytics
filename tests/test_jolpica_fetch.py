@@ -10,6 +10,7 @@ import copy
 import hashlib
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from f1_analytics.data_sources import jolpica_fetch as jf
@@ -243,3 +244,228 @@ def test_completed_rounds_needs_results_and_a_past_date(raw_dir: Path):
 
     assert jf.completed_rounds(raw_dir, 2025, today=date(2025, 3, 5)) == [1]
     assert jf.completed_rounds(raw_dir, 2025, today=date(2026, 1, 1)) == [1, 2]
+
+
+# --- pit stops -------------------------------------------------------------
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _dump_module():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("dump_jolpica", REPO_ROOT / "scripts" / "dump_jolpica.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _pitstops_calls(getter: RecordedGetter) -> list[str]:
+    return [url for url, _ in getter.calls if url.endswith("/pitstops.json")]
+
+
+def _stops_table(season, round_, stops, total=None):
+    race = _race(season, round_, f"Race {round_}", "bahrain", "2025-03-01", "15:00:00", f"https://example.com/{season}/{round_}",
+                 PitStops=stops)
+    return _race_table([race] if stops else [], total=total, row_key="PitStops")
+
+
+def _drop_stops(raw_dir: Path, season: str, round_: str) -> None:
+    stops = jf.read_raw_table(raw_dir, "pit_stops")
+    jf.write_raw_table(raw_dir, "pit_stops", stops[~((stops["season"] == season) & (stops["round"] == round_))])
+
+
+def test_pit_stops_table_shape_and_fixture_header():
+    from jolpica_responses import FIXTURE_RAW
+
+    assert jf.RAW_COLUMNS["pit_stops"] == ["season", "round", "driverId", "stop", "lap", "time", "duration"]
+    assert jf.PIT_STOPS_FIRST_SEASON == 2011
+    path = FIXTURE_RAW / "pit_stops.csv"
+    assert path.read_text().splitlines()[0] == "season,round,driverId,stop,lap,time,duration"
+    stops = jf.read_raw_table(FIXTURE_RAW, "pit_stops")
+    results = jf.read_raw_table(FIXTURE_RAW, "results")
+    results_2025 = {(s, r) for s, r in zip(results["season"], results["round"]) if s == "2025"}
+    assert results_2025 and results_2025 <= set(zip(stops["season"], stops["round"]))
+    # The committed fixture is already in normalized order.
+    assert jf.normalize(stops, "pit_stops").equals(stops)
+
+
+def test_flatten_pit_stops_keeps_jolpica_order_and_field_names():
+    from jolpica_responses import _pit_stop
+
+    stops = [_pit_stop("piastri", 1, 18), _pit_stop("hamilton", 1, 9), _pit_stop("piastri", 2, 40)]
+    frame = jf.flatten_pit_stops(jf.merge_race_pages([_stops_table(2025, 3, stops)["MRData"]], "PitStops"))
+    assert list(frame.columns) == jf.RAW_COLUMNS["pit_stops"]
+    assert frame[["driverId", "stop", "lap"]].values.tolist() == [["piastri", "1", "18"], ["hamilton", "1", "9"],
+                                                                 ["piastri", "2", "40"]]
+    # A later round sorts after an earlier one; within a round the source order stands.
+    earlier = jf.flatten_pit_stops(jf.merge_race_pages([_stops_table(2025, 2, [_pit_stop("alonso", 1, 5)])["MRData"]], "PitStops"))
+    normalized = jf.normalize(pd.concat([frame, earlier]), "pit_stops")
+    assert normalized["driverId"].tolist() == ["alonso", "piastri", "hamilton", "piastri"]
+
+
+def test_update_appends_the_new_rounds_pit_stops_and_a_rerun_requests_none(raw_dir: Path):
+    before = jf.read_raw_table(raw_dir, "pit_stops")
+    getter = RecordedGetter(recorded_responses())
+
+    jf.update_raw_dir(raw_dir, _client(getter), log=lambda m: None)
+
+    assert [url.split(jf.BASE_URL)[1] for url in _pitstops_calls(getter)] == ["2025/3/pitstops.json"]
+    stops = jf.read_raw_table(raw_dir, "pit_stops")
+    assert len(stops) == len(before) + 4
+    assert stops.iloc[: len(before)].equals(before)
+    new = stops[(stops["season"] == "2025") & (stops["round"] == "3")]
+    assert new[["driverId", "stop", "lap"]].values.tolist() == [
+        ["piastri", "1", "18"], ["hamilton", "1", "19"], ["verstappen", "1", "21"], ["piastri", "2", "40"]]
+    for url, params in getter.calls:
+        assert set(params) == {"limit", "offset"}
+
+    snapshot = _hashes(raw_dir)
+    rerun = RecordedGetter(recorded_responses())
+    assert jf.update_raw_dir(raw_dir, _client(rerun), log=lambda m: None)["appended"] == []
+    assert _pitstops_calls(rerun) == []
+    assert _hashes(raw_dir) == snapshot
+
+
+def test_update_refetches_a_latest_season_round_loaded_without_pit_stops(raw_dir: Path):
+    from jolpica_responses import _pit_stop
+
+    _drop_stops(raw_dir, "2025", "1")
+    snapshot = _hashes(raw_dir)
+    responses = recorded_responses(round3_run=False)
+    responses["2025/1/pitstops"] = _stops_table(2025, 1, [_pit_stop("verstappen", 1, 15), _pit_stop("hamilton", 1, 16)])
+    messages = []
+
+    outcome = jf.update_raw_dir(raw_dir, _client(RecordedGetter(responses)), log=messages.append)
+
+    assert outcome == {"appended": [], "races_changed": False}
+    stops = jf.read_raw_table(raw_dir, "pit_stops")
+    r1 = stops[(stops["season"] == "2025") & (stops["round"] == "1")]
+    assert r1["driverId"].tolist() == ["verstappen", "hamilton"]
+    assert stops["round"].tolist()[:2] == ["1", "1"]  # sorted ahead of round 2
+    after = _hashes(raw_dir)
+    assert {name for name in after if after[name] != snapshot[name]} == {"pit_stops.csv"}
+
+
+def test_update_logs_pit_stops_still_missing_and_writes_nothing(raw_dir: Path):
+    _drop_stops(raw_dir, "2025", "2")
+    snapshot = _hashes(raw_dir)
+    responses = recorded_responses(round3_run=False)
+    responses["2025/2/pitstops"] = _stops_table(2025, 2, [])
+    messages = []
+
+    outcome = jf.update_raw_dir(raw_dir, _client(RecordedGetter(responses)), log=messages.append)
+
+    assert outcome == {"appended": [], "races_changed": False}
+    assert "[jolpica] 2025 round 2: pit stops still missing" in messages
+    assert _hashes(raw_dir) == snapshot
+
+
+def test_update_never_refetches_pit_stops_of_an_earlier_season(raw_dir: Path):
+    # The fixture's 2024 rounds have results but no pit_stops rows; the recorded
+    # getter fails on any request it has no response for.
+    stops = jf.read_raw_table(raw_dir, "pit_stops")
+    results = jf.read_raw_table(raw_dir, "results")
+    assert ("2024", "1") in set(zip(results["season"], results["round"]))
+    assert "2024" not in set(stops["season"])
+    getter = RecordedGetter(recorded_responses())
+
+    jf.update_raw_dir(raw_dir, _client(getter), log=lambda m: None)
+
+    assert not any("/2024/" in url for url in _pitstops_calls(getter))
+
+
+def test_update_makes_no_pit_stops_request_before_2011(tmp_path: Path):
+    raw_dir = make_update_world(tmp_path / "jolpica")
+    schedule = [_race(2010, 1, "Bahrain Grand Prix", "bahrain", "2010-03-14", "12:00:00Z", "https://example.com/race/2010/1"),
+                _race(2010, 2, "Australian Grand Prix", "albert_park", "2010-03-28", "06:00:00Z", "https://example.com/race/2010/2")]
+    jf.write_raw_table(raw_dir, "races", jf.flatten_races(schedule))
+    results = jf.read_raw_table(raw_dir, "results")
+    r1 = results[(results["season"] == "2024") & (results["round"] == "1")].assign(season="2010")
+    jf.write_raw_table(raw_dir, "results", r1)
+    stops_before = (raw_dir / "pit_stops.csv").read_bytes()
+    base = recorded_responses()
+    responses = {
+        "2010/races": _race_table(schedule),
+        "2010/2/results": _race_table([_race(2010, 2, "Australian Grand Prix", "albert_park", "2010-03-28", "06:00:00Z",
+                                             "https://example.com/race/2010/2",
+                                             Results=[_result(1, "hamilton", "mercedes", 25, 1)])], row_key="Results"),
+        "2010/2/qualifying": _race_table([], row_key="QualifyingResults"),
+        "2010/driverstandings": base["2025/driverstandings"],
+        "2010/constructorstandings": base["2025/constructorstandings"],
+    }
+    getter = RecordedGetter(responses)
+
+    outcome = jf.update_raw_dir(raw_dir, _client(getter), log=lambda m: None)
+
+    assert outcome["appended"] == [(2010, 2)]
+    assert _pitstops_calls(getter) == []
+    assert ("2010", "2") in set(zip(*[jf.read_raw_table(raw_dir, "results")[c] for c in ("season", "round")]))
+    assert (raw_dir / "pit_stops.csv").read_bytes() == stops_before
+
+
+def test_update_refuses_a_short_pit_stops_page(raw_dir: Path):
+    responses = recorded_responses()
+    responses["2025/3/pitstops"]["MRData"]["total"] = "5"
+    snapshot = _hashes(raw_dir)
+    with pytest.raises(jf.IncompleteJolpicaFetchError, match="2025 round 3 pit_stops: landed 4 row"):
+        jf.update_raw_dir(raw_dir, _client(RecordedGetter(responses)), log=lambda m: None)
+    assert _hashes(raw_dir) == snapshot
+
+
+def _dump_responses():
+    from jolpica_responses import _pit_stop
+
+    return {
+        "2024/1/pitstops": _stops_table(2024, 1, [_pit_stop("verstappen", 1, 17), _pit_stop("hamilton", 1, 18)]),
+        "2024/2/pitstops": _stops_table(2024, 2, [_pit_stop("hamilton", 1, 20)]),
+        "2025/1/pitstops": _stops_table(2025, 1, [_pit_stop("alonso", 1, 12), _pit_stop("verstappen", 1, 14)]),
+        "2025/2/pitstops": _stops_table(2025, 2, [_pit_stop("verstappen", 1, 22)]),
+    }
+
+
+def test_dump_only_pit_stops_rewrites_only_pit_stops_csv(raw_dir: Path, capsys):
+    snapshot = _hashes(raw_dir)
+    getter = RecordedGetter(_dump_responses())
+
+    rc = _dump_module().main(["--only", "pit_stops", "--first", "2011", "--raw-dir", str(raw_dir)], client=_client(getter))
+
+    assert rc == 0
+    after = _hashes(raw_dir)
+    assert {name for name in after if after[name] != snapshot[name]} == {"pit_stops.csv"}
+    assert set(after) == set(snapshot)
+    stops = jf.read_raw_table(raw_dir, "pit_stops")
+    assert list(zip(stops["season"], stops["round"], stops["driverId"])) == [
+        ("2024", "1", "verstappen"), ("2024", "1", "hamilton"), ("2024", "2", "hamilton"),
+        ("2025", "1", "alonso"), ("2025", "1", "verstappen"), ("2025", "2", "verstappen")]
+    for url, params in getter.calls:
+        assert set(params) == {"limit", "offset"}
+
+
+def test_dump_only_pit_stops_skips_seasons_before_2011_and_outside_the_range(raw_dir: Path):
+    results = jf.read_raw_table(raw_dir, "results")
+    early = results[(results["season"] == "2024") & (results["round"] == "1")].assign(season="2010")
+    jf.write_raw_table(raw_dir, "results", pd.concat([early, results]))
+    getter = RecordedGetter(_dump_responses())
+
+    _dump_module().main(["--only", "pit_stops", "--first", "2000", "--last", "2024", "--raw-dir", str(raw_dir)],
+                        client=_client(getter))
+
+    assert [url.split(jf.BASE_URL)[1] for url in _pitstops_calls(getter)] == ["2024/1/pitstops.json", "2024/2/pitstops.json"]
+    assert set(jf.read_raw_table(raw_dir, "pit_stops")["season"]) == {"2024"}
+
+
+def test_dump_only_pit_stops_refuses_a_short_page_and_leaves_the_file_unchanged(raw_dir: Path):
+    responses = _dump_responses()
+    responses["2025/2/pitstops"]["MRData"]["total"] = "3"
+    snapshot = _hashes(raw_dir)
+
+    with pytest.raises(jf.IncompleteJolpicaFetchError, match="2025 round 2 pit_stops"):
+        _dump_module().main(["--only", "pit_stops", "--first", "2011", "--raw-dir", str(raw_dir)],
+                            client=_client(RecordedGetter(responses)))
+    assert _hashes(raw_dir) == snapshot
+
+
+def test_dump_only_accepts_no_other_table(raw_dir: Path):
+    with pytest.raises(SystemExit):
+        _dump_module().main(["--only", "results", "--raw-dir", str(raw_dir)], client=_client(RecordedGetter({})))

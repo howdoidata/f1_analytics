@@ -41,6 +41,8 @@ BACKOFF_BASE_SECONDS = 10.0
 REQUEST_TIMEOUT_SECONDS = 30
 # Sprints exist from 2021; earlier seasons are not queried for them.
 SPRINT_FIRST_SEASON = 2021
+# Jolpica holds pit-stop data from 2011; earlier seasons are not queried for it.
+PIT_STOPS_FIRST_SEASON = 2011
 FIRST_SEASON = 1950
 
 Getter = Callable[[str, dict], dict]
@@ -113,6 +115,7 @@ RAW_COLUMNS: dict[str, list[str]] = {
         "constructorId",
         "constructorName",
     ],
+    "pit_stops": ["season", "round", "driverId", "stop", "lap", "time", "duration"],
 }
 RAW_COLUMNS["sprint_results"] = RAW_COLUMNS["results"]
 
@@ -397,6 +400,32 @@ def flatten_qualifying(races: list[dict]) -> pd.DataFrame:
     return _frame(rows, "qualifying")
 
 
+def flatten_pit_stops(races: list[dict]) -> pd.DataFrame:
+    """One row per pit stop (`PitStops`), in the order Jolpica returns them."""
+    rows = []
+    for race in races:
+        for stop in race.get("PitStops", []):
+            rows.append(
+                {
+                    "season": int(race["season"]),
+                    "round": int(race["round"]),
+                    "driverId": stop.get("driverId"),
+                    "stop": stop.get("stop"),
+                    "lap": stop.get("lap"),
+                    "time": stop.get("time"),
+                    "duration": stop.get("duration"),
+                }
+            )
+    return _frame(rows, "pit_stops")
+
+
+def fetch_round_pit_stops(client: JolpicaClient, season: int, round_: int) -> pd.DataFrame:
+    """One round's pit stops; a short page raises `IncompleteJolpicaFetchError`."""
+    pages = client.get_all(f"{season}/{round_}/pitstops")
+    verify_total(pages, "PitStops", f"{season} round {round_} pit_stops")
+    return flatten_pit_stops(merge_race_pages(pages, "PitStops"))
+
+
 def standings_lists(pages: list[dict]) -> list[dict]:
     lists: list[dict] = []
     for page in pages:
@@ -570,8 +599,10 @@ def update_raw_dir(
     2. Walk the rounds lacking results in order. The first round whose
        results come back empty ends the walk ("up to date").
     3. For each round with results: append results, sprint and qualifying,
-       and any new driver/constructor/circuit; then refresh that season's
-       final standings.
+       pit stops (from 2011), and any new driver/constructor/circuit; then
+       refresh that season's final standings.
+    4. Re-fetch the pit stops of every round of the latest season that has
+       results but no pit-stop rows; one that still has none is logged.
 
     Nothing is written unless something changed. Returns
     `{"appended": [(season, round), ...], "races_changed": bool}`.
@@ -616,6 +647,8 @@ def update_raw_dir(
         qualifying_pages = client.get_all(f"{season_}/{round_}/qualifying")
         verify_total(qualifying_pages, "QualifyingResults", f"{season_} round {round_} qualifying")
         qualifying_races = merge_race_pages(qualifying_pages, "QualifyingResults")
+        if season_ >= PIT_STOPS_FIRST_SEASON:
+            new_frames["pit_stops"].append(fetch_round_pit_stops(client, season_, round_))
 
         new_frames["results"].append(flatten_results(result_races, "Results"))
         new_frames["sprint_results"].append(flatten_results(sprint_races, "SprintResults"))
@@ -626,19 +659,35 @@ def update_raw_dir(
         appended.append((season_, round_))
         log(f"[jolpica] {season_} round {round_}: {len(new_frames['results'][-1])} result row(s) appended")
 
-    if not appended:
-        if races_changed:
-            write_raw_table(raw_dir, "races", races)
-            write_raw_table(raw_dir, "circuits", circuits)
-            log("[jolpica] schedule updated; no new results")
-        else:
-            log("[jolpica] up to date")
-        return {"appended": [], "races_changed": races_changed}
+    # Rounds of the latest season loaded with results but no pit stops.
+    with_stops = _round_keys(tables["pit_stops"])
+    refetched_stops: list[pd.DataFrame] = []
+    if season >= PIT_STOPS_FIRST_SEASON:
+        for season_, round_ in sorted(key for key in loaded if key[0] == season and key not in with_stops):
+            stops = fetch_round_pit_stops(client, season_, round_)
+            if stops.empty:
+                log(f"[jolpica] {season_} round {round_}: pit stops still missing")
+            else:
+                refetched_stops.append(stops)
+                log(f"[jolpica] {season_} round {round_}: {len(stops)} pit stop row(s) fetched")
 
     def _concat(*frames: pd.DataFrame) -> pd.DataFrame:
         return pd.concat([frame.astype("string") for frame in frames if not frame.empty] or [frames[0]], ignore_index=True)
 
-    for table in ("results", "sprint_results", "qualifying"):
+    if not appended:
+        if races_changed:
+            write_raw_table(raw_dir, "races", races)
+            write_raw_table(raw_dir, "circuits", circuits)
+        if refetched_stops:
+            write_raw_table(raw_dir, "pit_stops", _concat(tables["pit_stops"], *refetched_stops))
+        if races_changed:
+            log("[jolpica] schedule updated; no new results")
+        elif not refetched_stops:
+            log("[jolpica] up to date")
+        return {"appended": [], "races_changed": races_changed}
+
+    new_frames["pit_stops"].extend(refetched_stops)
+    for table in ("results", "sprint_results", "qualifying", "pit_stops"):
         tables[table] = _concat(tables[table], *new_frames[table])
 
     standings_pages = []
