@@ -6,6 +6,7 @@ the DataFrames these functions return, so tests can pass synthetic frames.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import duckdb
@@ -73,3 +74,25 @@ def load_race_data(db_path: Path = DUCKDB_PATH, season: int = 2026) -> dict[str,
             "standings": load_constructor_standings(con, season),
             "laps": load_laps(con, season),
         }
+
+
+@dataclass(frozen=True)
+class PitStopTables:
+    """The seven marts the pit-stop analysis reads, one DataFrame each."""
+
+    races: pd.DataFrame
+    results: pd.DataFrame
+    constructors: pd.DataFrame
+    circuits: pd.DataFrame
+    pit_stops: pd.DataFrame
+    car_races: pd.DataFrame
+    practice_stints: pd.DataFrame
+
+
+def load_pit_stop_tables(db_path: Path = DUCKDB_PATH) -> PitStopTables:
+    """Every row of the seven pit-stop marts, in one read-only pass."""
+    with open_database(db_path) as con:
+        return PitStopTables(**{
+            name: con.execute(f"SELECT * FROM {name}").df()
+            for name in PitStopTables.__dataclass_fields__
+        })
