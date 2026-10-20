@@ -469,3 +469,51 @@ def test_dump_only_pit_stops_refuses_a_short_page_and_leaves_the_file_unchanged(
 def test_dump_only_accepts_no_other_table(raw_dir: Path):
     with pytest.raises(SystemExit):
         _dump_module().main(["--only", "results", "--raw-dir", str(raw_dir)], client=_client(RecordedGetter({})))
+
+
+def _full_dump_responses():
+    """A recorded world for `dump()` over 2010-2011: 2011 R1 has results, 2011 R2 has not run."""
+    from jolpica_responses import _pit_stop, _standings
+
+    def race(season, round_, **rows):
+        return _race(season, round_, f"Race {round_}", "bahrain", f"{season}-03-0{round_}", "12:00:00Z",
+                     f"https://example.com/race/{season}/{round_}", **rows)
+
+    responses = {}
+    for season in (2010, 2011):
+        result_rows = [_result(1, "hamilton", "mercedes", 25, 1), _result(2, "verstappen", "red_bull", 18, 2)]
+        responses[f"{season}/races"] = _race_table([race(season, 1), race(season, 2)])
+        responses[f"{season}/results"] = _race_table([race(season, 1, Results=result_rows)], row_key="Results")
+        responses[f"{season}/qualifying"] = _race_table([], row_key="QualifyingResults")
+        responses[f"{season}/driverstandings"] = _standings(season, 1, "DriverStandings", [
+            {"position": "1", "positionText": "1", "points": "25", "wins": "1", "Driver": result_rows[0]["Driver"],
+             "Constructors": [result_rows[0]["Constructor"]]}])
+        responses[f"{season}/constructorstandings"] = _standings(season, 1, "ConstructorStandings", [
+            {"position": "1", "positionText": "1", "points": "25", "wins": "1", "Constructor": result_rows[0]["Constructor"]}])
+    responses["2011/1/pitstops"] = _stops_table(2011, 1, [_pit_stop("verstappen", 1, 12), _pit_stop("hamilton", 1, 13),
+                                                          _pit_stop("verstappen", 2, 30)])
+    return responses
+
+
+def test_full_dump_requests_pit_stops_only_for_2011_on_rounds_with_results(tmp_path: Path):
+    raw_dir = tmp_path / "jolpica"
+    getter = RecordedGetter(_full_dump_responses())
+
+    counts = _dump_module().dump(raw_dir, _client(getter), 2010, 2011)
+
+    assert [url.split(jf.BASE_URL)[1] for url in _pitstops_calls(getter)] == ["2011/1/pitstops.json"]
+    assert counts["pit_stops"] == 3
+    stops = jf.read_raw_table(raw_dir, "pit_stops")
+    assert list(zip(stops["season"], stops["round"], stops["driverId"], stops["stop"])) == [
+        ("2011", "1", "verstappen", "1"), ("2011", "1", "hamilton", "1"), ("2011", "1", "verstappen", "2")]
+    assert set(jf.read_raw_table(raw_dir, "results")["season"]) == {"2010", "2011"}
+
+
+def test_full_dump_refuses_a_short_pit_stops_page_and_writes_nothing(raw_dir: Path):
+    responses = _full_dump_responses()
+    responses["2011/1/pitstops"]["MRData"]["total"] = "4"
+    snapshot = _hashes(raw_dir)
+
+    with pytest.raises(jf.IncompleteJolpicaFetchError, match="2011 round 1 pit_stops: landed 3 row"):
+        _dump_module().dump(raw_dir, _client(RecordedGetter(responses)), 2010, 2011)
+    assert _hashes(raw_dir) == snapshot

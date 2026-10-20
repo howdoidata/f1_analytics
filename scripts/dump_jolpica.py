@@ -17,8 +17,10 @@ cold run takes a little over an hour.
 
 `--only pit_stops` backfills just `pit_stops.csv`: it reads the rounds with
 results from the committed `results.csv` (within `--first`/`--last`), fetches
-each round's pitstops and writes only that file. Run it a season at a time to
-warm the cache, then once over the whole range to write the complete file:
+each round's pitstops and writes only that file. The file is rewritten with
+only the `--first`/`--last` range: a partial run deletes every other season's
+stops. Warm the cache a season at a time if needed, but the full-range run
+must come last, before committing:
 
     uv run python scripts/dump_jolpica.py --only pit_stops --first 2011 --last 2011
     uv run python scripts/dump_jolpica.py --only pit_stops --first 2011
@@ -148,7 +150,6 @@ def main(argv: list[str] | None = None, *, client: jf.JolpicaClient | None = Non
     if args.only == "pit_stops":
         count = dump_pit_stops(args.raw_dir, client, args.first, args.last)
         print(f"[dump] pit_stops.csv: {count} row(s)")
-        print(f"[dump] {client.request_count} live request(s)")
         return 0
     counts = dump(args.raw_dir, client, args.first, args.last)
     for table, count in counts.items():

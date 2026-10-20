@@ -61,7 +61,7 @@ To run dbt directly, from the repo root (this writes straight to `data/processed
 uv run dbt build --project-dir dbt --profiles-dir dbt
 ```
 
-The Jolpica dump was made once with `uv run python scripts/dump_jolpica.py` (already committed; about 90 minutes at the API rate limit). Pit stops (2011 onwards) were backfilled into `pit_stops.csv` with `uv run python scripts/dump_jolpica.py --only pit_stops --first 2011`, which reads the rounds from the committed `results.csv` and writes only that file; `uv run refresh` keeps it current.
+The Jolpica dump was made once with `uv run python scripts/dump_jolpica.py` (already committed; about 90 minutes at the API rate limit). Pit stops (2011 onwards) were backfilled into `pit_stops.csv` with `uv run python scripts/dump_jolpica.py --only pit_stops --first 2011`, which reads the rounds from the committed `results.csv` and writes only that file. It rewrites the file with only the `--first`/`--last` range, so a partial run leaves only that range: run the full range last before committing. `uv run refresh` keeps it current.
 
 ### Reports
 
