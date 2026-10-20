@@ -4,8 +4,9 @@ For each round the model is fitted once on races before it, and every team in
 the race's results is forecast with the round's day-before weather (weights
 from p, air temperature from the same race-start hours) and its cars' start
 compounds as on the grid (a car with none takes the race's most common one).
-Two benchmarks predict 2 x a stops-per-car rate (all stops, red flags
-included): the circuit's history from 2011 and the team's form this season
+The model and both benchmarks are scored against the team's actual total (all
+of its stops, red-flag stops included). Two benchmarks predict 2 x a
+stops-per-car rate (all stops): the circuit's history from 2011 and the team's form this season
 (the previous season's in round 1), each falling back to the field mean.
 """
 
@@ -26,10 +27,10 @@ if TYPE_CHECKING:
 
 CARS_PER_TEAM = 2
 METHODS = ("model", "circuit_history", "season_form")
-TABLE_COLUMNS = ["method", "mae_with_red_flags", "mae_without_red_flags", "hit_rate", "n"]
+TABLE_COLUMNS = ["method", "mae", "hit_rate", "n"]
 ROW_COLUMNS = [
-    "season", "round", "circuit_id", "constructor_id", "actual_with_red_flags", "actual_without_red_flags",
-    "model_with_red_flags", "model_without_red_flags", "model_p10", "model_p90", "model_hit",
+    "season", "round", "circuit_id", "constructor_id", "actual",
+    "model", "model_p10", "model_p90", "model_hit",
     "circuit_history", "season_form",
 ]
 
@@ -53,10 +54,11 @@ def _start_compounds(tables: PitStopTables, season: int, round: int, drivers: It
     return [by_driver[d] if isinstance(by_driver.get(d), str) else most_common for d in drivers]
 
 
-def _team_stops(tables: PitStopTables, season: int, round: int, constructor_id: str) -> tuple[int, int]:
+def _team_stops(tables: PitStopTables, season: int, round: int, constructor_id: str) -> int:
+    """All of the team's stops at the race (every `stop_type`)."""
     stops = tables.pit_stops
     team = stops[(stops["season"] == season) & (stops["round"] == round) & (stops["constructor_id"] == constructor_id)]
-    return len(team), int((team["stop_type"] != "red_flag").sum())
+    return len(team)
 
 
 def backtest(tables: PitStopTables, season: int, rounds: Iterable[int]) -> Backtest:
@@ -78,13 +80,12 @@ def backtest(tables: PitStopTables, season: int, rounds: Iterable[int]) -> Backt
                 start_compounds=_start_compounds(tables, season, round_, drivers),
                 air_temp=air_temp, weather=weights, model=model,
             )
-            actual, actual_without = _team_stops(tables, season, round_, constructor_id)
-            circuit_rate, team_rate = history.rates(constructor_id, circuit_id, season, round_, red_flags=True)
-            band = result.with_red_flags
+            actual = _team_stops(tables, season, round_, constructor_id)
+            circuit_rate, team_rate = history.rates(constructor_id, circuit_id, season, round_)
+            band = result.total
             rows.append({
                 "season": season, "round": round_, "circuit_id": circuit_id, "constructor_id": constructor_id,
-                "actual_with_red_flags": actual, "actual_without_red_flags": actual_without,
-                "model_with_red_flags": band.raw_mean, "model_without_red_flags": result.without_red_flags.raw_mean,
+                "actual": actual, "model": band.raw_mean,
                 "model_p10": band.p10, "model_p90": band.p90, "model_hit": bool(band.p10 <= actual <= band.p90),
                 "circuit_history": CARS_PER_TEAM * circuit_rate, "season_form": CARS_PER_TEAM * team_rate,
             })
@@ -93,20 +94,12 @@ def backtest(tables: PitStopTables, season: int, rounds: Iterable[int]) -> Backt
 
 
 def score(rows: pd.DataFrame) -> pd.DataFrame:
-    """One row per method: MAE against both actual totals, the model's hit rate (empty for benchmarks), n."""
-    with_rf, without_rf = rows["actual_with_red_flags"], rows["actual_without_red_flags"]
-    predictions = {
-        "model": (rows["model_with_red_flags"], rows["model_without_red_flags"]),
-        "circuit_history": (rows["circuit_history"], rows["circuit_history"]),
-        "season_form": (rows["season_form"], rows["season_form"]),
-    }
+    """One row per method: MAE against the actual total, the model's hit rate (empty for benchmarks), n."""
     table = []
     for method in METHODS:
-        with_pred, without_pred = predictions[method]
         table.append({
             "method": method,
-            "mae_with_red_flags": float((with_pred - with_rf).abs().mean()),
-            "mae_without_red_flags": float((without_pred - without_rf).abs().mean()),
+            "mae": float((rows[method] - rows["actual"]).abs().mean()),
             "hit_rate": float(rows["model_hit"].mean()) if method == "model" else np.nan,
             "n": len(rows),
         })

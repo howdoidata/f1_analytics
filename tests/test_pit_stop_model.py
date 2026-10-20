@@ -140,16 +140,22 @@ def test_a_round_without_both_day_before_hours_raises(frame):
 
 # --- the fit --------------------------------------------------------------------------------------
 
-def test_fit_rows_are_cars_of_earlier_races_and_exclude_red_flag_stops():
+def test_fit_rows_are_cars_of_earlier_races():
     model = fit_count_model(WORLD, 2025, 4)
     rows = model.fit_rows
     # 2024 R1 has no earlier fit race, so its rows (no circuit, team or field rate) are left out.
     assert sorted(set(zip(rows["season"], rows["round"]))) == [(2024, 2), (2024, 3), (2025, 1), (2025, 2), (2025, 3)]
     # c1 is out before its first stop in 2024 R3 and 2025 R1, so those two rows are left out.
     assert model.n_rows == 5 * 6 - 2 and model.n_races == 5
-    b1 = rows[(rows["season"] == 2025) & (rows["round"] == 3) & (rows["driver_id"] == "b1")]
-    assert b1["stops"].tolist() == [_stops_of(2025, 3, DRIVERS.index("b1"))]
     assert set(rows["weather"]) == {"dry", "mixed"}
+
+
+def test_a_cars_red_flag_stop_is_in_its_fit_target():
+    rows = fit_count_model(WORLD, 2025, 4).fit_rows.set_index(["season", "round", "driver_id"])
+    # 2025 R3: b1 and c2 each stop once more under the red flag; the target counts every stop_type.
+    for driver in ("b1", "c2"):
+        assert rows.loc[(2025, 3, driver), "stops"] == _stops_of(2025, 3, DRIVERS.index(driver)) + 1
+    assert rows.loc[(2025, 3, "a1"), "stops"] == _stops_of(2025, 3, DRIVERS.index("a1"))
 
 
 def test_cars_out_before_their_first_stop_are_left_out_of_the_fit():
@@ -165,7 +171,7 @@ def test_fit_row_rates_use_races_before_their_own_race():
     # 2025 R3 at c3: 2024 R3 (one car with no stop) is its only earlier c3 race.
     c3_2024 = sum(_stops_of(2024, 3, i) for i, d in enumerate(DRIVERS) if d != "c1") / 6
     assert rows.loc[(2025, 3, "a1"), "circuit_rate"] == pytest.approx(c3_2024)
-    # aa's 2025 R3 team rate: its R1 and R2 stops without red flags (a2 had none in R2).
+    # aa's 2025 R3 team rate: all its R1 and R2 stops (a2 had none in R2).
     aa = (_stops_of(2025, 1, 0) + _stops_of(2025, 1, 1) + _stops_of(2025, 2, 0)) / 4
     assert rows.loc[(2025, 3, "a1"), "team_rate"] == pytest.approx(aa)
     # 2025 R1: the team rate is the previous season's.
@@ -176,10 +182,16 @@ def test_fit_row_rates_use_races_before_their_own_race():
     assert rows.loc[(2024, 2, "a1"), "circuit_rate"] == pytest.approx(field)
 
 
-def test_red_flag_and_car_out_parts():
+def test_the_model_takes_the_car_out_rate():
     model = fit_count_model(WORLD, 2025, 4)
-    assert model.red_flag_race_rate == pytest.approx(1 / 5)
-    assert model.red_flag_stops_per_car == pytest.approx(2 / 6)
+    assert model.car_out_rate == pytest.approx(car_out_rate(WORLD, 2025, 4))
+
+
+def test_fit_rates_count_red_flag_stops():
+    rows = fit_count_model(WORLD, 2025, 5).fit_rows.set_index(["season", "round", "driver_id"])
+    # bb's 2025 R4 team rate: all its R1-R3 stops, b1's red-flag stop in R3 included.
+    bb = (sum(_stops_of(2025, r, i) for r in (1, 2, 3) for i in (2, 3)) + 1) / 6
+    assert rows.loc[(2025, 4, "b1"), "team_rate"] == pytest.approx(bb)
 
 
 def test_car_out_rate_counts_no_stop_non_finishers():
@@ -203,7 +215,7 @@ def test_a_constant_covariate_is_dropped_and_the_fit_succeeds():
     assert np.isfinite(model.params).all()
     result = forecast(replace(WORLD, car_races=cars), *ARGS, start_compounds=["SOFT", "WET"], air_temp=25.0,
                       weather="wet", model=model)
-    assert result.with_red_flags.mean > 0
+    assert result.total.mean > 0
 
 
 def test_a_constant_numeric_covariate_is_dropped():
@@ -236,8 +248,7 @@ def test_sentinel_rows_at_or_after_the_target_change_nothing(target):
     clean, dirty = fit_count_model(WORLD, *target), fit_count_model(_with_sentinels(WORLD, *target), *target)
     np.testing.assert_array_equal(clean.params, dirty.params)
     np.testing.assert_array_equal(clean.cov_params, dirty.cov_params)
-    assert (clean.columns, clean.red_flag_race_rate, clean.red_flag_stops_per_car, clean.car_out_rate) == \
-        (dirty.columns, dirty.red_flag_race_rate, dirty.red_flag_stops_per_car, dirty.car_out_rate)
+    assert (clean.columns, clean.field_rate, clean.car_out_rate) == (dirty.columns, dirty.field_rate, dirty.car_out_rate)
     pd.testing.assert_frame_equal(clean.fit_rows, dirty.fit_rows)
     args = ("aa", "c1", season, round_)
     assert forecast(WORLD, *args, **DRY_MEDIUM) == forecast(_with_sentinels(WORLD, *target), *args, **DRY_MEDIUM)
@@ -248,10 +259,9 @@ def test_sentinel_rows_at_or_after_the_target_change_nothing(target):
 def test_forecast_is_deterministic_and_rounded():
     first, second = forecast(WORLD, *ARGS, **DRY_MEDIUM), forecast(WORLD, *ARGS, **DRY_MEDIUM)
     assert first == second
-    for band in (first.with_red_flags, first.without_red_flags):
-        assert band.mean == round(band.mean, 1)
-        assert band.p10 <= band.mean <= band.p90
-    assert first.with_red_flags.mean >= first.without_red_flags.mean
+    band = first.total
+    assert band.mean == round(band.mean, 1)
+    assert band.p10 <= band.mean <= band.p90
     assert (SEED, DRAWS) == (20261025, 10_000)
 
 
@@ -285,8 +295,8 @@ def test_bad_weather_or_compounds_raise(inputs):
 
 def test_category_and_one_hot_weights_agree():
     weights = {"dry": 0.0, "mixed": 1.0, "wet": 0.0}
-    assert forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": "mixed"}).with_red_flags == \
-        forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": weights}).with_red_flags
+    assert forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": "mixed"}).total == \
+        forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": weights}).total
 
 
 def test_unseen_levels_use_the_nearest_seen_level():
@@ -296,10 +306,10 @@ def test_unseen_levels_use_the_nearest_seen_level():
     assert "INTERMEDIATE" in model.compound_levels
     wet = forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": "wet"}, model=model)
     mixed = forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": "mixed"}, model=model)
-    assert (wet.with_red_flags, wet.without_red_flags) == (mixed.with_red_flags, mixed.without_red_flags)
+    assert wet.total == mixed.total
     on_wets = forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "start_compounds": ["WET", "WET"]}, model=model)
     on_inters = forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "start_compounds": ["INTERMEDIATE"] * 2}, model=model)
-    assert on_wets.with_red_flags == on_inters.with_red_flags
+    assert on_wets.total == on_inters.total
 
 
 def test_no_history_uses_the_field_mean_of_the_fit_races():
@@ -308,28 +318,21 @@ def test_no_history_uses_the_field_mean_of_the_fit_races():
     result = forecast(WORLD, "new_team", "c4", 2025, 5, **DRY_MEDIUM, model=model)
     assert result.circuit_rate == pytest.approx(model.field_rate)
     assert result.team_rate == pytest.approx(model.field_rate)
-    non_red_flag = WORLD.pit_stops[WORLD.pit_stops["stop_type"] != "red_flag"]
-    assert model.field_rate == pytest.approx(len(non_red_flag) / len(WORLD.results))
-
-
-def test_no_red_flags_yet_gives_the_same_range_with_and_without():
-    model = fit_count_model(WORLD, 2025, 3)
-    assert model.red_flag_race_rate == 0.0
-    result = forecast(WORLD, "aa", "c3", 2025, 3, **DRY_MEDIUM, model=model)
-    assert result.with_red_flags == result.without_red_flags
+    # All stops (red-flag ones included) per car over every held race before 2025 R5.
+    assert model.field_rate == pytest.approx(len(WORLD.pit_stops) / len(WORLD.results))
 
 
 def test_mixed_range_is_at_least_as_wide_as_dry():
     dry = forecast(WORLD, *ARGS, **DRY_MEDIUM)
     mixed = forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": "mixed"})
-    for d, m in ((dry.with_red_flags, mixed.with_red_flags), (dry.without_red_flags, mixed.without_red_flags)):
-        assert m.p90 - m.p10 >= d.p90 - d.p10
+    d, m = dry.total, mixed.total
+    assert m.p90 - m.p10 >= d.p90 - d.p10
 
 
 def test_weights_with_p_zero_equal_dry():
     dry = forecast(WORLD, *ARGS, **DRY_MEDIUM)
     zero = forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": weather_weights(0.0)})
-    assert dry.with_red_flags == zero.with_red_flags
+    assert dry.total == zero.total
 
 
 def test_model_notes_say_what_story_7_shows():
@@ -345,20 +348,21 @@ def test_model_notes_say_what_story_7_shows():
     assert "higher precipitation probability of the race-start hour and the next" in text
     assert "not the forecast made the day before" in text and "optimistic" in text
     assert "tyre wear is not a model input" in text
+    assert not any("without red" in note.lower() for note in MODEL_NOTES)
 
 
 # --- the backtest ---------------------------------------------------------------------------------
 
 def test_backtest_scores_the_model_and_both_benchmarks():
     result = backtest(WORLD, 2025, [2, 3, 4])
-    assert result.table.columns.tolist() == ["method", "mae_with_red_flags", "mae_without_red_flags", "hit_rate", "n"]
+    assert result.table.columns.tolist() == ["method", "mae", "hit_rate", "n"]
     assert result.table["method"].tolist() == ["model", "circuit_history", "season_form"]
     assert result.table["n"].tolist() == [9, 9, 9]
     assert result.table["hit_rate"].isna().tolist() == [False, True, True]
     rows = result.rows.set_index(["round", "constructor_id"])
     # 2025 R3, bb: b1 has one red-flag stop.
     bb = _stops_of(2025, 3, 2) + _stops_of(2025, 3, 3)
-    assert rows.loc[(3, "bb"), ["actual_with_red_flags", "actual_without_red_flags"]].tolist() == [bb + 1, bb]
+    assert rows.loc[(3, "bb"), "actual"] == bb + 1
     # Benchmarks use all stops: c3's only earlier race (2024 R3), and bb's 2025 R1-R2.
     c3 = sum(_stops_of(2024, 3, i) for i, d in enumerate(DRIVERS) if d != "c1") / 6
     assert rows.loc[(3, "bb"), "circuit_history"] == pytest.approx(2 * c3)
@@ -369,17 +373,13 @@ def test_backtest_scores_the_model_and_both_benchmarks():
     expected = forecast(WORLD, "bb", "c3", 2025, 3, start_compounds=["HARD", "MEDIUM"], air_temp=temp,
                         weather=weather_weights(p))
     # Scored on the unrounded mean.
-    assert rows.loc[(3, "bb"), ["model_with_red_flags", "model_p10", "model_p90"]].tolist() == [
-        expected.with_red_flags.raw_mean, expected.with_red_flags.p10, expected.with_red_flags.p90]
-    assert expected.with_red_flags.mean == round(expected.with_red_flags.raw_mean, 1)
-    # Each benchmark's one prediction is scored against both actual totals.
-    bench = result.rows["circuit_history"]
-    assert result.table.loc[1, "mae_with_red_flags"] == pytest.approx(
-        (bench - result.rows["actual_with_red_flags"]).abs().mean())
-    assert result.table.loc[1, "mae_without_red_flags"] == pytest.approx(
-        (bench - result.rows["actual_without_red_flags"]).abs().mean())
-    hits = (result.rows["model_p10"] <= result.rows["actual_with_red_flags"]) & \
-        (result.rows["actual_with_red_flags"] <= result.rows["model_p90"])
+    assert rows.loc[(3, "bb"), ["model", "model_p10", "model_p90"]].tolist() == [
+        expected.total.raw_mean, expected.total.p10, expected.total.p90]
+    assert expected.total.mean == round(expected.total.raw_mean, 1)
+    # Every method is scored against the one actual total.
+    for i, method in enumerate(["model", "circuit_history", "season_form"]):
+        assert result.table.loc[i, "mae"] == pytest.approx((result.rows[method] - result.rows["actual"]).abs().mean())
+    hits = (result.rows["model_p10"] <= result.rows["actual"]) & (result.rows["actual"] <= result.rows["model_p90"])
     assert result.table.loc[0, "hit_rate"] == pytest.approx(hits.mean())
 
 
@@ -400,7 +400,7 @@ def test_backtest_a_car_with_no_start_compound_takes_the_races_most_common():
     p, temp = race_weather(WORLD, 2025, 3)
     expected = forecast(tables, "bb", "c3", 2025, 3, start_compounds=["HARD", common], air_temp=temp,
                         weather=weather_weights(p))
-    assert rows.loc["bb", "model_with_red_flags"] == expected.with_red_flags.raw_mean
+    assert rows.loc["bb", "model"] == expected.total.raw_mean
 
 
 def test_backtest_an_unknown_round_raises_story_4s_error():

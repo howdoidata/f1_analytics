@@ -1,7 +1,7 @@
-"""The pit-stop count model: a team's race stop total with and without red flags.
+"""The pit-stop count model: a team's race stop total, red-flag stops included.
 
 `fit_count_model(tables, season, round)` fits a Poisson GLM of each car's stops
-(excluding `red_flag` stops) on races before `(season, round)`; `forecast` turns
+(every `stop_type`) on races before `(season, round)`; `forecast` turns
 it into a team total over `DRAWS` seeded draws. Every rate and every fit row
 uses only races before the target, and each fit row's own rates use only
 races before that row's race.
@@ -11,22 +11,21 @@ Model terms:
 - Fit rows: every `car_races` row of a race before the target with a start
   compound and an air temperature, except cars out before their first stop
   (no stop and not finished, the `car_out_rate` rule), so the GLM models the
-  stops of running cars. Target: the car's Jolpica stops excluding `red_flag`.
-- Covariates: the circuit history rate (all stops but red-flag ones, per car,
-  at the circuit from 2011), the team rate (the team's stops per car without
-  red flags in the season's earlier rounds; the previous season's when the
-  season has no earlier round), the car's mean air temperature, the race's
+  stops of running cars. Target: all of the car's Jolpica stops (normal,
+  sc_vsc, red_flag and unknown).
+- Covariates: the circuit history rate (all stops per car at the circuit from
+  2011), the team rate (the team's stops per car, all stops, in the season's
+  earlier rounds; the previous season's when the season has no earlier round), the car's mean air temperature, the race's
   weather category (story 4's `_weather_category`) and the car's start compound.
-  A circuit or team with no history uses the field mean: stops per car without
-  red flags over the fit races (for a fit row, the fit races before its race).
+  A circuit or team with no history uses the field mean: stops per car (all
+  stops) over the fit races (for a fit row, the fit races before its race).
   A covariate with one value across the fit rows, or one the others already
   explain, is left out of that fit.
 - A draw: weather from the weights; per car, the GLM coefficients drawn from
   their estimated normal (`params`, `cov_params`), the car out before its
-  first stop with probability `car_out_rate` (0 stops), else Poisson(mu). With
-  red flags, the race is red-flagged at the red-flag race rate of the fit races
-  and each running car adds Poisson(mean extra red-flag stops per car in those
-  races).
+  first stop with probability `car_out_rate` (0 stops), else Poisson(mu). The
+  team total is the sum over its cars; red-flag stops are inside mu, with no
+  separate red-flag part.
 """
 
 from __future__ import annotations
@@ -78,7 +77,7 @@ MODEL_NOTES = [
     "The start-tyre effect is a pattern in past races, not cause and effect: teams choose "
     "their start tyres for reasons that also change how often they stop.",
     "A circuit or team with no stop history before the race uses the field mean: stops per car, "
-    "without red-flag stops, over the races the model is fitted on.",
+    "all stops, over the races the model is fitted on.",
     "An unseen weather or start-tyre level uses its nearest seen level "
     "(wet → mixed → dry; WET → INTERMEDIATE).",
     "The model counts the stops of cars that keep running; a car out before its first stop "
@@ -126,12 +125,12 @@ class _History:
             self._teams[constructor_id] = _stop_counts(keys, results, pit_stops)
         return self._teams[constructor_id]
 
-    def circuit_rate(self, circuit_id: str, season: int, round: int, *, red_flags: bool) -> float:
+    def circuit_rate(self, circuit_id: str, season: int, round: int) -> float:
         races = self.races
         keep = (races["circuit_id"] == circuit_id) & (races["season"] >= HISTORY_START_SEASON) & _before(races, season, round)
-        return _stops_per_car(races[keep], red_flags=red_flags)
+        return _stops_per_car(races[keep])
 
-    def team_rate(self, constructor_id: str, season: int, round: int, *, red_flags: bool) -> float:
+    def team_rate(self, constructor_id: str, season: int, round: int) -> float:
         """The team's earlier rounds this season; the previous season when the season has no earlier round."""
         races = self.races
         earlier = (races["season"] == season) & (races["round"] < round)
@@ -140,23 +139,23 @@ class _History:
             rows = counts[(counts["season"] == season) & (counts["round"] < round)]
         else:
             rows = counts[counts["season"] == season - 1]
-        return _stops_per_car(rows, red_flags=red_flags)
+        return _stops_per_car(rows)
 
-    def field_rate(self, season: int, round: int, *, red_flags: bool) -> float:
-        """Stops per car over the fit races (races with `car_races` rows) before the race."""
-        return _stops_per_car(self.fit_races[_before(self.fit_races, season, round)], red_flags=red_flags)
+    def field_rate(self, season: int, round: int) -> float:
+        """Stops per car (all stops) over the fit races (races with `car_races` rows) before the race."""
+        return _stops_per_car(self.fit_races[_before(self.fit_races, season, round)])
 
-    def rates(self, constructor_id: str, circuit_id: str, season: int, round: int, *, red_flags: bool) -> tuple[float, float]:
+    def rates(self, constructor_id: str, circuit_id: str, season: int, round: int) -> tuple[float, float]:
         """(circuit rate, team rate), each falling back to the field mean."""
-        key = (constructor_id, circuit_id, season, round, red_flags)
+        key = (constructor_id, circuit_id, season, round)
         if key not in self._rates:
-            self._rates[key] = self._uncached_rates(constructor_id, circuit_id, season, round, red_flags=red_flags)
+            self._rates[key] = self._uncached_rates(constructor_id, circuit_id, season, round)
         return self._rates[key]
 
-    def _uncached_rates(self, constructor_id: str, circuit_id: str, season: int, round: int, *, red_flags: bool) -> tuple[float, float]:
-        field_mean = self.field_rate(season, round, red_flags=red_flags)
-        circuit = self.circuit_rate(circuit_id, season, round, red_flags=red_flags)
-        team = self.team_rate(constructor_id, season, round, red_flags=red_flags)
+    def _uncached_rates(self, constructor_id: str, circuit_id: str, season: int, round: int) -> tuple[float, float]:
+        field_mean = self.field_rate(season, round)
+        circuit = self.circuit_rate(circuit_id, season, round)
+        team = self.team_rate(constructor_id, season, round)
         return (field_mean if np.isnan(circuit) else circuit), (field_mean if np.isnan(team) else team)
 
 
@@ -202,8 +201,6 @@ class CountModel:
     weather_levels: tuple[str, ...]
     compound_levels: tuple[str, ...]
     field_rate: float
-    red_flag_race_rate: float
-    red_flag_stops_per_car: float
     car_out_rate: float
     n_rows: int
     n_races: int
@@ -232,8 +229,7 @@ def _fit_rows(tables: PitStopTables, history: _History, season: int, round: int)
     rows = cars[cars["start_compound"].isin(COMPOUNDS) & cars["air_temp_mean"].notna()]
     rows = rows[["season", "round", "circuit_id", "driver_id", "constructor_id", "start_compound", "air_temp_mean"]]
     rows = rows.astype({"season": "int64", "round": "int64"}).rename(columns={"air_temp_mean": "air_temp"})
-    stops = tables.pit_stops[tables.pit_stops["stop_type"] != "red_flag"]
-    stops = stops.groupby(["season", "round", "driver_id"]).size().rename("stops").reset_index()
+    stops = tables.pit_stops.groupby(["season", "round", "driver_id"]).size().rename("stops").reset_index()
     rows = rows.merge(stops.astype({"season": "int64", "round": "int64"}), on=["season", "round", "driver_id"], how="left")
     stopped = tables.pit_stops[["season", "round", "driver_id"]].drop_duplicates().astype({"season": "int64", "round": "int64"})
     status = tables.results[["season", "round", "driver_id", "status"]].astype({"season": "int64", "round": "int64"})
@@ -242,7 +238,7 @@ def _fit_rows(tables: PitStopTables, history: _History, season: int, round: int)
     out = rows["stopped"].isna() & ~_finished(rows["status"])
     rows = rows[~out].drop(columns=["stopped", "status"])
     rates = [
-        history.rates(team, circuit, s, r, red_flags=False)
+        history.rates(team, circuit, s, r)
         for s, r, circuit, team in rows[["season", "round", "circuit_id", "constructor_id"]].itertuples(index=False)
     ]
     rows = rows.assign(
@@ -276,7 +272,7 @@ def _design(frame: pd.DataFrame, columns: Sequence[str]) -> np.ndarray:
 
 
 def fit_count_model(tables: PitStopTables, season: int, round: int) -> CountModel:
-    """The Poisson GLM and the red-flag and car-out parts, fitted on races before `(season, round)`."""
+    """The Poisson GLM and the car-out rate, fitted on races before `(season, round)`."""
     return _fit(tables, season, round, _History(tables))
 
 
@@ -312,16 +308,11 @@ def _fit(tables: PitStopTables, season: int, round: int, history: _History) -> C
         result = sm.GLM(rows["stops"].to_numpy(dtype=float), full[:, kept], family=sm.families.Poisson()).fit()
 
     races = rows[["season", "round"]].drop_duplicates()
-    counts = history.races.merge(races, on=["season", "round"])
-    flagged = counts[counts["red_flag"] > 0]
-    extra = float(flagged["red_flag"].sum() / flagged["cars"].sum()) if not flagged.empty else 0.0
     return CountModel(
         season=season, round=round, columns=columns,
         params=np.asarray(result.params, dtype=float), cov_params=np.asarray(result.cov_params(), dtype=float),
         dropped=dropped, weather_levels=weather_levels, compound_levels=compound_levels,
-        field_rate=history.field_rate(season, round, red_flags=False),
-        red_flag_race_rate=float(len(flagged) / len(counts)),
-        red_flag_stops_per_car=extra,
+        field_rate=history.field_rate(season, round),
         car_out_rate=car_out_rate(tables, season, round),
         n_rows=len(rows), n_races=len(races), fit_rows=rows, history=history,
     )
@@ -344,14 +335,13 @@ class StopRange:
 
 @dataclass(frozen=True)
 class Forecast:
-    """The team's race stop total, with and without red flags, and the inputs it used."""
+    """The team's race stop total (all stops, red-flag stops included) and the inputs it used."""
 
     constructor_id: str
     circuit_id: str
     season: int
     round: int
-    with_red_flags: StopRange
-    without_red_flags: StopRange
+    total: StopRange
     weather_weights: dict[str, float]
     start_compounds: tuple[str, ...]
     air_temp: float
@@ -398,7 +388,7 @@ def forecast(
     weather: str | Mapping[str, float],
     model: CountModel | None = None,
 ) -> Forecast:
-    """The team's total stops at the race, with and without red flags, over `DRAWS` draws seeded `SEED`.
+    """The team's total stops at the race (all stops), over `DRAWS` draws seeded `SEED`.
 
     `weather` is a category (`dry`, `mixed`, `wet`) or weights over them;
     `start_compounds` has one compound per car. `model` reuses a fit for the
@@ -415,7 +405,7 @@ def forecast(
     elif (model.season, model.round) != (season, round):
         raise ValueError(f"model is fitted for {model.season} round {model.round}, not {season} round {round}")
 
-    circuit_rate, team_rate = model.history.rates(constructor_id, circuit_id, season, round, red_flags=False)
+    circuit_rate, team_rate = model.history.rates(constructor_id, circuit_id, season, round)
     # One design row per (weather category, car).
     grid = pd.DataFrame(
         [
@@ -434,14 +424,11 @@ def forecast(
     mu = np.exp(np.einsum("dck,dk->dc", x[weather_draw], betas))
     out = rng.random((DRAWS, len(compounds))) < model.car_out_rate
     running = ~out
-    without = (rng.poisson(mu) * running).sum(axis=1)
-    flagged = rng.random(DRAWS) < model.red_flag_race_rate
-    extra = (rng.poisson(model.red_flag_stops_per_car, size=(DRAWS, len(compounds))) * running).sum(axis=1)
-    with_red_flags = without + extra * flagged
+    total = (rng.poisson(mu) * running).sum(axis=1)
 
     return Forecast(
         constructor_id=constructor_id, circuit_id=circuit_id, season=season, round=round,
-        with_red_flags=_range(with_red_flags), without_red_flags=_range(without),
+        total=_range(total),
         weather_weights=dict(zip(WEATHER_CATEGORIES, (float(w) for w in weights))),
         start_compounds=compounds, air_temp=float(air_temp),
         circuit_rate=float(circuit_rate), team_rate=float(team_rate),

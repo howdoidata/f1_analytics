@@ -90,10 +90,10 @@ def test_car_races_and_practice_stints_rows(conn):
 # only in a PR that says why.
 
 BACKTEST_PINS = {
-    # method: (mae_with_red_flags, mae_without_red_flags, hit_rate, n)
-    "model": (1.68, 1.56, 0.86, 187),
-    "circuit_history": (1.56, 1.48, None, 187),
-    "season_form": (1.67, 1.57, None, 187),
+    # method: (mae, hit_rate, n); every method scored against all of the team's stops
+    "model": (1.72, 0.83, 187),
+    "circuit_history": (1.56, None, 187),
+    "season_form": (1.67, None, 187),
 }
 
 
@@ -116,10 +116,9 @@ def test_every_backtest_round_has_a_day_before_forecast(conn):
 def test_backtest_2026_rounds_1_to_17(tables):
     table = backtest(tables, 2026, range(1, 18)).table.set_index("method")
     assert list(table.index) == list(BACKTEST_PINS)
-    for method, (mae_with, mae_without, hit_rate, n) in BACKTEST_PINS.items():
+    for method, (mae, hit_rate, n) in BACKTEST_PINS.items():
         row = table.loc[method]
-        assert round(row["mae_with_red_flags"], 2) == mae_with, method
-        assert round(row["mae_without_red_flags"], 2) == mae_without, method
+        assert round(row["mae"], 2) == mae, method
         if hit_rate is None:
             assert pd.isna(row["hit_rate"]), method
         else:
@@ -130,9 +129,8 @@ def test_backtest_2026_rounds_1_to_17(tables):
 def test_forecast_at_cota_2026_round_18(tables):
     result = forecast(tables, "williams", "americas", 2026, 18,
                       start_compounds=["MEDIUM", "MEDIUM"], air_temp=25.0, weather="dry")
-    with_rf, without_rf = result.with_red_flags, result.without_red_flags
-    assert (with_rf.mean, with_rf.p10, with_rf.p90) == (3.1, 1.0, 6.0)
-    assert (without_rf.mean, without_rf.p10, without_rf.p90) == (2.9, 1.0, 5.0)
+    total = result.total
+    assert (total.mean, total.p10, total.p90) == (3.1, 1.0, 6.0)
 
 
 # --- the skip / fail rule ----------------------------------------------------
