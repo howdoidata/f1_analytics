@@ -215,7 +215,7 @@ def _fmt(value, digits: int) -> str:
 
 
 def race_weather(weather: pd.DataFrame | None, laps: pd.DataFrame) -> dict[str, str]:
-    """Race means of air and track temperature (rows from the first lap start to the last lap end), and any rain."""
+    """Race means of air and track temperature and any rain, from the rows between the first lap start and the last lap end."""
     empty = {"air_temp_mean": "", "track_temp_mean": "", "rainfall": ""}
     if weather is None or len(weather) == 0:
         return empty
@@ -229,7 +229,7 @@ def race_weather(weather: pd.DataFrame | None, laps: pd.DataFrame) -> dict[str, 
     return {
         "air_temp_mean": _fmt(pd.to_numeric(window["AirTemp"], errors="coerce").mean(), 2),
         "track_temp_mean": _fmt(pd.to_numeric(window["TrackTemp"], errors="coerce").mean(), 2),
-        "rainfall": "true" if bool(_bool_series(frame["Rainfall"]).any()) else "false",
+        "rainfall": "true" if bool(_bool_series(window["Rainfall"]).any()) else "false",
     }
 
 

@@ -24,7 +24,7 @@ from typing import Any, Callable
 
 RETRY_CAP = 5
 BACKOFF_BASE_SECONDS = 1.0
-SESSION_IDENTIFIER = "R"  # race session only
+SESSION_IDENTIFIER = "R"  # default session: the race
 
 FASTF1_978_URL = "https://github.com/theOehrly/Fast-F1/issues/978"
 

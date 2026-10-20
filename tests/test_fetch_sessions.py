@@ -584,3 +584,20 @@ def test_tyre_wear_needs_five_green_accurate_laps_and_skips_wet_stints():
     results = pd.DataFrame({"number": ["1"], "driverId": ["max_verstappen"], "constructorId": ["red_bull"]})
     row = summary.car_race_rows(wet, _weather(), results, season=2026, round_number=1, circuit_id="x").iloc[0]
     assert row["deg_s_per_lap"] == "" and row["wet_laps"] == "10"
+
+
+def test_rain_after_the_last_lap_is_not_race_rainfall():
+    laps = _laps(cars=("1",), n_laps=6)
+    weather = _weather()
+    # Rain only in a row after the last lap ends (as at 2026 Miami).
+    weather = pd.concat(
+        [weather, pd.DataFrame({"Time": [_td(9000)], "AirTemp": [20.0], "TrackTemp": [30.0], "Rainfall": [True]})],
+        ignore_index=True,
+    )
+    results = pd.DataFrame({"number": ["1"], "driverId": ["max_verstappen"], "constructorId": ["red_bull"]})
+    row = summary.car_race_rows(laps, weather, results, season=2026, round_number=4, circuit_id="miami").iloc[0]
+    assert row["rainfall"] == "false"
+
+    weather.loc[1, "Rainfall"] = True  # rain during the race counts
+    row = summary.car_race_rows(laps, weather, results, season=2026, round_number=4, circuit_id="miami").iloc[0]
+    assert row["rainfall"] == "true"
