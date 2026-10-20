@@ -105,8 +105,12 @@ def load_session_with_retry(
     token: str,
     *,
     sleep: Callable[[float], None] = time.sleep,
+    identifier: str = SESSION_IDENTIFIER,
 ) -> Any:
-    """Load one race session, retrying only rate-limit/request failures.
+    """Load one session (the race by default), retrying only rate-limit/request failures.
+
+    `identifier` is FastF1's session name (`R`, `FP1`, `FP2`, `FP3`, ...); a
+    session the event does not have raises FastF1's `ValueError`, unretried.
 
     Any other exception -- e.g. `DataNotLoadedError` for a session with no
     data -- is not retried: it is the statused failure.
@@ -120,7 +124,7 @@ def load_session_with_retry(
         # cached race makes no fresh HTTP requests.
         fastf1.Cache.enable_cache(str(cache_dir))
         apply_archive_auth_header(fastf1, token)
-        session = fastf1.get_session(season, round_number, SESSION_IDENTIFIER)
+        session = fastf1.get_session(season, round_number, identifier)
         session.load(laps=True, telemetry=False, weather=True, messages=False)
         return session
 
