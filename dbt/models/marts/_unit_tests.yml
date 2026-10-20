@@ -266,3 +266,88 @@ unit_tests:
         - {driver_id: verstappen, stint_number: 2, constructor_id: red_bull, compound: MEDIUM, lap_start: 3, lap_end: 4, lap_count: 2}
         - {driver_id: hamilton, stint_number: 1, constructor_id: mercedes, compound: SOFT, lap_start: 1, lap_end: 2, lap_count: 2}
         - {driver_id: alonso, stint_number: 1, constructor_id: aston_martin, compound: MEDIUM, lap_start: 1, lap_end: 1, lap_count: 1}
+
+  # --- pit stops -------------------------------------------------------------
+
+  - name: pit_stop_durations_parse_to_seconds
+    description: >
+      Jolpica writes ss.fff, m:ss.fff and mm:ss.fff durations (and one bare 24);
+      an empty one stays NULL.
+    model: stg_jolpica__pit_stops
+    given:
+      # A source's columns cannot be looked up before the build, so the raw
+      # VARCHAR rows are given as SQL.
+      - input: source('jolpica', 'pit_stops')
+        format: sql
+        rows: |
+          select * from (values
+              ('2011', '1', 'a', '1', '1', '17:05:23', '26.898'),
+              ('2011', '1', 'b', '1', '2', '17:06:23', '1:29.401'),
+              ('2011', '1', 'c', '1', '3', '17:07:23', '21:39.801'),
+              ('2011', '1', 'd', '1', '4', '17:08:23', '24'),
+              ('2011', '1', 'e', '1', '5', '17:09:23', null::varchar)
+          ) as t(season, round, driverId, stop, lap, time, duration)
+    expect:
+      rows:
+        - {driver_id: a, season: 2011, round: 1, stop: 1, lap: 1, duration_s: 26.898}
+        - {driver_id: b, season: 2011, round: 1, stop: 1, lap: 2, duration_s: 89.401}
+        - {driver_id: c, season: 2011, round: 1, stop: 1, lap: 3, duration_s: 1299.801}
+        - {driver_id: d, season: 2011, round: 1, stop: 1, lap: 4, duration_s: 24.0}
+        - {driver_id: e, season: 2011, round: 1, stop: 1, lap: 5, duration_s: null}
+
+  - name: pit_stop_type_follows_track_status_periods
+    description: >
+      Race 1 has car_races rows and sc, vsc and red_flag periods: a stop on a
+      period's first or last lap is inside it, red_flag beats sc where they
+      overlap (laps 30-31), and a lap outside every period is normal. Race 2 has
+      car_races rows and no periods, so all normal. Race 3 has no car_races
+      rows, so all unknown even with a period. constructor_id comes from results.
+    model: pit_stops
+    given:
+      - input: ref('stg_jolpica__pit_stops')
+        rows:
+          - {season: 2026, round: 1, driver_id: a, stop: 1, lap: 5, time: '14:00:00', duration_s: 22.1}
+          - {season: 2026, round: 1, driver_id: a, stop: 2, lap: 10, time: '14:10:00', duration_s: 22.2}
+          - {season: 2026, round: 1, driver_id: a, stop: 3, lap: 12, time: '14:20:00', duration_s: 22.3}
+          - {season: 2026, round: 1, driver_id: a, stop: 4, lap: 13, time: '14:30:00', duration_s: 22.4}
+          - {season: 2026, round: 1, driver_id: b, stop: 1, lap: 20, time: '14:40:00', duration_s: 22.5}
+          - {season: 2026, round: 1, driver_id: b, stop: 2, lap: 22, time: '14:50:00', duration_s: 22.6}
+          - {season: 2026, round: 1, driver_id: b, stop: 3, lap: 30, time: '15:00:00', duration_s: 95.0}
+          - {season: 2026, round: 1, driver_id: b, stop: 4, lap: 31, time: '15:10:00', duration_s: 96.0}
+          - {season: 2026, round: 1, driver_id: b, stop: 5, lap: 29, time: '15:05:00', duration_s: 22.7}
+          - {season: 2026, round: 2, driver_id: a, stop: 1, lap: 10, time: '14:00:00', duration_s: 23.0}
+          - {season: 2026, round: 3, driver_id: a, stop: 1, lap: 10, time: '14:00:00', duration_s: 24.0}
+          - {season: 2026, round: 3, driver_id: b, stop: 1, lap: 40, time: '14:30:00', duration_s: null}
+      - input: ref('results')
+        rows:
+          - {season: 2026, round: 1, driver_id: a, constructor_id: williams}
+          - {season: 2026, round: 1, driver_id: b, constructor_id: mercedes}
+          - {season: 2026, round: 2, driver_id: a, constructor_id: williams}
+          - {season: 2026, round: 3, driver_id: a, constructor_id: williams}
+          - {season: 2026, round: 3, driver_id: b, constructor_id: mercedes}
+      - input: ref('car_races')
+        rows:
+          - {season: 2026, round: 1, driver_id: a, constructor_id: williams}
+          - {season: 2026, round: 1, driver_id: b, constructor_id: mercedes}
+          - {season: 2026, round: 2, driver_id: a, constructor_id: williams}
+      - input: ref('stg_fastf1_summary__track_status_periods')
+        rows:
+          - {season: 2026, round: 1, status: sc, start_lap: 10, end_lap: 12}
+          - {season: 2026, round: 1, status: vsc, start_lap: 20, end_lap: 20}
+          - {season: 2026, round: 1, status: sc, start_lap: 28, end_lap: 30}
+          - {season: 2026, round: 1, status: red_flag, start_lap: 30, end_lap: 31}
+          - {season: 2026, round: 3, status: sc, start_lap: 9, end_lap: 11}
+    expect:
+      rows:
+        - {season: 2026, round: 1, driver_id: a, constructor_id: williams, stop: 1, lap: 5, duration_s: 22.1, stop_type: normal}
+        - {season: 2026, round: 1, driver_id: a, constructor_id: williams, stop: 2, lap: 10, duration_s: 22.2, stop_type: sc_vsc}
+        - {season: 2026, round: 1, driver_id: a, constructor_id: williams, stop: 3, lap: 12, duration_s: 22.3, stop_type: sc_vsc}
+        - {season: 2026, round: 1, driver_id: a, constructor_id: williams, stop: 4, lap: 13, duration_s: 22.4, stop_type: normal}
+        - {season: 2026, round: 1, driver_id: b, constructor_id: mercedes, stop: 1, lap: 20, duration_s: 22.5, stop_type: sc_vsc}
+        - {season: 2026, round: 1, driver_id: b, constructor_id: mercedes, stop: 2, lap: 22, duration_s: 22.6, stop_type: normal}
+        - {season: 2026, round: 1, driver_id: b, constructor_id: mercedes, stop: 3, lap: 30, duration_s: 95.0, stop_type: red_flag}
+        - {season: 2026, round: 1, driver_id: b, constructor_id: mercedes, stop: 4, lap: 31, duration_s: 96.0, stop_type: red_flag}
+        - {season: 2026, round: 1, driver_id: b, constructor_id: mercedes, stop: 5, lap: 29, duration_s: 22.7, stop_type: sc_vsc}
+        - {season: 2026, round: 2, driver_id: a, constructor_id: williams, stop: 1, lap: 10, duration_s: 23.0, stop_type: normal}
+        - {season: 2026, round: 3, driver_id: a, constructor_id: williams, stop: 1, lap: 10, duration_s: 24.0, stop_type: unknown}
+        - {season: 2026, round: 3, driver_id: b, constructor_id: mercedes, stop: 1, lap: 40, duration_s: null, stop_type: unknown}

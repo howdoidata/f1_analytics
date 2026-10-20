@@ -17,6 +17,8 @@ sources:
       - name: qualifying
       - name: final_driver_standings
       - name: final_constructor_standings
+      - name: pit_stops
+        description: One row per pit stop, 2011 onwards.
 
   - name: fastf1
     description: >
@@ -36,3 +38,24 @@ sources:
       - name: counts
         meta:
           external_location: "read_json('{{ env_var('F1_RAW_DIR', 'data/raw') }}/fastf1/*/*/counts.json', filename=true, format='auto', columns={race_label: 'VARCHAR', season: 'VARCHAR', round: 'VARCHAR', lap_count: 'VARCHAR', weather_count: 'VARCHAR', drivers: 'VARCHAR[]'})"
+
+  - name: fastf1_summary
+    description: >
+      Per-car-per-race summaries and track-status periods written by
+      `uv run fetch-sessions` under data/raw/fastf1_summary/.
+    meta:
+      external_location: "read_csv('{{ env_var('F1_RAW_DIR', 'data/raw') }}/fastf1_summary/{name}.csv', header=true, all_varchar=true)"
+    tables:
+      - name: car_races
+      - name: track_status_periods
+
+  - name: fastf1_practice
+    description: >
+      Practice stint summaries written by `uv run fetch-sessions`, one file per
+      session: data/raw/fastf1_practice/<season>/<RR>-<slug>/<session>_stints.csv.
+    meta:
+      formatter: template
+    tables:
+      - name: stints
+        meta:
+          external_location: "read_csv('{{ env_var('F1_RAW_DIR', 'data/raw') }}/fastf1_practice/*/*/*_stints.csv', header=true, union_by_name=true, all_varchar=true)"

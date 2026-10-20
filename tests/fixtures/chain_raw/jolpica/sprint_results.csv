@@ -1,0 +1,7 @@
+season,round,raceName,number,driverId,givenName,familyName,constructorId,constructorName,grid,position,positionText,points,laps,status,totalRaceTime,millis,fastestLapNumber,fastestLapRank,fastestLapTime
+2023,2,Saudi Arabian Grand Prix,11,perez,Sergio,Perez,red_bull,Red Bull,1,1,1,8,19,Finished,,,,,
+2023,2,Saudi Arabian Grand Prix,1,verstappen,Max,Verstappen,red_bull,Red Bull,2,2,2,7,19,Finished,,,,,
+2023,2,Saudi Arabian Grand Prix,14,alonso,Fernando,Alonso,aston_martin,Aston Martin,3,3,3,6,19,Finished,,,,,
+2023,2,Saudi Arabian Grand Prix,63,russell,George,Russell,mercedes,Mercedes,4,4,4,5,19,Finished,,,,,
+2023,2,Saudi Arabian Grand Prix,44,hamilton,Lewis,Hamilton,mercedes,Mercedes,5,5,5,4,19,Finished,,,,,
+2023,2,Saudi Arabian Grand Prix,18,stroll,Lance,Stroll,aston_martin,Aston Martin,6,6,6,3,19,Finished,,,,,

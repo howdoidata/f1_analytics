@@ -1,0 +1,5 @@
+season,round,raceName,circuitId,date,time,url
+2022,1,Bahrain Grand Prix,bahrain,2022-03-20,15:00:00,https://example.com/race/2022/1
+2023,1,Bahrain Grand Prix,bahrain,2023-03-05,15:00:00,https://example.com/race/2023/1
+2023,2,Saudi Arabian Grand Prix,jeddah,2023-03-19,17:00:00,https://example.com/race/2023/2
+2023,3,Australian Grand Prix,albert_park,2023-04-02,05:00:00,https://example.com/race/2023/3
