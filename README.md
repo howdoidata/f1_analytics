@@ -51,6 +51,7 @@ The render prints Jupyter kernel warnings such as "Kernel is running over TCP wi
 ```bash
 uv run build     # data/raw/ -> data/processed/f1_analytics.duckdb (offline, no credentials)
 uv run refresh   # maintainer only: append new Jolpica rounds, fetch missing FastF1 extracts, then build
+uv run fetch-sessions --circuit americas --since 2018   # maintainer only: summarise FastF1 sessions into data/raw/fastf1_summary/ and fastf1_practice/ (see --help)
 ```
 
 `uv run build` runs `dbt build` on the project in `dbt/`: staging tables (schema `staging`) type the raw CSVs, the marts in `main` are the tables the analysis reads, and the dbt tests check them. It builds into a fresh temporary file and swaps it in only if every model and test passes and no guarded table (`results`, `sprint_results`, `qualifying`, `raw_fastf1_*`) has shrunk; otherwise it exits 1 and leaves the previous DuckDB file as it was. Each build's test results are in `dbt/target/run_results.json`. Paths resolve from the package location, so `uv run build` writes to this repo's `data/processed/` whatever the current directory.

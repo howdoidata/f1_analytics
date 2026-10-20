@@ -9,6 +9,9 @@ DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 JOLPICA_RAW_DIR = RAW_DATA_DIR / "jolpica"
 FASTF1_RAW_DIR = RAW_DATA_DIR / "fastf1"
+# `fetch-sessions` output: per-car-per-race summaries and practice stints (committed).
+FASTF1_SUMMARY_DIR = RAW_DATA_DIR / "fastf1_summary"
+FASTF1_PRACTICE_DIR = RAW_DATA_DIR / "fastf1_practice"
 # Gitignored caches: FastF1's HTTP cache and the Jolpica dump's page cache.
 FASTF1_CACHE_DIR = RAW_DATA_DIR / "fastf1_cache"
 JOLPICA_CACHE_DIR = DATA_DIR / "cache" / "jolpica"
