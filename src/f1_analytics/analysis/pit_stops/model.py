@@ -21,9 +21,10 @@ Model terms:
   stops) over the fit races (for a fit row, the fit races before its race).
   A covariate with one value across the fit rows, or one the others already
   explain, is left out of that fit.
-- A draw: weather from the weights; per car, the GLM coefficients drawn from
-  their estimated normal (`params`, `cov_params`), the car out before its
-  first stop with probability `car_out_rate` (0 stops), else Poisson(mu). The
+- A draw: one GLM coefficient vector from their estimated normal (`params`,
+  `cov_params`), shared by the team's cars; weather from the weights; then
+  per car, the car out before its first stop with probability
+  `car_out_rate` (0 stops), else Poisson(mu). The
   team total is the sum over its cars; red-flag stops are inside mu, with no
   separate red-flag part.
 """
