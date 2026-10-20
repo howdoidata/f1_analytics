@@ -21,11 +21,14 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      # tests/conftest.py blocks all network access -- this suite
-      # never needs F1TV/FastF1 credentials to run.
-      - name: Run tests
-        run: uv run pytest -v
-
       # dbt build on the committed data/raw/: every model and test must pass.
+      # It runs first so tests/test_real_db.py reads the built file.
       - name: Build the DuckDB file
         run: uv run build
+
+      # tests/conftest.py blocks all network access -- this suite
+      # never needs F1TV/FastF1 credentials to run. It runs even when the
+      # build fails; the real-DB test then fails because CI is set.
+      - name: Run tests
+        if: success() || failure()
+        run: uv run pytest -v

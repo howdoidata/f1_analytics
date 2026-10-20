@@ -52,3 +52,42 @@ models:
     description: One row per FastF1 Driver code seen in the laps, with its resolution.
   - name: stg_fastf1__team_map
     description: One row per FastF1 Team name seen in the laps, with its resolution.
+
+  # Pit stops and the FastF1 session summaries: a non-numeric season/round
+  # would drop the row out of every join.
+  - name: stg_jolpica__pit_stops
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+  - name: stg_fastf1_summary__car_races
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+  - name: stg_fastf1_summary__track_status_periods
+    description: >
+      Stays in staging: pit_stops reads it for stop_type. A status outside sc,
+      vsc and red_flag would silently type its stops normal, so it fails the build.
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+      - name: status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [sc, vsc, red_flag]
+      - name: start_lap
+        data_tests: [not_null]
+      - name: end_lap
+        data_tests: [not_null]
+  - name: stg_fastf1_practice__stints
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]

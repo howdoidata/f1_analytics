@@ -275,3 +275,101 @@ models:
         description: (V)
         data_tests:
           - not_null
+
+  # --- Williams pit-stop forecast: stops, cars and practice stints ------------
+
+  - name: pit_stops
+    description: >
+      The stop count of record (W1): one row per Jolpica pit stop, 2011 onwards,
+      with the car's constructor from results and a stop_type from the FastF1
+      track-status periods.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, driver_id, stop]
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+      - name: driver_id
+        data_tests: [not_null]
+      - name: constructor_id
+        description: constructorId of the results row with the same season, round and driver.
+        data_tests: [not_null]
+      - name: stop
+        data_tests: [not_null]
+      - name: lap
+        data_tests: [not_null]
+      - name: time
+        description: Time of day of the stop, as Jolpica gives it.
+        data_tests: [not_null]
+      - name: duration_s
+        description: >
+          Pit-lane time in seconds. NULL where Jolpica has no duration.
+      - name: stop_type
+        description: >
+          unknown when the race has no car_races row; otherwise red_flag when the
+          lap is inside a red_flag period, sc_vsc when inside an sc or vsc period
+          (both end laps included; red_flag wins an overlap), else normal.
+          Penalty stops cannot be told apart and are normal.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [normal, sc_vsc, red_flag, unknown]
+
+  - name: car_races
+    description: >
+      One row per car per race with a FastF1 summary (story 2's car_races.csv),
+      typed. Values pass through as written.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, driver_id]
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+      - name: driver_id
+        data_tests: [not_null]
+      - name: constructor_id
+        data_tests: [not_null]
+      - name: stops_fastf1
+        description: >
+          Pit-in laps in the FastF1 laps, as story 2 wrote it. Not the stop
+          count: W1 counts stops from pit_stops.
+      - name: rainfall
+        description: True if FastF1 weather shows rain during the race window only (not the whole session).
+      - name: deg_s_per_lap
+        description: >
+          Raw slope of lap time against tyre life, in seconds per lap: the
+          lap-weighted mean of the dry stints' least-squares slopes. Not corrected
+          for fuel burn, so it is often negative. NULL when no stint qualifies.
+
+  - name: practice_stints
+    description: >
+      One row per practice stint, from every
+      data/raw/fastf1_practice/<season>/<RR>-<slug>/<session>_stints.csv file.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, session, driver_id, stint]
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+      - name: session
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [FP1, FP2, FP3]
+      - name: driver_id
+        data_tests: [not_null]
+      - name: stint
+        data_tests: [not_null]
+      - name: laps
+        data_tests: [not_null]

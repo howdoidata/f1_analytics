@@ -29,6 +29,7 @@ CURATED_TABLES = {
     "race_results_enriched", "driver_standings_by_round", "constructor_standings_by_round",
     "final_driver_standings", "final_constructor_standings",
     "raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather",
+    "pit_stops", "car_races", "practice_stints",
 }
 
 
@@ -41,10 +42,17 @@ def _extract(raw_dir: Path, season: int, dir_name: str, fixture: str = "normal_r
     return target
 
 
+def _add_session_summaries(raw: Path) -> None:
+    """The FastF1 summary and practice files (2025 R1 only); their sources fail the build when missing."""
+    shutil.copytree(FIXTURES / "fastf1_summary", raw / "fastf1_summary")
+    shutil.copytree(FIXTURES / "fastf1_practice", raw / "fastf1_practice")
+
+
 def _make_raw_dir(root: Path) -> Path:
     raw = root / "raw"
     shutil.copytree(FIXTURES / "jolpica_raw", raw / "jolpica")
     _extract(raw, 2024, "01-bahrain-grand-prix")
+    _add_session_summaries(raw)
     return raw
 
 
@@ -120,7 +128,7 @@ def test_build_writes_every_curated_table_from_raw_fixtures(built_db: Path):
         def types(table):
             return dict(conn.execute(
                 "SELECT column_name, data_type FROM information_schema.columns "
-                "WHERE table_schema = 'main' AND table_name = ?", [table]).fetchall())
+                "WHERE table_schema = 'main' AND table_name = ? ORDER BY ordinal_position", [table]).fetchall())
 
         assert types("driver_standings_by_round")["date"] == "DATE"
         assert types("results")["fastest_lap"] == "DOUBLE" and types("results")["position"] == "BIGINT"
@@ -152,6 +160,35 @@ def test_build_writes_every_curated_table_from_raw_fixtures(built_db: Path):
         assert conn.execute(
             "SELECT url, time_race FROM race_results_enriched WHERE season = 2024 AND round = 2 LIMIT 1"
         ).fetchone() == ("https://example.com/race/2024/2", "17:00:00")
+
+        # Pit stops, car summaries and practice stints, typed.
+        assert types("pit_stops") == {
+            "season": "BIGINT", "round": "BIGINT", "driver_id": "VARCHAR", "constructor_id": "VARCHAR",
+            "stop": "BIGINT", "lap": "BIGINT", "time": "VARCHAR", "duration_s": "DOUBLE", "stop_type": "VARCHAR"}
+        assert list(types("pit_stops")) == [
+            "season", "round", "driver_id", "constructor_id", "stop", "lap", "time", "duration_s", "stop_type"]
+        car_types = types("car_races")
+        assert {car_types[c] for c in ("laps_completed", "stints", "stops_fastf1", "wet_laps", "driver_number")} == {"BIGINT"}
+        assert {car_types[c] for c in ("air_temp_mean", "track_temp_mean", "deg_s_per_lap")} == {"DOUBLE"}
+        assert car_types["rainfall"] == "BOOLEAN"
+        assert types("practice_stints")["stint"] == "BIGINT" and types("practice_stints")["laps"] == "BIGINT"
+        assert types("practice_stints")["deg_s_per_lap"] == "DOUBLE"
+        # 2025 R1 has summaries and one sc period (laps 15-16); 2025 R2 has none.
+        assert conn.execute(
+            "SELECT season, round, driver_id, constructor_id, stop, lap, duration_s, stop_type FROM pit_stops "
+            "ORDER BY season, round, lap").fetchall() == [
+            (2025, 1, "hamilton", "mercedes", 1, 14, 23.104, "normal"),
+            (2025, 1, "verstappen", "red_bull", 1, 16, 22.871, "sc_vsc"),
+            (2025, 1, "alonso", "alpine", 1, 17, 23.522, "normal"),
+            (2025, 1, "verstappen", "red_bull", 2, 36, 22.64, "normal"),
+            (2025, 2, "verstappen", "red_bull", 1, 20, 21.903, "unknown"),
+            (2025, 2, "alonso", "alpine", 1, 21, 22.215, "unknown"),
+            (2025, 2, "hamilton", "mercedes", 1, 24, 22.087, "unknown"),
+        ]
+        assert conn.execute(
+            "SELECT driver_id, rainfall, deg_s_per_lap FROM car_races ORDER BY driver_id").fetchall() == [
+            ("alonso", False, 0.0412), ("hamilton", False, -0.0135), ("verstappen", False, None)]
+        assert conn.execute("SELECT COUNT(*) FROM practice_stints WHERE session = 'FP2'").fetchone() == (3,)
 
 
 def test_build_replaces_a_db_an_earlier_pipeline_wrote(existing_db: Path, raw_dir: Path):
@@ -388,6 +425,7 @@ def test_refresh_with_a_valid_token_updates_fetches_missing_extracts_and_builds(
     # The update-test world: 2025 R3 is the next round; R1 already has an extract.
     raw = tmp_path / "raw"
     make_update_world(raw / "jolpica")
+    _add_session_summaries(raw)
     kept = _extract(raw, 2025, "01-bahrain-grand-prix")
     kept_hashes = _tree_hashes(kept)
     calls = []
@@ -412,7 +450,7 @@ def test_refresh_with_a_valid_token_updates_fetches_missing_extracts_and_builds(
     assert _tree_hashes(kept) == kept_hashes
     assert (raw / "fastf1" / "2025" / "02-saudi-arabian-grand-prix" / "counts.json").is_file()
     assert not (raw / "fastf1" / "2025" / "03-australian-grand-prix").exists()
-    assert "raw_fastf1_laps" in _tables(tmp_path / "out.duckdb")
+    assert {"raw_fastf1_laps", "pit_stops", "car_races", "practice_stints"} <= _tables(tmp_path / "out.duckdb")
 
 
 # --- pins --------------------------------------------------------------------
@@ -428,8 +466,10 @@ def test_dependency_pins():
 
 
 def test_build_refuses_to_shrink_a_landed_table(existing_db: Path, raw_dir: Path, capsys):
+    # A 2024 row: every 2025 results row has a pit stop, which would then be an orphan.
     results = jolpica_fetch.read_raw_table(raw_dir / "jolpica", "results")
-    jolpica_fetch.write_raw_table(raw_dir / "jolpica", "results", results.iloc[:-1])
+    dropped = (results["season"] == "2024") & (results["round"] == "2") & (results["driverId"] == "hamilton")
+    jolpica_fetch.write_raw_table(raw_dir / "jolpica", "results", results[~dropped])
     err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
     assert "results: this build has 11 row(s), fewer than the 12" in err and "refusing to replace" in err
     assert "delete" in err and "and rebuild" in err
@@ -445,3 +485,78 @@ def test_a_round_with_any_extract_folder_is_not_refetched_after_a_race_rename(ra
     _extract(raw_dir, 2025, "01-old-bahrain-name")
     missing = cli.missing_extract_rounds(raw_dir, 2025, today=date(2025, 12, 31))
     assert missing == [(2, "02-saudi-arabian-grand-prix")]
+
+
+# --- pit stops, car summaries and practice stints ----------------------------
+
+
+def _append_csv_rows(path: Path, rows: list[str]) -> None:
+    with path.open("a") as handle:
+        handle.write("".join(row + "\n" for row in rows))
+
+
+def _drop_last_csv_row(path: Path) -> None:
+    lines = path.read_text().splitlines()
+    path.write_text("\n".join(lines[:-1]) + "\n")
+
+
+def test_build_rejects_a_pit_stop_with_no_results_row(existing_db: Path, raw_dir: Path, capsys):
+    _append_csv_rows(raw_dir / "jolpica" / "pit_stops.csv", ["2025,1,leclerc,1,20,15:35:00,23.001"])
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "assert_pit_stops_have_a_results_row" in err and "(2025, 1, 'leclerc', 1)" in err
+
+
+def test_build_rejects_a_car_race_with_no_results_row_of_that_constructor(existing_db: Path, raw_dir: Path, capsys):
+    # Alonso drove for alpine in 2025 R1, not aston_martin.
+    path = raw_dir / "fastf1_summary" / "car_races.csv"
+    path.write_text(path.read_text().replace("2025,1,bahrain,alonso,alpine,", "2025,1,bahrain,alonso,aston_martin,"))
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "assert_car_races_have_a_results_row" in err and "aston_martin" in err
+
+
+@pytest.mark.parametrize(
+    ("relative", "row", "test_name"),
+    [
+        ("jolpica/pit_stops.csv", "2025,1,hamilton,1,30,15:45:00,22.500",
+         "unique_combination_pit_stops_season__round__driver_id__stop"),
+        ("fastf1_summary/car_races.csv",
+         "2025,1,bahrain,hamilton,mercedes,44,57,2,1,SOFT,SOFT,SOFT|HARD,0,24.5,31.25,false,",
+         "unique_combination_car_races_season__round__driver_id"),
+        ("fastf1_practice/2025/01-bahrain-grand-prix/FP2_stints.csv",
+         "2025,1,FP2,hamilton,mercedes,44,1,MEDIUM,4,",
+         "unique_combination_practice_stints_season__round__session__driver_id__stint"),
+    ],
+)
+def test_build_rejects_a_duplicate_key(existing_db: Path, raw_dir: Path, capsys, relative: str, row: str, test_name: str):
+    _append_csv_rows(raw_dir / relative, [row])
+    assert test_name in _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+
+
+def test_build_rejects_a_practice_session_outside_fp1_to_fp3(existing_db: Path, raw_dir: Path, capsys):
+    folder = raw_dir / "fastf1_practice" / "2025" / "01-bahrain-grand-prix"
+    (folder / "FP4_stints.csv").write_text(
+        (folder / "FP2_stints.csv").read_text().replace(",FP2,", ",FP4,"))
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "accepted_values_practice_stints_session" in err and "FP4" in err
+
+
+@pytest.mark.parametrize("missing", ["fastf1_summary/car_races.csv", "fastf1_summary/track_status_periods.csv", "fastf1_practice"])
+def test_build_fails_when_a_session_summary_source_is_missing(existing_db: Path, raw_dir: Path, capsys, missing: str):
+    target = raw_dir / missing
+    shutil.rmtree(target) if target.is_dir() else target.unlink()
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert ("_stints.csv" if missing == "fastf1_practice" else target.name) in err
+
+
+@pytest.mark.parametrize(
+    ("relative", "table", "existing"),
+    [
+        ("jolpica/pit_stops.csv", "pit_stops", 7),
+        ("fastf1_summary/car_races.csv", "car_races", 3),
+        ("fastf1_practice/2025/01-bahrain-grand-prix/FP2_stints.csv", "practice_stints", 3),
+    ],
+)
+def test_build_refuses_to_shrink_a_new_mart(existing_db: Path, raw_dir: Path, capsys, relative: str, table: str, existing: int):
+    _drop_last_csv_row(raw_dir / relative)
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert f"{table}: this build has {existing - 1} row(s), fewer than the {existing}" in err and "refusing to replace" in err

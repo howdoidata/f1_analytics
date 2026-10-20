@@ -1,0 +1,13 @@
+season,round,session,driver_id,constructor_id,driver_number,stint,compound,laps,deg_s_per_lap
+2023,1,FP2,alonso,aston_martin,14,1,SOFT,6,0.0812
+2023,1,FP2,alonso,aston_martin,14,2,MEDIUM,14,-0.0124
+2023,1,FP2,hamilton,mercedes,44,1,SOFT,6,0.0812
+2023,1,FP2,hamilton,mercedes,44,2,MEDIUM,14,-0.0124
+2023,1,FP2,perez,red_bull,11,1,SOFT,6,0.0812
+2023,1,FP2,perez,red_bull,11,2,MEDIUM,14,-0.0124
+2023,1,FP2,russell,mercedes,63,1,SOFT,6,0.0812
+2023,1,FP2,russell,mercedes,63,2,MEDIUM,14,-0.0124
+2023,1,FP2,stroll,aston_martin,18,1,SOFT,6,0.0812
+2023,1,FP2,stroll,aston_martin,18,2,MEDIUM,14,-0.0124
+2023,1,FP2,verstappen,red_bull,1,1,SOFT,6,0.0812
+2023,1,FP2,verstappen,red_bull,1,2,MEDIUM,14,-0.0124

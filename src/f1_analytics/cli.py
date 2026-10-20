@@ -35,7 +35,10 @@ LOGIN_COMMAND = "uv run python -m fastf1 auth f1tv --authenticate"
 # Tables fed by data that only ever grows; a build that would shrink one
 # means a raw file was truncated or lost, so the swap is refused.
 REGRESSION_GUARDED_TABLES = frozenset(
-    {"results", "sprint_results", "qualifying", "raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather"}
+    {
+        "results", "sprint_results", "qualifying", "raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather",
+        "pit_stops", "car_races", "practice_stints",
+    }
 )
 # Failing rows printed per failing dbt test.
 FAILURE_SAMPLE_ROWS = 5

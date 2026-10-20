@@ -1,0 +1,4 @@
+season,round,session,driver_id,constructor_id,driver_number,stint,compound,laps,deg_s_per_lap
+2025,1,FP2,alonso,alpine,14,1,MEDIUM,11,-0.2284
+2025,1,FP2,hamilton,mercedes,44,1,SOFT,3,
+2025,1,FP2,verstappen,red_bull,1,1,SOFT,5,0.0595
