@@ -11,9 +11,12 @@ import os
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 import pytest
 
 from f1_analytics import config
+from f1_analytics.analysis.data import load_pit_stop_tables
+from f1_analytics.analysis.pit_stops import backtest, forecast
 
 
 MISSING_DB = "real DuckDB not built; run uv run build"
@@ -21,19 +24,22 @@ MISSING_DB = "real DuckDB not built; run uv run build"
 UP_TO_2026_R17 = "(season < 2026 OR (season = 2026 AND round <= 17))"
 
 
-def _has_pit_stops(path: Path) -> bool:
+REQUIRED_TABLES = ("pit_stops", "weather_forecasts")
+
+
+def _has_required_tables(path: Path) -> bool:
     with duckdb.connect(str(path), read_only=True) as connection:
-        return connection.execute(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'main' AND table_name = 'pit_stops'"
-        ).fetchone()[0] > 0
+        found = {name for (name,) in connection.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'").fetchall()}
+    return set(REQUIRED_TABLES) <= found
 
 
 def require_real_db(path: Path, environ=os.environ) -> Path:
-    """`path` if it exists and has `pit_stops`; otherwise skip, or fail when `CI` is set.
+    """`path` if it exists and has `pit_stops` and `weather_forecasts`; otherwise skip, or fail when `CI` is set.
 
-    A DB built before the pit-stop marts counts as not built.
+    A DB built before those marts counts as not built.
     """
-    if path.exists() and _has_pit_stops(path):
+    if path.exists() and _has_required_tables(path):
         return path
     if "CI" in environ:
         pytest.fail(MISSING_DB)
@@ -79,6 +85,56 @@ def test_car_races_and_practice_stints_rows(conn):
     assert _one(conn, "SELECT COUNT(*) FROM practice_stints WHERE season = 2026 AND round = 13 AND session = 'FP2'") == (97,)
 
 
+# --- story 5: the count model on the committed data -------------------------
+# Pinned from the last run on the committed data/raw/ (2026-10-20). They change
+# only in a PR that says why.
+
+BACKTEST_PINS = {
+    # method: (mae_with_red_flags, mae_without_red_flags, hit_rate, n)
+    "model": (1.68, 1.56, 0.86, 187),
+    "circuit_history": (1.56, 1.48, None, 187),
+    "season_form": (1.67, 1.57, None, 187),
+}
+
+
+@pytest.fixture(scope="module")
+def tables(conn):
+    return load_pit_stop_tables(config.DUCKDB_PATH)
+
+
+def test_story_5_stop_pins(conn):
+    assert _one(conn, "SELECT COUNT(*) FROM pit_stops WHERE season = 2026 AND round BETWEEN 1 AND 17") == (689,)
+    assert _one(conn, "SELECT COUNT(*) FROM pit_stops JOIN races USING (season, round) "
+                      "WHERE races.circuit_id = 'americas' AND season BETWEEN 2012 AND 2025") == (416,)
+
+
+def test_every_backtest_round_has_a_day_before_forecast(conn):
+    assert _one(conn, "SELECT COUNT(DISTINCT round) FROM weather_forecasts "
+                      "WHERE season = 2026 AND round BETWEEN 1 AND 17 AND kind = 'day_before'") == (17,)
+
+
+def test_backtest_2026_rounds_1_to_17(tables):
+    table = backtest(tables, 2026, range(1, 18)).table.set_index("method")
+    assert list(table.index) == list(BACKTEST_PINS)
+    for method, (mae_with, mae_without, hit_rate, n) in BACKTEST_PINS.items():
+        row = table.loc[method]
+        assert round(row["mae_with_red_flags"], 2) == mae_with, method
+        assert round(row["mae_without_red_flags"], 2) == mae_without, method
+        if hit_rate is None:
+            assert pd.isna(row["hit_rate"]), method
+        else:
+            assert round(row["hit_rate"], 2) == hit_rate, method
+        assert row["n"] == n, method
+
+
+def test_forecast_at_cota_2026_round_18(tables):
+    result = forecast(tables, "williams", "americas", 2026, 18,
+                      start_compounds=["MEDIUM", "MEDIUM"], air_temp=25.0, weather="dry")
+    with_rf, without_rf = result.with_red_flags, result.without_red_flags
+    assert (with_rf.mean, with_rf.p10, with_rf.p90) == (3.1, 1.0, 6.0)
+    assert (without_rf.mean, without_rf.p10, without_rf.p90) == (2.9, 1.0, 5.0)
+
+
 # --- the skip / fail rule ----------------------------------------------------
 
 
@@ -97,6 +153,16 @@ def test_a_db_without_pit_stops_counts_as_not_built(tmp_path: Path, environ):
     path = tmp_path / "old.duckdb"
     with duckdb.connect(str(path)) as connection:
         connection.execute("CREATE TABLE results AS SELECT 1 AS x")
+    expected = pytest.fail.Exception if "CI" in environ else pytest.skip.Exception
+    with pytest.raises(expected, match=MISSING_DB):
+        require_real_db(path, environ=environ)
+
+
+@pytest.mark.parametrize("environ", [{}, {"CI": ""}])
+def test_a_db_without_weather_forecasts_counts_as_not_built(tmp_path: Path, environ):
+    path = tmp_path / "story4.duckdb"
+    with duckdb.connect(str(path)) as connection:
+        connection.execute("CREATE TABLE pit_stops AS SELECT 1 AS x")
     expected = pytest.fail.Exception if "CI" in environ else pytest.skip.Exception
     with pytest.raises(expected, match=MISSING_DB):
         require_real_db(path, environ=environ)

@@ -351,3 +351,42 @@ unit_tests:
         - {season: 2026, round: 2, driver_id: a, constructor_id: williams, stop: 1, lap: 10, duration_s: 23.0, stop_type: normal}
         - {season: 2026, round: 3, driver_id: a, constructor_id: williams, stop: 1, lap: 10, duration_s: 24.0, stop_type: unknown}
         - {season: 2026, round: 3, driver_id: b, constructor_id: mercedes, stop: 1, lap: 40, duration_s: null, stop_type: unknown}
+
+  # --- weather forecasts -----------------------------------------------------
+
+  - name: weather_forecast_files_unnest_to_one_row_per_hour
+    description: >
+      A fetch-weather file (open_meteo/day_before/2026-03.json, two hours): kind,
+      season and round come from the path, the hourly arrays stay aligned, the
+      probability becomes 0-1 and a null value stays NULL.
+    model: stg_open_meteo__forecasts
+    given:
+      - input: source('open_meteo', 'forecasts')
+        format: sql
+        rows: |
+          select
+              '/raw/open_meteo/day_before/2026-03.json' as filename,
+              'https://historical-forecast-api.open-meteo.com/v1/forecast' as endpoint,
+              '2026-10-20T10:00:00Z' as fetched_at,
+              '2026-03-29T05:00:00Z' as race_start_utc,
+              {'hourly': {'time': ['2026-03-29T05:00', '2026-03-29T06:00'], 'precipitation': [0.0, 0.4],
+                          'precipitation_probability': [10.0, null], 'temperature_2m': [17.8, 16.9]}} as response
+    expect:
+      rows:
+        - {kind: day_before, season: 2026, round: 3, hour_utc: '2026-03-29 05:00:00', race_start_utc: '2026-03-29 05:00:00',
+           precipitation_mm: 0.0, precipitation_probability_pct: 10.0, air_temp: 17.8}
+        - {kind: day_before, season: 2026, round: 3, hour_utc: '2026-03-29 06:00:00', race_start_utc: '2026-03-29 05:00:00',
+           precipitation_mm: 0.4, precipitation_probability_pct: null, air_temp: 16.9}
+
+  - name: weather_forecasts_probability_is_a_share
+    description: Open-Meteo's percent becomes 0-1.
+    model: weather_forecasts
+    given:
+      - input: ref('stg_open_meteo__forecasts')
+        rows:
+          - {season: 2026, round: 3, kind: day_before, hour_utc: '2026-03-29 05:00:00', precipitation_probability_pct: 40.0}
+          - {season: 2026, round: 3, kind: day_before, hour_utc: '2026-03-29 06:00:00', precipitation_probability_pct: 100.0}
+    expect:
+      rows:
+        - {season: 2026, round: 3, hour_utc: '2026-03-29 05:00:00', precipitation_probability: 0.4}
+        - {season: 2026, round: 3, hour_utc: '2026-03-29 06:00:00', precipitation_probability: 1.0}

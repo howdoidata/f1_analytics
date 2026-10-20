@@ -59,3 +59,24 @@ per car per stint: compound, laps and a raw tyre-wear slope).
 - F1 timing data is the property of Formula One World Championship Limited.
   This project is unofficial and not associated with the Formula 1 companies.
   The summaries are kept here for non-commercial analysis only.
+
+## `open_meteo/`
+
+Hourly weather forecasts for the race window, one file per race:
+`open_meteo/day_before/<season>-<RR>.json` (the endpoint, the query, the
+fetch time, the race start in UTC and the API response: hourly precipitation,
+precipitation probability and air temperature for the race date and the day
+after, at the circuit's latitude and longitude).
+
+- Source: [Open-Meteo](https://open-meteo.com/), Historical Forecast API
+  (`https://historical-forecast-api.open-meteo.com/v1/forecast`), fetched by
+  `uv run fetch-weather --season <s> --round <r> --day-before`. No account or
+  key is needed. The Previous Runs API has rain probability for only two of
+  2026's first 17 rounds (Miami and Canada), so it is not used.
+- The Historical Forecast API keeps the latest forecast for each hour, and
+  these files were fetched after the races: they are not a true day-before
+  forecast, so the backtest's weather is optimistic. The analysis uses p, the
+  higher precipitation probability of the race-start hour and the next.
+- Licence: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), per the
+  [Open-Meteo terms](https://open-meteo.com/en/terms). Weather data by
+  Open-Meteo.com.

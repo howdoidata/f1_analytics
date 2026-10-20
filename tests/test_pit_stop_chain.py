@@ -1,6 +1,7 @@
 """The pit-stop chain test: from a DuckDB built from the chain fixture world to model inputs.
 
-Stories 5 and 6 extend this file (count model, backtest, scenario table). The
+Story 5 extends it to the count model's forecast and the backtest table; story 6
+adds the scenario table. The
 chain follows `CHAIN_TEAM` (not Williams) at non-COTA circuits, and checks that
 every input comes from races before the target round.
 """
@@ -16,7 +17,7 @@ import pytest
 from chain_world import CHAIN_CIRCUIT, CHAIN_EARLIER_SEASON, CHAIN_SEASON, CHAIN_TEAM, make_chain_world
 from f1_analytics import cli
 from f1_analytics.analysis.data import PitStopTables, load_pit_stop_tables
-from f1_analytics.analysis.pit_stops import model_inputs, practice_wear_vs_history
+from f1_analytics.analysis.pit_stops import backtest, fit_count_model, forecast, model_inputs, practice_wear_vs_history
 
 
 @pytest.fixture(scope="module")
@@ -112,3 +113,48 @@ def test_every_chain_round_ignores_the_target_race_and_later(chain_tables):
             _assert_same(practice_wear_vs_history(chain_tables, *args), practice_wear_vs_history(trimmed, *args))
             checked += 1
     assert checked == 4 * 3
+
+
+# --- story 5: count model and backtest ----------------------------------------------------------
+
+CHAIN_DRY_MEDIUM = {"start_compounds": ["MEDIUM", "MEDIUM"], "air_temp": 24.5, "weather": "dry"}
+
+
+def test_round_3_forecast_reaches_a_total_and_range(chain_tables):
+    model = fit_count_model(chain_tables, CHAIN_SEASON, 3)
+    # 2022 R1 has no earlier fit race, so the fit is 2023 R1-R2: 12 cars, one red-flagged race
+    # (2023 R2: 4 red-flag stops over 6 cars). Every car is dry, on MEDIUM, at 24.5 °C.
+    assert (model.n_rows, model.n_races) == (12, 2)
+    assert model.red_flag_race_rate == 0.5 and model.red_flag_stops_per_car == pytest.approx(4 / 6)
+    assert {"air_temp"} <= set(model.dropped) and model.weather_levels == ("dry",)
+    assert model.car_out_rate == 0.0
+
+    result = forecast(chain_tables, CHAIN_TEAM, "albert_park", CHAIN_SEASON, 3, **CHAIN_DRY_MEDIUM, model=model)
+    assert result == forecast(chain_tables, CHAIN_TEAM, "albert_park", CHAIN_SEASON, 3, **CHAIN_DRY_MEDIUM)
+    for band in (result.with_red_flags, result.without_red_flags):
+        assert 0 <= band.p10 <= band.mean <= band.p90
+    assert result.with_red_flags.mean > result.without_red_flags.mean
+    # albert_park has no earlier race: the field mean of the fit races (2023 R1-R2, no red-flag stops).
+    assert result.circuit_rate == pytest.approx(model.field_rate)
+    assert result.team_rate == 1.0
+
+
+def test_chain_backtest_table(chain_tables):
+    result = backtest(chain_tables, CHAIN_SEASON, [2, 3])
+    assert result.table["method"].tolist() == ["model", "circuit_history", "season_form"]
+    assert result.table["n"].tolist() == [6, 6, 6]
+    assert result.table["hit_rate"].isna().tolist() == [False, True, True]
+    assert result.table[["mae_with_red_flags", "mae_without_red_flags"]].notna().all().all()
+    team = result.rows[result.rows["constructor_id"] == CHAIN_TEAM]
+    # R2: hamilton 2 (one under the red flag) + russell 1; R3: hamilton 2 + russell 1.
+    assert team[["round", "actual_with_red_flags", "actual_without_red_flags"]].values.tolist() == [[2, 3, 2], [3, 3, 3]]
+    with pytest.raises(ValueError, match=f"^no fit races before {CHAIN_SEASON} round 1$"):
+        backtest(chain_tables, CHAIN_SEASON, [1])
+
+
+def test_chain_forecast_ignores_the_target_race_and_later(chain_tables):
+    for round_, circuit in ((2, "jeddah"), (3, "albert_park")):
+        trimmed = _as_of(chain_tables, CHAIN_SEASON, round_)
+        for team in sorted(set(chain_tables.constructors["constructor_id"])):
+            args = (team, circuit, CHAIN_SEASON, round_)
+            assert forecast(chain_tables, *args, **CHAIN_DRY_MEDIUM) == forecast(trimmed, *args, **CHAIN_DRY_MEDIUM)

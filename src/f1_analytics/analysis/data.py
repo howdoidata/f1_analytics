@@ -6,7 +6,7 @@ the DataFrames these functions return, so tests can pass synthetic frames.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import duckdb
@@ -76,9 +76,23 @@ def load_race_data(db_path: Path = DUCKDB_PATH, season: int = 2026) -> dict[str,
         }
 
 
+WEATHER_FORECAST_COLUMNS = [
+    "season", "round", "kind", "hour_utc", "endpoint", "fetched_at", "race_start_utc",
+    "precipitation_probability", "precipitation_mm", "air_temp",
+]
+
+
+def _no_weather_forecasts() -> pd.DataFrame:
+    return pd.DataFrame(columns=WEATHER_FORECAST_COLUMNS)
+
+
 @dataclass(frozen=True)
 class PitStopTables:
-    """The seven marts the pit-stop analysis reads, one DataFrame each."""
+    """The eight marts the pit-stop analysis reads, one DataFrame each.
+
+    `weather_forecasts` defaults to an empty frame, so callers that build the
+    tables by hand and need no forecasts can leave it out.
+    """
 
     races: pd.DataFrame
     results: pd.DataFrame
@@ -87,10 +101,11 @@ class PitStopTables:
     pit_stops: pd.DataFrame
     car_races: pd.DataFrame
     practice_stints: pd.DataFrame
+    weather_forecasts: pd.DataFrame = field(default_factory=_no_weather_forecasts)
 
 
 def load_pit_stop_tables(db_path: Path = DUCKDB_PATH) -> PitStopTables:
-    """Every row of the seven pit-stop marts, in one read-only pass."""
+    """Every row of the eight pit-stop marts, in one read-only pass."""
     with open_database(db_path) as con:
         return PitStopTables(**{
             name: con.execute(f"SELECT * FROM {name}").df()
