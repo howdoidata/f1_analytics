@@ -12,10 +12,12 @@ import pytest
 from f1_analytics.analysis.data import PitStopTables
 from f1_analytics.analysis.pit_stops import (
     MODEL_NOTES, UnknownInputError, backtest, car_out_rate, fit_count_model, forecast, incident_chance, race_weather,
-    weather_weights,
+    team_split_check, weather_weights,
 )
 from f1_analytics.analysis.pit_stops.backtest import score
-from f1_analytics.analysis.pit_stops.model import DRAWS, SEED, _draw, _grid
+from f1_analytics.analysis.pit_stops.model import (
+    DRAWS, SEED, _draw, _grid, _link_parts, _match_chances, _model_pairs, _team_link, race_minimum,
+)
 
 TEAMS = {"aa": ("a1", "a2"), "bb": ("b1", "b2"), "cc": ("c1", "c2")}
 DRIVERS = [d for cars in TEAMS.values() for d in cars]
@@ -49,7 +51,7 @@ def make_world() -> PitStopTables:
             elif (s, r, d) == (2025, 1, "c1"):
                 stops, status = 0, "Did not start"
             elif (s, r, d) == (2025, 2, "a2"):
-                stops, status = 0, "+1 Lap"
+                status = "+1 Lap"  # a lapped finisher, with its stops
             elif (s, r, d) == (2025, 2, "b2"):
                 status = "Retired"  # out after a stop: not a car out before its first stop
             results.append((s, r, d, TEAM_OF[d], status))
@@ -167,7 +169,7 @@ def test_cars_out_before_their_first_stop_are_left_out_of_the_fit():
     keys = set(zip(*[fit_count_model(WORLD, 2025, 4).fit_rows[c] for c in ("season", "round", "driver_id")]))
     # Retired and Did not start with no stop: out, drawn by the car-out part instead.
     assert (2024, 3, "c1") not in keys and (2025, 1, "c1") not in keys
-    # +1 Lap with no stop finished, and Retired after a stop was running: both stay in.
+    # +1 Lap finished, and Retired after a stop was running: both stay in.
     assert (2025, 2, "a2") in keys and (2025, 2, "b2") in keys
 
 
@@ -176,8 +178,8 @@ def test_fit_row_rates_use_races_before_their_own_race():
     # 2025 R3 at c3: 2024 R3 (one car with no stop) is its only earlier c3 race.
     c3_2024 = sum(_stops_of(2024, 3, i) for i, d in enumerate(DRIVERS) if d != "c1") / 6
     assert rows.loc[(2025, 3, "a1"), "circuit_rate"] == pytest.approx(c3_2024)
-    # aa's 2025 R3 team rate: all its R1 and R2 stops (a2 had none in R2).
-    aa = (_stops_of(2025, 1, 0) + _stops_of(2025, 1, 1) + _stops_of(2025, 2, 0)) / 4
+    # aa's 2025 R3 team rate: all its R1 and R2 stops.
+    aa = (_stops_of(2025, 1, 0) + _stops_of(2025, 1, 1) + _stops_of(2025, 2, 0) + _stops_of(2025, 2, 1)) / 4
     assert rows.loc[(2025, 3, "a1"), "team_rate"] == pytest.approx(aa)
     # 2025 R1: the team rate is the previous season's.
     aa_2024 = sum(_stops_of(2024, r, i) for r in (1, 2, 3) for i in (0, 1)) / 6
@@ -200,7 +202,7 @@ def test_fit_rates_count_red_flag_stops():
 
 
 def test_car_out_rate_counts_no_stop_non_finishers():
-    # 2025 R1-R3: c1 did not start (out); a2 +1 Lap with no stop (finished); b2 retired after a stop.
+    # 2025 R1-R3: c1 did not start (out); a2 +1 Lap (finished); b2 retired after a stop.
     assert car_out_rate(WORLD, 2025, 4) == pytest.approx(1 / 18)
     # Round 1 uses the previous season: c1 retired with no stop in 2024 R3.
     assert car_out_rate(WORLD, 2025, 1) == pytest.approx(1 / 18)
@@ -214,11 +216,12 @@ def test_no_fit_rows_raises():
 
 def test_a_constant_covariate_is_dropped_and_the_fit_succeeds():
     cars = WORLD.car_races.assign(start_compound="MEDIUM", wet_laps=0)
-    model = fit_count_model(replace(WORLD, car_races=cars), 2025, 4)
+    tables = replace(WORLD, car_races=cars)
+    model = fit_count_model(tables, 2025, 4)
     assert model.weather_levels == ("dry",) and model.compound_levels == ("MEDIUM",)
     assert not any(c.startswith(("weather:", "start_compound:")) for c in model.columns)
     assert np.isfinite(model.params).all()
-    result = forecast(replace(WORLD, car_races=cars), *ARGS, start_compounds=["SOFT", "WET"], air_temp=25.0,
+    result = forecast(tables, *ARGS, start_compounds=["SOFT", "WET"], air_temp=25.0,
                       weather="wet", model=model)
     assert result.total.mean > 0
 
@@ -363,6 +366,8 @@ def test_model_notes_say_what_story_7_shows():
     assert "tyre wear is not a model input" in text
     assert "incident chance rests on few races" in text and "safety car or red flag" in text
     assert "a vsc does not count" in text and "only through its season half" in text
+    assert "at least the race minimum of stops" in text and "1 in a mixed or wet race" in text
+    assert "usually make the same number of stops" in text and "each car keeps its own spread" in text
     assert not any("without red" in note.lower() for note in MODEL_NOTES)
 
 
@@ -550,3 +555,188 @@ def test_score_leaves_a_split_with_no_rows_empty():
     table = score(rows)
     assert table["mae_incident"].isna().all() and table["mae_clean"].notna().all()
     assert table["mae_clean"].tolist() == pytest.approx(table["mae"].tolist())
+
+
+# --- race minimum and team link -------------------------------------------------------------------
+
+def _stop_rules(*rows) -> pd.DataFrame:
+    return pd.DataFrame(list(rows), columns=["circuit_id", "from_season", "dry_minimum"])
+
+
+def _set_status(tables: PitStopTables, season: int, round_: int, drivers, status: str) -> PitStopTables:
+    results = tables.results.copy()
+    results.loc[(results["season"] == season) & (results["round"] == round_)
+                & results["driver_id"].isin(drivers), "status"] = status
+    return replace(tables, results=results)
+
+
+def _quiet(model, **changes):
+    """The model with no coefficient spread and no car out, so every car runs at its point-estimate mu."""
+    return replace(model, cov_params=np.eye(len(model.columns)) * 1e-20, car_out_rate=0.0, **changes)
+
+
+DRY, MIXED_W = np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])
+
+
+def test_the_fit_target_is_the_stops_above_the_race_minimum():
+    model = fit_count_model(WORLD, 2025, 4)
+    rows = model.fit_rows.set_index(["season", "round", "driver_id"])
+    assert model.minimums == {"dry": 1, "mixed": 1, "wet": 1}
+    # Dry races (no stop_rules row) and the mixed 2025 R2: minimum 1.
+    assert set(rows.loc[rows["weather"] == "dry", "minimum"]) == {1}
+    assert set(rows.loc[rows["weather"] == "mixed", "minimum"]) == {1}
+    assert (rows["extra"] == rows["stops"] - rows["minimum"]).all()
+
+
+def test_a_finisher_with_no_stop_in_a_mixed_race_fails_the_fit():
+    stops = WORLD.pit_stops[~((WORLD.pit_stops["season"] == 2025) & (WORLD.pit_stops["round"] == 2)
+                              & (WORLD.pit_stops["driver_id"] == "a2"))]
+    with pytest.raises(ValueError, match="^a2 finished 2025 round 2 with 0 stops, below the race minimum 1$"):
+        fit_count_model(replace(WORLD, pit_stops=stops), 2025, 4)
+
+
+def test_a_dry_running_car_makes_at_least_one_stop_in_every_draw():
+    model = _quiet(fit_count_model(WORLD, 2025, 4))
+    x = _grid(model, 2.0, 2.0, 25.0, ["MEDIUM", "SOFT"])
+    stops, _ = _draw(model, x, DRY, 0.3)
+    assert stops.min() >= 1
+    # Mixed: minimum 1 as well.
+    mixed, _ = _draw(model, x, MIXED_W, 0.3)
+    assert mixed.min() >= 1
+
+
+def test_a_car_out_before_its_first_stop_still_gets_0():
+    model = replace(fit_count_model(WORLD, 2025, 4), car_out_rate=0.5)
+    stops, _ = _draw(model, _grid(model, 2.0, 2.0, 25.0, ["MEDIUM", "SOFT"]), DRY, 0.3)
+    assert 0.45 < (stops == 0).mean() < 0.55
+    assert set(np.unique(stops)) - {0} and stops[stops > 0].min() >= 1
+
+
+def test_a_stop_rule_sets_the_dry_minimum_from_its_season():
+    # c3 is a 2-stop circuit from 2025 (3 before it, from 2020): the latest from_season up to the season wins.
+    tables = replace(WORLD, stop_rules=_stop_rules(("c3", 2020, 3), ("c3", 2025, 2)))
+    assert race_minimum(tables, "c3", 2025, "dry") == 2 and race_minimum(tables, "c3", 2024, "dry") == 3
+    assert race_minimum(tables, "c3", 2019, "dry") == 1 and race_minimum(tables, "c1", 2025, "dry") == 1
+    assert race_minimum(tables, "c3", 2025, "mixed") == 1 == race_minimum(tables, "c3", 2025, "wet")
+    tables = replace(WORLD, stop_rules=_stop_rules(("c3", 2025, 2)))
+    model = fit_count_model(tables, 2025, 3)
+    assert model.minimums == {"dry": 2, "mixed": 1, "wet": 1}
+    stops, _ = _draw(_quiet(model), _grid(model, 2.0, 2.0, 25.0, ["MEDIUM", "SOFT"]), DRY, 0.3)
+    assert stops.min() >= 2
+    # The same circuit in 2024 is still at 1.
+    assert fit_count_model(tables, 2024, 3).minimums["dry"] == 1
+
+
+def test_a_finisher_below_the_race_minimum_fails_the_fit():
+    # a1 finished the dry 2025 R1 with no stop.
+    stops = WORLD.pit_stops
+    tables = replace(WORLD, pit_stops=stops[~((stops["season"] == 2025) & (stops["round"] == 1)
+                                              & (stops["driver_id"] == "a1"))])
+    with pytest.raises(ValueError, match="^a1 finished 2025 round 1 with 0 stops, below the race minimum 1$"):
+        fit_count_model(tables, 2025, 4)
+    # A 2-stop rule at c3 from 2025: a1 finished 2025 R3 with one stop.
+    with pytest.raises(ValueError, match="^a1 finished 2025 round 3 with 1 stops, below the race minimum 2$"):
+        fit_count_model(replace(WORLD, stop_rules=_stop_rules(("c3", 2025, 2))), 2025, 4)
+
+
+def test_a_non_finisher_below_the_minimum_is_clipped_to_0_and_kept():
+    # 2025 R3 at a 2-stop c3: a1 and b2 made one stop and retired.
+    tables = _set_status(replace(WORLD, stop_rules=_stop_rules(("c3", 2025, 2))), 2025, 3, ["a1", "b2"], "Retired")
+    rows = fit_count_model(tables, 2025, 4).fit_rows.set_index(["season", "round", "driver_id"])
+    for driver in ("a1", "b2"):
+        assert rows.loc[(2025, 3, driver), ["stops", "minimum", "extra"]].tolist() == [1, 2, 0]
+    assert (rows["stops"] < rows["minimum"]).sum() == 2
+    assert rows.loc[(2025, 3, "b1"), "extra"] == rows.loc[(2025, 3, "b1"), "stops"] - 2
+
+
+def test_with_a_full_link_and_equal_mu_both_cars_match_in_every_draw():
+    model = fit_count_model(WORLD, 2025, 4)
+    x = _grid(model, 2.0, 2.0, 25.0, ["MEDIUM", "MEDIUM"])
+    linked, _ = _draw(replace(model, team_link=1.0, car_out_rate=0.0), x, DRY, 0.3)
+    assert (linked[:, 0] == linked[:, 1]).all()
+    free, _ = _draw(replace(model, team_link=0.0, car_out_rate=0.0), x, DRY, 0.3)
+    assert (free[:, 0] != free[:, 1]).any()
+
+
+@pytest.mark.parametrize("rho", [0.4, 1.0])
+def test_the_link_keeps_each_cars_own_distribution(rho):
+    model = replace(fit_count_model(WORLD, 2025, 4), car_out_rate=0.1)
+    x = _grid(model, 2.0, 2.0, 25.0, ["MEDIUM", "SOFT"])
+    free, _ = _draw(replace(model, team_link=0.0), x, DRY, 0.3)
+    linked, _ = _draw(replace(model, team_link=rho), x, DRY, 0.3)
+    # The first car always draws from its own uniform: identical whatever the link.
+    np.testing.assert_array_equal(free[:, 0], linked[:, 0])
+    # The second car's mean moves only by Monte Carlo error.
+    se = math.sqrt(free[:, 1].var() / DRAWS + linked[:, 1].var() / DRAWS)
+    assert abs(free[:, 1].mean() - linked[:, 1].mean()) < 4 * se
+    # The team mean is unchanged; only the joint spread moves.
+    assert linked.sum(axis=1).var() >= free.sum(axis=1).var()
+
+
+def _pmf(k: int, mu: float) -> float:
+    return math.exp(-mu) * mu ** k / math.factorial(k)
+
+
+def test_rho_closed_form_on_a_hand_computed_pair():
+    # Two team-races, each with mu 0.5 and 1.0; one has equal extra stops: obs 1/2.
+    pairs = pd.DataFrame({"mu1": [0.5, 0.5], "mu2": [1.0, 1.0], "extra1": [1, 0], "extra2": [1, 1]})
+    m_ind = sum(_pmf(k, 0.5) * _pmf(k, 1.0) for k in range(40))
+    cdf = lambda k, mu: sum(_pmf(i, mu) for i in range(k + 1)) if k >= 0 else 0.0  # noqa: E731
+    m_shared = sum(max(0.0, min(cdf(k, 0.5), cdf(k, 1.0)) - max(cdf(k - 1, 0.5), cdf(k - 1, 1.0)))
+                   for k in range(40))
+    # By hand: F(0.5) steps .6065 .9098 .9856 ...; F(1.0) steps .3679 .7358 .9197 ...; overlap .3679 + .1292 + .0099.
+    assert m_shared == pytest.approx(0.3679 + 0.1292 + 0.0099, abs=2e-4)
+    assert _match_chances(0.5, 1.0) == pytest.approx((m_ind, m_shared))
+    parts = _link_parts(pairs)
+    assert (parts["n"], parts["obs"]) == (2, 0.5)
+    assert parts["rho"] == pytest.approx((0.5 - m_ind) / (m_shared - m_ind))
+    assert _team_link(pairs) == pytest.approx(0.9555, abs=1e-3)
+    # Equal mu: the shared draw always matches.
+    assert _match_chances(1.0, 1.0)[1] == pytest.approx(1.0)
+
+
+def test_rho_is_clipped_to_0_1():
+    pairs = pd.DataFrame({"mu1": [0.5, 0.5], "mu2": [1.0, 1.0], "extra1": [1, 0], "extra2": [1, 0]})
+    assert _team_link(pairs) == 1.0
+    assert _team_link(pairs.assign(extra2=[2, 1])) == 0.0
+
+
+def test_rho_uses_the_seasons_earlier_both_finished_team_races_then_all_fit_rows():
+    model = fit_count_model(WORLD, 2025, 4)
+    pairs = _model_pairs(model)
+    # 2025 R1-R3: c1 did not start in R1 (cc out), b2 retired in R2 (bb out): 9 - 2 team-races.
+    assert set(pairs["season"]) == {2025} and len(pairs) == 7
+    assert 0.0 <= model.team_link <= 1.0
+    # 2025 R1 has no earlier round: all fit rows (2024 R2-R3; c1 out in 2024 R3).
+    first = _model_pairs(fit_count_model(WORLD, 2025, 1))
+    assert set(pairs.columns) >= {"mu1", "mu2", "extra1", "extra2"}
+    assert set(first["season"]) == {2024} and len(first) == 5
+
+
+def test_no_both_finished_team_race_anywhere_gives_rho_0():
+    tables = WORLD
+    for s, r, _ in HELD:
+        tables = _set_status(tables, s, r, ["a2", "b2", "c2"], "Retired")  # out after a stop: still fit rows
+    model = fit_count_model(tables, 2025, 4)
+    assert _model_pairs(model).empty and model.team_link == 0.0
+    check = team_split_check(model)
+    assert check["split"].tolist() == ["same", "differ by 1", "differ by 2+"]
+    assert check[["model", "observed"]].isna().all().all()
+
+
+def test_team_split_check_compares_the_models_split_shares_with_the_observed():
+    model = fit_count_model(WORLD, 2025, 4)
+    check = team_split_check(model)
+    assert check.columns.tolist() == ["split", "model", "observed"]
+    assert check["split"].tolist() == ["same", "differ by 1", "differ by 2+"]
+    assert check["model"].sum() == pytest.approx(1.0) and check["observed"].sum() == pytest.approx(1.0)
+    pairs = _model_pairs(model)
+    gap = (pairs["extra1"] - pairs["extra2"]).abs()
+    assert check["observed"].tolist() == pytest.approx([(gap == 0).mean(), (gap == 1).mean(), (gap >= 2).mean()])
+    # Unclipped ρ matches the observed same-count share exactly.
+    if 0.0 < model.team_link < 1.0:
+        assert check.loc[0, "model"] == pytest.approx(check.loc[0, "observed"])
+    # No link: the independent shares.
+    free = team_split_check(replace(model, team_link=0.0))
+    assert free.loc[0, "model"] == pytest.approx(np.mean([_match_chances(a, b)[0]
+                                                          for a, b in zip(pairs["mu1"], pairs["mu2"])]))

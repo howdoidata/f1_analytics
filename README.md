@@ -54,7 +54,7 @@ uv run refresh   # maintainer only: append new Jolpica rounds, fetch missing Fas
 uv run fetch-sessions --circuit americas --since 2018   # maintainer only: summarise FastF1 sessions into data/raw/fastf1_summary/ and fastf1_practice/ (see --help)
 ```
 
-`uv run build` runs `dbt build` on the project in `dbt/`: staging tables (schema `staging`) type the raw CSVs, the marts in `main` are the tables the analysis reads, and the dbt tests check them. It builds into a fresh temporary file and swaps it in only if every model and test passes and no guarded table (`results`, `sprint_results`, `qualifying`, `raw_fastf1_*`) has shrunk; otherwise it exits 1 and leaves the previous DuckDB file as it was. Each build's test results are in `dbt/target/run_results.json`. Paths resolve from the package location, so `uv run build` writes to this repo's `data/processed/` whatever the current directory.
+`uv run build` runs `dbt build` on the project in `dbt/`: staging tables (schema `staging`) type the raw CSVs, the marts in `main` are the tables the analysis reads, and the dbt tests check them. It builds into a fresh temporary file and swaps it in only if every model and test passes and no guarded table (`results`, `sprint_results`, `qualifying`, `raw_fastf1_*`, `pit_stops`, `car_races`, `practice_stints`, `weather_forecasts`, `race_incidents`, `stop_rules`) has shrunk; otherwise it exits 1 and leaves the previous DuckDB file as it was. Each build's test results are in `dbt/target/run_results.json`. Paths resolve from the package location, so `uv run build` writes to this repo's `data/processed/` whatever the current directory.
 
 To run dbt directly, from the repo root (this writes straight to `data/processed/f1_analytics.duckdb`, with no swap or shrink guard):
 

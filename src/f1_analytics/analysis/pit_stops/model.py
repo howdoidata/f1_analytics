@@ -1,8 +1,8 @@
 """The pit-stop count model: a team's race stop total, red-flag stops included.
 
 `fit_count_model(tables, season, round)` fits a Poisson GLM of each car's stops
-(every `stop_type`) on races before `(season, round)`; `forecast` turns
-it into a team total over `DRAWS` seeded draws. Every rate and every fit row
+above the race minimum (every `stop_type`) on races before `(season, round)`;
+`forecast` turns it into a team total over `DRAWS` seeded draws. Every rate and every fit row
 uses only races before the target, and each fit row's own rates use only
 races before that row's race.
 
@@ -11,8 +11,15 @@ Model terms:
 - Fit rows: every `car_races` row of a race before the target with a start
   compound and an air temperature, except cars out before their first stop
   (no stop and not finished, the `car_out_rate` rule), so the GLM models the
-  stops of running cars. Target: all of the car's Jolpica stops (normal,
-  sc_vsc, red_flag and unknown).
+  stops of running cars. Target: the car's extra stops, all of its Jolpica
+  stops (normal, sc_vsc, red_flag and unknown) minus the race minimum. A
+  non-finisher below the minimum counts 0 extra stops; a finisher below it
+  fails the fit.
+- Race minimum (`race_minimum`): in a dry race, the `stop_rules` mart's
+  `dry_minimum` for the circuit at the latest `from_season` up to the season,
+  or 1 with no such row; 1 in a mixed or wet race (a weather change forces a
+  tyre change; no finisher in the data made none). Circuit rules live only in
+  the mart's seed.
 - Covariates: the circuit history rate (all stops per car at the circuit from
   2011), the team rate (the team's stops per car, all stops, in the season's
   earlier rounds; the previous season's when the season has no earlier round), the car's mean air temperature, the race's
@@ -28,11 +35,21 @@ Model terms:
   races, over the earlier `race_incidents` races at the circuit and the earlier
   races of the season, each race counted once; with neither, all earlier
   `race_incidents` races; with none, 0.0. No tuned weight.
+- Team link (`team_link`, ρ): the chance that the team's cars share one
+  uniform for their extra stops. ρ = (obs − mean m_ind) ÷ (mean m_shared −
+  mean m_ind), clipped to [0, 1], over the fit rows' team-races where both cars
+  finished, from the season's earlier rounds (all fit rows when the season has
+  none; ρ = 0 with none at all), with in-sample mu: obs is the share with equal
+  extra stops, m_ind = Σₖ p₁(k)p₂(k) and m_shared the overlap of the two
+  cars' Poisson CDF steps. No tuned weight.
 - A draw: one GLM coefficient vector from their estimated normal (`params`,
-  `cov_params`), shared by the team's cars; weather from the weights; then
-  `incident` from the incident chance, also shared by the team's cars; then
-  per car, the car out before its first stop with probability
-  `car_out_rate` (0 stops), else Poisson(mu). The
+  `cov_params`), shared by the team's cars; weather from the weights, which
+  fixes the race minimum; then `incident` from the incident chance, also
+  shared by the team's cars; then per car, the car out before its first stop
+  with probability `car_out_rate` (0 stops); then the link (with chance ρ the
+  cars share one uniform u, else each has its own) and the uniforms. A running
+  car makes the minimum plus F⁻¹(u; mu), its own Poisson's inverse CDF, so the
+  link moves only the team's joint spread, not either car's distribution. The
   team total is the sum over its cars; red-flag stops are inside mu, with no
   separate red-flag part.
 """
@@ -47,6 +64,7 @@ from typing import TYPE_CHECKING, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
+from scipy.stats import poisson
 
 from f1_analytics.analysis.pit_stops.history import (
     HISTORY_START_SEASON,
@@ -80,6 +98,15 @@ COMPOUND_FALLBACK = {
 }
 NUMERIC_TERMS = ("circuit_rate", "team_rate", "air_temp")
 INCIDENT_TERM = "incident"
+# The race minimum: one stop in a dry race (two compounds). In a mixed or wet race the two-compound rule
+# lapses, but the weather change forces a tyre change: no finisher in the data made none (user, 2026-10-21).
+DEFAULT_DRY_MINIMUM = 1
+WET_MINIMUM = 1
+SPLITS = ("same", "differ by 1", "differ by 2+")
+# A numerical guard, not a model term: a car's mean extra stops in a draw is capped here. A level whose
+# extra stops are all 0 has a coefficient near −∞ with a huge spread, and its sampled coefficients
+# would overflow exp; no draw on the committed data comes near the cap.
+MU_CAP = 1e6
 
 MODEL_NOTES = [
     "Penalty stops with no tyre change cannot be told apart from other stops in the data, "
@@ -107,6 +134,11 @@ MODEL_NOTES = [
     "earlier races of the season with a safety car or red flag (a VSC does not count), and the "
     "backtest tests it only through its season half, because no backtest round is at a circuit "
     "with earlier races in the data.",
+    "A running car makes at least the race minimum of stops: 1 in a dry race, more where a "
+    "circuit's rules require it, and 1 in a mixed or wet race; the model counts the stops above it.",
+    "The team's two cars usually make the same number of stops: in each draw they share one random "
+    "draw for their extra stops with a chance set from the season's earlier races where both finished, "
+    "and each car keeps its own spread.",
 ]
 
 
@@ -209,6 +241,20 @@ def _race_incidents(tables: PitStopTables) -> pd.DataFrame:
     })
 
 
+def _dry_minimum(tables: PitStopTables, circuit_id: str, season: int) -> int:
+    """The `stop_rules` row's `dry_minimum` at the latest `from_season` up to `season`; 1 with none."""
+    rules = tables.stop_rules
+    rows = rules[(rules["circuit_id"] == circuit_id) & (rules["from_season"].astype("int64") <= season)]
+    if rows.empty:
+        return DEFAULT_DRY_MINIMUM
+    return int(rows.sort_values("from_season")["dry_minimum"].iloc[-1])
+
+
+def race_minimum(tables: PitStopTables, circuit_id: str, season: int, weather: str) -> int:
+    """The stops a running car makes at least: the circuit's dry minimum when `weather` is dry, else `WET_MINIMUM`."""
+    return _dry_minimum(tables, circuit_id, season) if weather == "dry" else WET_MINIMUM
+
+
 def incident_chance(tables: PitStopTables, circuit_id: str, season: int, round: int) -> float:
     """The chance of a safety car or red flag (not a VSC) at the race, from races before it.
 
@@ -257,6 +303,10 @@ class CountModel:
     n_races: int
     fit_rows: pd.DataFrame = field(repr=False)
     history: _History = field(repr=False, compare=False)
+    # ρ: the chance the team's cars share one uniform for their extra stops.
+    team_link: float
+    # The target race's minimum stops by weather (dry, mixed, wet).
+    minimums: Mapping[str, int]
 
 
 def _check_race(tables: PitStopTables, season: int, round: int) -> None:
@@ -271,7 +321,10 @@ def _check_race(tables: PitStopTables, season: int, round: int) -> None:
 def _fit_rows(tables: PitStopTables, history: _History, season: int, round: int) -> pd.DataFrame:
     """One row per car of each race before the target with a known start compound and air temperature.
 
-    Each row carries its race's `incident` (0/1) from the `race_incidents` mart.
+    Each row carries its race's `incident` (0/1) from the `race_incidents` mart,
+    whether the car `finished`, the race `minimum` (`race_minimum`) and its
+    `extra` stops: stops − minimum, 0 for a non-finisher below the minimum.
+    Raises `ValueError` for a finisher below the minimum.
 
     A car out before its first stop (no stop and a status `_finished` rejects)
     is left out: the forecast draws it separately. A row whose circuit and team rates stay unknown (no earlier fit race to
@@ -288,8 +341,9 @@ def _fit_rows(tables: PitStopTables, history: _History, season: int, round: int)
     status = tables.results[["season", "round", "driver_id", "status"]].astype({"season": "int64", "round": "int64"})
     rows = rows.merge(stopped.assign(stopped=True), on=["season", "round", "driver_id"], how="left") \
         .merge(status, on=["season", "round", "driver_id"], how="left")
-    out = rows["stopped"].isna() & ~_finished(rows["status"])
-    rows = rows[~out].drop(columns=["stopped", "status"])
+    finished = _finished(rows["status"])
+    out = rows["stopped"].isna() & ~finished
+    rows = rows.assign(finished=finished)[~out].drop(columns=["stopped", "status"])
     rates = [
         history.rates(team, circuit, s, r)
         for s, r, circuit, team in rows[["season", "round", "circuit_id", "constructor_id"]].itertuples(index=False)
@@ -304,8 +358,21 @@ def _fit_rows(tables: PitStopTables, history: _History, season: int, round: int)
     # A race missing from the mart is clean.
     rows = rows.merge(_race_incidents(tables), on=["season", "round"], how="left")
     rows = rows.assign(incident=rows["incident"].fillna(0).astype("int64"))
-    return rows.astype({"circuit_rate": "float64", "team_rate": "float64", "air_temp": "float64"}) \
+    rows = rows.astype({"circuit_rate": "float64", "team_rate": "float64", "air_temp": "float64"}) \
         .sort_values(["season", "round", "driver_id"]).reset_index(drop=True)
+    minimum = [
+        race_minimum(tables, circuit, s, w)
+        for s, circuit, w in rows[["season", "circuit_id", "weather"]].itertuples(index=False)
+    ]
+    rows = rows.assign(minimum=pd.Series(minimum, index=rows.index, dtype="int64"))
+    below = rows[(rows["stops"] < rows["minimum"]) & rows["finished"]]
+    if not below.empty:
+        row = below.iloc[0]
+        raise ValueError(
+            f"{row['driver_id']} finished {row['season']} round {row['round']} with {row['stops']} stops, "
+            f"below the race minimum {row['minimum']}"
+        )
+    return rows.assign(extra=(rows["stops"] - rows["minimum"]).clip(lower=0).astype("int64"))
 
 
 def _seen(values: pd.Series, order: Sequence[str]) -> tuple[str, ...]:
@@ -362,17 +429,126 @@ def _fit(tables: PitStopTables, season: int, round: int, history: _History) -> C
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        result = sm.GLM(rows["stops"].to_numpy(dtype=float), full[:, kept], family=sm.families.Poisson()).fit()
+        result = sm.GLM(rows["extra"].to_numpy(dtype=float), full[:, kept], family=sm.families.Poisson()).fit()
+    params = np.asarray(result.params, dtype=float)
+    mu = np.exp(full[:, kept] @ params)
+    race = tables.races[(tables.races["season"] == season) & (tables.races["round"] == round)]
+    circuit_id = str(race["circuit_id"].iloc[0])
 
     races = rows[["season", "round"]].drop_duplicates()
     return CountModel(
         season=season, round=round, columns=columns,
-        params=np.asarray(result.params, dtype=float), cov_params=np.asarray(result.cov_params(), dtype=float),
+        params=params, cov_params=np.asarray(result.cov_params(), dtype=float),
         dropped=dropped, weather_levels=weather_levels, compound_levels=compound_levels,
         field_rate=history.field_rate(season, round),
         car_out_rate=car_out_rate(tables, season, round),
         n_rows=len(rows), n_races=len(races), fit_rows=rows, history=history,
+        team_link=_team_link(_link_pairs(rows, mu, season)),
+        minimums={w: race_minimum(tables, circuit_id, season, w) for w in WEATHER_CATEGORIES},
     )
+
+
+# --------------------------------------------------------------------------
+# Team link
+# --------------------------------------------------------------------------
+
+
+def _link_pairs(rows: pd.DataFrame, mu: np.ndarray, season: int) -> pd.DataFrame:
+    """The fit rows' team-races where both cars finished: mu1, mu2 (in-sample) and extra1, extra2.
+
+    From the season's earlier rounds; all fit rows when the season has none.
+    """
+    cars = rows.assign(mu=mu)
+    groups = cars.groupby(["season", "round", "constructor_id"], sort=True)
+    both = groups["finished"].transform("all") & (groups["finished"].transform("size") == 2)
+    cars = cars[both].sort_values(["season", "round", "constructor_id", "driver_id"])
+    first, second = cars.iloc[0::2].reset_index(drop=True), cars.iloc[1::2].reset_index(drop=True)
+    pairs = pd.DataFrame({
+        "season": first["season"], "round": first["round"], "constructor_id": first["constructor_id"],
+        "mu1": first["mu"], "mu2": second["mu"], "extra1": first["extra"], "extra2": second["extra"],
+    })
+    this_season = pairs[pairs["season"] == season]
+    return (this_season if not this_season.empty else pairs).reset_index(drop=True)
+
+
+def _support(mu1: float, mu2: float) -> np.ndarray:
+    """0..k, with k past both Poisson's mass to well below float precision."""
+    top = max(mu1, mu2)
+    return np.arange(int(top + 12 * math.sqrt(top) + 30))
+
+
+def _match_chances(mu1: float, mu2: float) -> tuple[float, float]:
+    """(m_ind, m_shared): the chance two cars' counts are equal drawn independently, and from one shared uniform.
+
+    m_ind = Σₖ p₁(k)p₂(k); m_shared = Σₖ the overlap of the CDF steps (F₁(k−1), F₁(k)] and (F₂(k−1), F₂(k)].
+    """
+    k = _support(mu1, mu2)
+    m_ind = float((poisson.pmf(k, mu1) * poisson.pmf(k, mu2)).sum())
+    c1, c2 = poisson.cdf(k, mu1), poisson.cdf(k, mu2)
+    p1, p2 = np.concatenate([[0.0], c1[:-1]]), np.concatenate([[0.0], c2[:-1]])
+    m_shared = float(np.clip(np.minimum(c1, c2) - np.maximum(p1, p2), 0.0, None).sum())
+    return m_ind, m_shared
+
+
+def _link_parts(pairs: pd.DataFrame) -> dict[str, float]:
+    """n, obs, mean m_ind, mean m_shared and the unclipped ρ of the pairs (NaN ρ with no pairs or no spread)."""
+    if pairs.empty:
+        return {"n": 0, "obs": math.nan, "m_ind": math.nan, "m_shared": math.nan, "rho": math.nan}
+    chances = np.array([_match_chances(a, b) for a, b in zip(pairs["mu1"], pairs["mu2"])])
+    obs = float((pairs["extra1"] == pairs["extra2"]).mean())
+    m_ind, m_shared = float(chances[:, 0].mean()), float(chances[:, 1].mean())
+    spread = m_shared - m_ind
+    rho = (obs - m_ind) / spread if spread > 0 else math.nan
+    return {"n": len(pairs), "obs": obs, "m_ind": m_ind, "m_shared": m_shared, "rho": rho}
+
+
+def _team_link(pairs: pd.DataFrame) -> float:
+    """ρ in [0, 1]; 0 with no pairs (or when sharing cannot change the match chance)."""
+    rho = _link_parts(pairs)["rho"]
+    return 0.0 if math.isnan(rho) else float(min(max(rho, 0.0), 1.0))
+
+
+def _model_pairs(model: CountModel) -> pd.DataFrame:
+    rows = model.fit_rows
+    mu = np.exp(_design(rows, model.columns) @ model.params)
+    return _link_pairs(rows, mu, model.season)
+
+
+def team_split_check(model: CountModel) -> pd.DataFrame:
+    """The model's against the observed shares of team-races whose cars made the same, 1 apart or 2+ apart stops.
+
+    Over the team-races `team_link` is set from (both cars finished; the
+    season's earlier rounds, else all fit rows), with in-sample mu and the
+    link ρ. The model share is exact, not sampled: ρ times the shared-uniform
+    chance plus (1 − ρ) times the independent one, averaged over team-races.
+    Columns `split` (`SPLITS`), `model`, `observed`; NaN shares with no
+    team-races.
+    """
+    pairs = _model_pairs(model)
+    if pairs.empty:
+        return pd.DataFrame({"split": SPLITS, "model": [math.nan] * 3, "observed": [math.nan] * 3})
+    rho = model.team_link
+    shares = np.zeros(3)
+    for mu1, mu2 in zip(pairs["mu1"], pairs["mu2"]):
+        k = _support(mu1, mu2)
+        p1, p2 = poisson.pmf(k, mu1), poisson.pmf(k, mu2)
+        independent = _split_shares(np.outer(p1, p2), k)
+        shares += rho * _split_shares(_shared_joint(mu1, mu2, k), k) + (1 - rho) * independent
+    gap = (pairs["extra1"] - pairs["extra2"]).abs().clip(upper=2)
+    observed = [float((gap == g).mean()) for g in (0, 1, 2)]
+    return pd.DataFrame({"split": SPLITS, "model": shares / len(pairs), "observed": observed})
+
+
+def _split_shares(joint: np.ndarray, k: np.ndarray) -> np.ndarray:
+    gap = np.abs(k[:, None] - k[None, :])
+    return np.array([joint[gap == 0].sum(), joint[gap == 1].sum(), joint[gap >= 2].sum()])
+
+
+def _shared_joint(mu1: float, mu2: float, k: np.ndarray) -> np.ndarray:
+    """P(F₁⁻¹(u) = i, F₂⁻¹(u) = j) for one shared uniform u: the overlap of the two CDF steps."""
+    c1, c2 = poisson.cdf(k, mu1), poisson.cdf(k, mu2)
+    p1, p2 = np.concatenate([[0.0], c1[:-1]]), np.concatenate([[0.0], c2[:-1]])
+    return np.clip(np.minimum(c1[:, None], c2[None, :]) - np.maximum(p1[:, None], p2[None, :]), 0.0, None)
 
 
 # --------------------------------------------------------------------------
@@ -464,17 +640,27 @@ def _grid(
 def _draw(model: CountModel, x: np.ndarray, weights: np.ndarray, chance: float) -> tuple[np.ndarray, np.ndarray]:
     """Each car's stops in each of the `DRAWS` seeded draws, and each draw's incident (True/False).
 
-    Draw order: coefficients, weather, incident (one per draw, shared by the
-    team's cars), car out, Poisson.
+    Draw order: coefficients, weather (which fixes the race minimum), incident
+    (one per draw, shared by the team's cars), car out, the link (one per draw:
+    with chance `team_link` every car uses the first car's uniform), the
+    uniforms. A car out gets 0; a running car the minimum plus its Poisson's
+    inverse CDF at its uniform.
     """
     rng = np.random.default_rng(SEED)
     # Cholesky, not the default SVD: its factor is unique, so draws match across LAPACK builds.
     betas = rng.multivariate_normal(model.params, model.cov_params, size=DRAWS, method="cholesky")
     weather_draw = rng.choice(len(WEATHER_CATEGORIES), size=DRAWS, p=weights)
     incident_draw = rng.random(DRAWS) < chance
-    mu = np.exp(np.einsum("dck,dk->dc", x[weather_draw, incident_draw.astype(int)], betas))
+    eta = np.einsum("dck,dk->dc", x[weather_draw, incident_draw.astype(int)], betas)
+    mu = np.exp(np.minimum(eta, math.log(MU_CAP)))
     out = rng.random((DRAWS, x.shape[2])) < model.car_out_rate
-    stops = rng.poisson(mu) * ~out
+    linked = rng.random(DRAWS) < model.team_link
+    u = rng.random((DRAWS, x.shape[2]))
+    u = np.where(linked[:, None], u[:, :1], u)
+    # ppf(0) is −1 (below the support); a uniform of exactly 0 is the smallest count, 0.
+    extra = np.maximum(poisson.ppf(u, mu), 0).astype("int64")
+    minimum = np.array([model.minimums[w] for w in WEATHER_CATEGORIES], dtype="int64")[weather_draw]
+    stops = (minimum[:, None] + extra) * ~out
     return stops, incident_draw
 
 

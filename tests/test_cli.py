@@ -29,7 +29,7 @@ CURATED_TABLES = {
     "race_results_enriched", "driver_standings_by_round", "constructor_standings_by_round",
     "final_driver_standings", "final_constructor_standings",
     "raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather",
-    "pit_stops", "car_races", "practice_stints", "weather_forecasts", "race_incidents",
+    "pit_stops", "car_races", "practice_stints", "weather_forecasts", "race_incidents", "stop_rules",
 }
 
 
@@ -579,3 +579,8 @@ def test_build_refuses_to_shrink_race_incidents():
     # car_races too, and the guard (tables checked in name order) reports car_races first: the
     # behavioural shrink cannot reach race_incidents here, so this checks the table is guarded.
     assert "race_incidents" in cli.REGRESSION_GUARDED_TABLES
+
+
+def test_stop_rules_is_guarded():
+    # A seed-fed mart: a build whose seed lost a row would shrink it, so the swap is refused.
+    assert "stop_rules" in cli.REGRESSION_GUARDED_TABLES

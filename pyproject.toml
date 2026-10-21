@@ -23,6 +23,8 @@ dependencies = [
     "ipykernel>=7.4,<7.5",
     # The pit-stop count model (Poisson GLM); one minor version.
     "statsmodels~=0.14.5",
+    # The count model's Poisson CDF and inverse CDF (the team link); installed with statsmodels, pinned to its minor.
+    "scipy~=1.18.1",
 ]
 
 [project.scripts]
