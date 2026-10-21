@@ -38,8 +38,8 @@ Model terms:
 - Team link (`team_link`, ρ): the chance that the team's cars share one
   uniform for their extra stops. ρ = (obs − mean m_ind) ÷ (mean m_shared −
   mean m_ind), clipped to [0, 1], over the fit rows' team-races where both cars
-  finished, from the season's earlier rounds (all fit rows when the season has
-  none; ρ = 0 with none at all), with in-sample mu: obs is the share with equal
+  finished, from the season's earlier rounds (all fit rows when those rounds
+  have no such team-race; ρ = 0 with none at all), with in-sample mu: obs is the share with equal
   extra stops, m_ind = Σₖ p₁(k)p₂(k) and m_shared the overlap of the two
   cars' Poisson CDF steps. No tuned weight.
 - A draw: one GLM coefficient vector from their estimated normal (`params`,
@@ -59,7 +59,7 @@ from __future__ import annotations
 import math
 import numbers
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Mapping, Sequence
 
 import numpy as np
@@ -456,7 +456,7 @@ def _fit(tables: PitStopTables, season: int, round: int, history: _History) -> C
 def _link_pairs(rows: pd.DataFrame, mu: np.ndarray, season: int) -> pd.DataFrame:
     """The fit rows' team-races where both cars finished: mu1, mu2 (in-sample) and extra1, extra2.
 
-    From the season's earlier rounds; all fit rows when the season has none.
+    From the season's earlier rounds; all fit rows when those rounds have no team-race where both cars finished.
     """
     cars = rows.assign(mu=mu)
     groups = cars.groupby(["season", "round", "constructor_id"], sort=True)
@@ -699,7 +699,9 @@ def forecast(
 
     circuit_rate, team_rate = model.history.rates(constructor_id, circuit_id, season, round)
     x = _grid(model, circuit_rate, team_rate, air_temp, compounds)
-    stops, _ = _draw(model, x, weights, chance)
+    # The race minimum of the circuit asked for, which need not be the fitted race's.
+    minimums = {w: race_minimum(tables, circuit_id, season, w) for w in WEATHER_CATEGORIES}
+    stops, _ = _draw(replace(model, minimums=minimums), x, weights, chance)
 
     return Forecast(
         constructor_id=constructor_id, circuit_id=circuit_id, season=season, round=round,

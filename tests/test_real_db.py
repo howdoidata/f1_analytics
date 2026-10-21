@@ -8,15 +8,19 @@ races up to 2026 R17, so a later refresh adds rows without breaking them.
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import duckdb
+import numpy as np
 import pandas as pd
 import pytest
 
 from f1_analytics import config
 from f1_analytics.analysis.data import load_pit_stop_tables
-from f1_analytics.analysis.pit_stops import backtest, forecast, incident_chance
+from f1_analytics.analysis.pit_stops import backtest, fit_count_model, forecast, incident_chance
+from f1_analytics.analysis.pit_stops.model import _draw, _grid
+from f1_analytics.analysis.pit_stops.weather import LIVE, race_weather
 
 
 MISSING_DB = "real DuckDB not built; run uv run build"
@@ -142,6 +146,18 @@ def test_forecast_at_cota_2026_round_18(tables):
     assert result.incident_chance == incident_chance(tables, "americas", 2026, 18)
     total = result.total
     assert (total.mean, total.p10, total.p90) == (3.1, 2.0, 5.0)
+
+
+def test_cota_preset_never_draws_a_running_car_below_one_stop(tables):
+    # The R18 preset: dry, SOFT|MEDIUM, at the live forecast's air temperature; no car out, so every car runs.
+    model = fit_count_model(tables, 2026, 18)
+    assert model.minimums["dry"] == 1
+    _, air_temp = race_weather(tables, 2026, 18, kind=LIVE)
+    circuit_rate, team_rate = model.history.rates("williams", "americas", 2026, 18)
+    x = _grid(model, circuit_rate, team_rate, air_temp, ["SOFT", "MEDIUM"])
+    stops, _ = _draw(replace(model, car_out_rate=0.0), x, np.array([1.0, 0.0, 0.0]),
+                     incident_chance(tables, "americas", 2026, 18))
+    assert stops.min() >= 1
 
 
 # --- the skip / fail rule ----------------------------------------------------

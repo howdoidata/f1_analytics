@@ -16,7 +16,7 @@ from f1_analytics.analysis.pit_stops import (
 )
 from f1_analytics.analysis.pit_stops.backtest import score
 from f1_analytics.analysis.pit_stops.model import (
-    DRAWS, SEED, _draw, _grid, _link_parts, _match_chances, _model_pairs, _team_link, race_minimum,
+    DRAWS, MU_CAP, SEED, _draw, _grid, _link_parts, _match_chances, _model_pairs, _team_link, race_minimum,
 )
 
 TEAMS = {"aa": ("a1", "a2"), "bb": ("b1", "b2"), "cc": ("c1", "c2")}
@@ -207,6 +207,14 @@ def test_car_out_rate_counts_no_stop_non_finishers():
     # Round 1 uses the previous season: c1 retired with no stop in 2024 R3.
     assert car_out_rate(WORLD, 2025, 1) == pytest.approx(1 / 18)
     assert car_out_rate(WORLD, 2024, 1) == 0.0
+
+
+def test_car_out_rate_counts_a_no_stop_lapped_finisher_as_finished():
+    # a2 finishes 2025 R2 "+1 Lap" with no stop: finished, not out, so the rate is still c1's 1 of 18.
+    stops = WORLD.pit_stops
+    tables = replace(WORLD, pit_stops=stops[~((stops["season"] == 2025) & (stops["round"] == 2)
+                                              & (stops["driver_id"] == "a2"))])
+    assert car_out_rate(tables, 2025, 4) == pytest.approx(1 / 18)
 
 
 def test_no_fit_rows_raises():
@@ -670,7 +678,10 @@ def test_the_link_keeps_each_cars_own_distribution(rho):
     se = math.sqrt(free[:, 1].var() / DRAWS + linked[:, 1].var() / DRAWS)
     assert abs(free[:, 1].mean() - linked[:, 1].mean()) < 4 * se
     # The team mean is unchanged; only the joint spread moves.
-    assert linked.sum(axis=1).var() >= free.sum(axis=1).var()
+    team_free, team_linked = free.sum(axis=1), linked.sum(axis=1)
+    team_se = math.sqrt(team_free.var() / DRAWS + team_linked.var() / DRAWS)
+    assert abs(team_free.mean() - team_linked.mean()) < 4 * team_se
+    assert team_linked.var() >= team_free.var()
 
 
 def _pmf(k: int, mu: float) -> float:
@@ -709,7 +720,7 @@ def test_rho_uses_the_seasons_earlier_both_finished_team_races_then_all_fit_rows
     assert 0.0 <= model.team_link <= 1.0
     # 2025 R1 has no earlier round: all fit rows (2024 R2-R3; c1 out in 2024 R3).
     first = _model_pairs(fit_count_model(WORLD, 2025, 1))
-    assert set(pairs.columns) >= {"mu1", "mu2", "extra1", "extra2"}
+    assert set(first.columns) >= {"mu1", "mu2", "extra1", "extra2"}
     assert set(first["season"]) == {2024} and len(first) == 5
 
 
@@ -740,3 +751,38 @@ def test_team_split_check_compares_the_models_split_shares_with_the_observed():
     free = team_split_check(replace(model, team_link=0.0))
     assert free.loc[0, "model"] == pytest.approx(np.mean([_match_chances(a, b)[0]
                                                           for a, b in zip(pairs["mu1"], pairs["mu2"])]))
+
+
+def test_team_split_check_with_a_full_link_uses_the_shared_uniform_chances():
+    model = fit_count_model(WORLD, 2025, 4)
+    pairs = _model_pairs(model)
+    shared = team_split_check(replace(model, team_link=1.0))
+    assert shared["model"].sum() == pytest.approx(1.0)
+    assert shared.loc[0, "model"] == pytest.approx(np.mean([_match_chances(a, b)[1]
+                                                            for a, b in zip(pairs["mu1"], pairs["mu2"])]))
+
+
+def test_a_forecast_uses_the_race_minimum_of_the_circuit_it_is_given():
+    # c4 is a 2-stop circuit from 2025; the 2025 R4 fit is for c1 (minimum 1).
+    tables = replace(WORLD, stop_rules=_stop_rules(("c4", 2025, 2)))
+    model = fit_count_model(tables, 2025, 4)
+    assert model.minimums["dry"] == 1
+    # No extra stops (mu ≈ 0), no spread, no car out: each team total is 2 × the minimum.
+    params = np.where(np.array(model.columns) == "const", -30.0, 0.0)
+    model = _quiet(model, params=params)
+    at_c4 = forecast(tables, "aa", "c4", 2025, 4, **DRY_MEDIUM, model=model).total
+    at_c1 = forecast(tables, "aa", "c1", 2025, 4, **DRY_MEDIUM, model=model).total
+    assert (at_c4.raw_mean, at_c4.p10, at_c4.p90) == (4.0, 4.0, 4.0)
+    assert (at_c1.raw_mean, at_c1.p10, at_c1.p90) == (2.0, 2.0, 2.0)
+
+
+def test_an_overflowing_coefficient_draw_is_capped():
+    model = fit_count_model(WORLD, 2025, 4)
+    k = len(model.columns)
+    # The constant's sampled values reach ±thousands: exp would overflow without the cap.
+    cov = np.eye(k) * 1e-20
+    cov[model.columns.index("const"), model.columns.index("const")] = 1e6
+    model = replace(model, params=np.zeros(k), cov_params=cov, car_out_rate=0.0)
+    stops, _ = _draw(model, _grid(model, 2.0, 2.0, 25.0, ["MEDIUM", "SOFT"]), DRY, 0.3)
+    assert np.isfinite(stops).all() and stops.min() >= 0
+    assert stops.max() <= 2 * MU_CAP and (stops > MU_CAP / 2).any()
