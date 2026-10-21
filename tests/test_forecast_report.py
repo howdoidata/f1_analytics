@@ -198,6 +198,15 @@ def test_report_on_the_chain_world(chain):
     assert html.count('name="scenario-weather"') == len(pr.weather_chances(report.scenarios))
 
 
+def test_round_one_has_no_backtest(chain):
+    """Matrix row `round = 1`: no earlier rounds, so no backtest and the "no earlier rounds" sentence."""
+    tables = load_pit_stop_tables(chain["db"])
+    assert pr.season_backtest(tables, CHAIN_SEASON, []) == (None, ())
+    assert pr.season_backtest(tables, CHAIN_SEASON, [1]) == (None, (1,))
+    assert pr.untested_sentence(CHAIN_SEASON, ()) == ""
+    assert pr.no_backtest_sentence(CHAIN_SEASON) == f"There are no earlier rounds in {CHAIN_SEASON} to test on."
+
+
 # --------------------------------------------------------------------------
 # Quarto renders (skipped without Quarto)
 # --------------------------------------------------------------------------
