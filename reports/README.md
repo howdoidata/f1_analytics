@@ -4,6 +4,14 @@
 
 Each report answers one question about Formula 1 results. Newest first.
 
+## Williams pit stops: 2026 United States Grand Prix
+
+**2026-10-24**
+
+How many pit stops will Williams make in total at the Circuit of the Americas? Round 18, Sunday 2026-10-25
+
+[Report (HTML)](2026-10-24-williams-cota-pit-stop-forecast/report.html) · [Source (`report.qmd`)](2026-10-24-williams-cota-pit-stop-forecast/report.qmd)
+
 ## Championship leader conversion at the current-season cutoff
 
 **2026-10-11**

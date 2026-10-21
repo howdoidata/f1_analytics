@@ -63,20 +63,27 @@ per car per stint: compound, laps and a raw tyre-wear slope).
 ## `open_meteo/`
 
 Hourly weather forecasts for the race window, one file per race:
-`open_meteo/day_before/<season>-<RR>.json` (the endpoint, the query, the
-fetch time, the race start in UTC and the API response: hourly precipitation,
-precipitation probability and air temperature for the race date and the day
-after, at the circuit's latitude and longitude).
+`open_meteo/day_before/<season>-<RR>.json` (the backtest's weather) and
+`open_meteo/forecast/<season>-<RR>.json` (the live forecast for an upcoming
+race, which the scenario file and the pit-stop forecast page read). Each holds
+the endpoint, the query, the fetch time, the race start in UTC and the API
+response: hourly precipitation, precipitation probability and air temperature
+for the race date and the day after, at the circuit's latitude and longitude.
 
 - Source: [Open-Meteo](https://open-meteo.com/), Historical Forecast API
   (`https://historical-forecast-api.open-meteo.com/v1/forecast`), fetched by
   `uv run fetch-weather --season <s> --round <r> --day-before`. No account or
   key is needed. The Previous Runs API has rain probability for only two of
   2026's first 17 rounds (Miami and Canada), so it is not used.
+- Live forecasts: Open-Meteo's Forecast API
+  (`https://api.open-meteo.com/v1/forecast`), fetched by
+  `uv run fetch-weather --season <s> --round <r>` before the race. A later
+  fetch replaces the file, so it holds the latest forecast fetched.
 - The Historical Forecast API keeps the latest forecast for each hour, and
   these files were fetched after the races: they are not a true day-before
   forecast, so the backtest's weather is optimistic. The analysis uses p, the
   higher precipitation probability of the race-start hour and the next.
 - Licence: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), per the
-  [Open-Meteo terms](https://open-meteo.com/en/terms). Weather data by
-  Open-Meteo.com.
+  [Open-Meteo terms](https://open-meteo.com/en/terms), for both folders.
+  Weather data by Open-Meteo.com. The pit-stop forecast page carries the same
+  credit in its footer.
