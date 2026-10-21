@@ -378,8 +378,10 @@ models:
     description: >
       One row per race, forecast kind and forecast hour (UTC), from every
       data/raw/open_meteo/<kind>/<season>-<RR>.json file `uv run fetch-weather`
-      writes (kind day_before: the Open-Meteo forecast for the race date and the
-      day after). precipitation_probability is 0-1; air_temp is in °C.
+      writes, each for the race date and the day after (kind day_before: the
+      Historical Forecast API, the backtest's weather; kind forecast: the live
+      Forecast API, an upcoming race's weather for the scenario grid).
+      precipitation_probability is 0-1; air_temp is in °C.
     data_tests:
       - unique_combination:
           arguments:

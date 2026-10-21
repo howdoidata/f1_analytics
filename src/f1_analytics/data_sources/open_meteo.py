@@ -1,4 +1,4 @@
-"""Open-Meteo client for the race-window weather forecast the pit-stop backtest uses.
+"""Open-Meteo client for the race-window weather forecasts the pit-stop analysis uses.
 
 The HTTP call is an injectable `getter(url, params) -> dict`, like the Jolpica
 client's, so tests replay recorded responses with no network. Requests carry
@@ -11,6 +11,9 @@ pit-stop analysis sets p to the higher hourly precipitation probability of the
 race-start hour and the next. The Historical Forecast API keeps the latest
 forecast for each hour, and these files were fetched after the races: they are
 not a true day-before forecast, so the backtest's weather is optimistic.
+
+Live endpoint: the Forecast API (`FORECAST_URL`), with the same query, for an
+upcoming race (`fetch_forecast`). Its files are the scenario grid's weather.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from typing import Callable
 
 
 HISTORICAL_FORECAST_URL = "https://historical-forecast-api.open-meteo.com/v1/forecast"
+FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 HOURLY_VARIABLES = ("precipitation", "precipitation_probability", "temperature_2m")
 REQUEST_TIMEOUT_SECONDS = 30
 
@@ -46,10 +50,9 @@ def _utc(start_utc: datetime) -> datetime:
     return start_utc.astimezone(timezone.utc)
 
 
-def day_before_request(lat: float, lng: float, start_utc: datetime) -> tuple[str, dict]:
-    """The URL and query of the race-window forecast: hourly, UTC, race date to the day after."""
+def _window_params(lat: float, lng: float, start_utc: datetime) -> dict:
     day = _utc(start_utc).date()
-    params = {
+    return {
         "latitude": float(lat),
         "longitude": float(lng),
         "hourly": ",".join(HOURLY_VARIABLES),
@@ -57,7 +60,16 @@ def day_before_request(lat: float, lng: float, start_utc: datetime) -> tuple[str
         "start_date": day.isoformat(),
         "end_date": (day + timedelta(days=1)).isoformat(),
     }
-    return HISTORICAL_FORECAST_URL, params
+
+
+def day_before_request(lat: float, lng: float, start_utc: datetime) -> tuple[str, dict]:
+    """The URL and query of the race-window forecast: hourly, UTC, race date to the day after."""
+    return HISTORICAL_FORECAST_URL, _window_params(lat, lng, start_utc)
+
+
+def forecast_request(lat: float, lng: float, start_utc: datetime) -> tuple[str, dict]:
+    """`day_before_request`'s query, for the live Forecast API."""
+    return FORECAST_URL, _window_params(lat, lng, start_utc)
 
 
 class OpenMeteoClient:
@@ -68,7 +80,13 @@ class OpenMeteoClient:
 
     def fetch_day_before(self, lat: float, lng: float, start_utc: datetime) -> dict:
         """The Open-Meteo response for the circuit at `lat`, `lng` and the race starting at `start_utc`."""
-        url, params = day_before_request(lat, lng, start_utc)
+        return self._fetch(*day_before_request(lat, lng, start_utc))
+
+    def fetch_forecast(self, lat: float, lng: float, start_utc: datetime) -> dict:
+        """`fetch_day_before` from the live Forecast API, for an upcoming race."""
+        return self._fetch(*forecast_request(lat, lng, start_utc))
+
+    def _fetch(self, url: str, params: dict) -> dict:
         response = self.getter(url, params)
         hourly = response.get("hourly") if isinstance(response, dict) else None
         missing = [name for name in ("time", *HOURLY_VARIABLES) if not isinstance((hourly or {}).get(name), list)]

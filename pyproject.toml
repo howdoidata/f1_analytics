@@ -30,6 +30,7 @@ build = "f1_analytics.cli:build"
 refresh = "f1_analytics.cli:refresh"
 fetch-sessions = "f1_analytics.fetch_sessions:main"
 fetch-weather = "f1_analytics.fetch_weather:main"
+scenarios = "f1_analytics.scenarios:main"
 gallery = "f1_analytics.gallery:cli"
 
 [dependency-groups]

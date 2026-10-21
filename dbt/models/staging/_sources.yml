@@ -64,7 +64,7 @@ sources:
     description: >
       Race-window weather forecasts written by `uv run fetch-weather`, one file
       per race: data/raw/open_meteo/<kind>/<season>-<RR>.json (kind is the
-      folder, e.g. day_before). `filename` carries the kind, season and round.
+      folder: day_before or forecast, the live mode). `filename` carries the kind, season and round.
     meta:
       formatter: template
     tables:
