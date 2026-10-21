@@ -11,10 +11,11 @@ import pytest
 
 from f1_analytics.analysis.data import PitStopTables
 from f1_analytics.analysis.pit_stops import (
-    MODEL_NOTES, UnknownInputError, backtest, car_out_rate, fit_count_model, forecast, race_weather,
+    MODEL_NOTES, UnknownInputError, backtest, car_out_rate, fit_count_model, forecast, incident_chance, race_weather,
     weather_weights,
 )
-from f1_analytics.analysis.pit_stops.model import DRAWS, SEED
+from f1_analytics.analysis.pit_stops.backtest import score
+from f1_analytics.analysis.pit_stops.model import DRAWS, SEED, _draw, _grid
 
 TEAMS = {"aa": ("a1", "a2"), "bb": ("b1", "b2"), "cc": ("c1", "c2")}
 DRIVERS = [d for cars in TEAMS.values() for d in cars]
@@ -27,6 +28,8 @@ COMPOUND_CYCLE = ("MEDIUM", "SOFT", "HARD", "MEDIUM", "INTERMEDIATE")
 # 2025 R2 is mixed (some wet laps); 2025 R3 has a red flag (b1 and c2 stop under it).
 MIXED = {(2025, 2)}
 RED_FLAG_STOPS = [(2025, 3, "b1"), (2025, 3, "c2")]
+# Races with a safety car or red flag (the race_incidents mart); every other held race is clean.
+INCIDENTS = {(2024, 2), (2025, 3)}
 
 
 def _stops_of(season: int, round_: int, i: int) -> int:
@@ -70,6 +73,8 @@ def make_world() -> PitStopTables:
                                                    "laps_completed", "start_compound", "wet_laps", "air_temp_mean"]),
         practice_stints=pd.DataFrame(),
         weather_forecasts=weather_frame([(2025, r, 13, 0.0 if r != 3 else 0.5) for r in range(1, 6)]),
+        race_incidents=pd.DataFrame([(s, r, (s, r) in INCIDENTS) for s, r, _ in HELD],
+                                    columns=["season", "round", "incident"]),
     )
 
 
@@ -227,7 +232,7 @@ def test_a_constant_numeric_covariate_is_dropped():
 # --- leakage --------------------------------------------------------------------------------------
 
 def _with_sentinels(tables: PitStopTables, season: int, round_: int) -> PitStopTables:
-    """Add a result, ten stops (some red-flag) and a wet car_races row at the target and in a later round."""
+    """Add a result, ten stops (some red-flag), a wet car_races row and an incident at the target and in a later round."""
     results, stops, cars = [tables.results], [tables.pit_stops], [tables.car_races]
     for r in (round_, round_ + 1):
         results.append(pd.DataFrame([(season, r, "zz", "aa", "Retired")], columns=tables.results.columns))
@@ -238,8 +243,11 @@ def _with_sentinels(tables: PitStopTables, season: int, round_: int) -> PitStopT
     races = tables.races
     if not ((races["season"] == season) & (races["round"] == round_ + 1)).any():
         races = pd.concat([races, pd.DataFrame([(season, round_ + 1, "GP", "c1")], columns=races.columns)])
+    incidents = pd.concat([tables.race_incidents, pd.DataFrame(
+        [(season, r, True) for r in (round_, round_ + 1)], columns=tables.race_incidents.columns)])
+    incidents = incidents.drop_duplicates(["season", "round"], keep="last")
     return replace(tables, races=races, results=pd.concat(results), pit_stops=pd.concat(stops),
-                   car_races=pd.concat(cars))
+                   car_races=pd.concat(cars), race_incidents=incidents)
 
 
 @pytest.mark.parametrize("target", [(2025, 4), (2025, 2), (2025, 1)])
@@ -252,6 +260,7 @@ def test_sentinel_rows_at_or_after_the_target_change_nothing(target):
     pd.testing.assert_frame_equal(clean.fit_rows, dirty.fit_rows)
     args = ("aa", "c1", season, round_)
     assert forecast(WORLD, *args, **DRY_MEDIUM) == forecast(_with_sentinels(WORLD, *target), *args, **DRY_MEDIUM)
+    assert incident_chance(WORLD, "c1", *target) == incident_chance(_with_sentinels(WORLD, *target), "c1", *target)
 
 
 # --- the forecast ---------------------------------------------------------------------------------
@@ -323,8 +332,12 @@ def test_no_history_uses_the_field_mean_of_the_fit_races():
 
 
 def test_mixed_range_is_at_least_as_wide_as_dry():
-    dry = forecast(WORLD, *ARGS, **DRY_MEDIUM)
-    mixed = forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": "mixed"})
+    # With the mixed coefficient's estimate set to 0, mixed and dry share a mean, and only the
+    # mixed coefficient's own uncertainty (one mixed race) is left to widen the mixed range.
+    model = fit_count_model(WORLD, 2025, 4)
+    model = replace(model, params=np.where(np.array(model.columns) == "weather:mixed", 0.0, model.params))
+    dry = forecast(WORLD, *ARGS, **DRY_MEDIUM, model=model)
+    mixed = forecast(WORLD, *ARGS, **{**DRY_MEDIUM, "weather": "mixed"}, model=model)
     d, m = dry.total, mixed.total
     assert m.p90 - m.p10 >= d.p90 - d.p10
 
@@ -348,6 +361,8 @@ def test_model_notes_say_what_story_7_shows():
     assert "higher precipitation probability of the race-start hour and the next" in text
     assert "not the forecast made the day before" in text and "optimistic" in text
     assert "tyre wear is not a model input" in text
+    assert "incident chance rests on few races" in text and "safety car or red flag" in text
+    assert "a vsc does not count" in text and "only through its season half" in text
     assert not any("without red" in note.lower() for note in MODEL_NOTES)
 
 
@@ -355,10 +370,11 @@ def test_model_notes_say_what_story_7_shows():
 
 def test_backtest_scores_the_model_and_both_benchmarks():
     result = backtest(WORLD, 2025, [2, 3, 4])
-    assert result.table.columns.tolist() == ["method", "mae", "hit_rate", "n"]
+    assert result.table.columns.tolist() == ["method", "mae", "mae_clean", "mae_incident", "hit_rate", "width", "n"]
     assert result.table["method"].tolist() == ["model", "circuit_history", "season_form"]
     assert result.table["n"].tolist() == [9, 9, 9]
     assert result.table["hit_rate"].isna().tolist() == [False, True, True]
+    assert result.table["width"].isna().tolist() == [False, True, True]
     rows = result.rows.set_index(["round", "constructor_id"])
     # 2025 R3, bb: b1 has one red-flag stop.
     bb = _stops_of(2025, 3, 2) + _stops_of(2025, 3, 3)
@@ -418,3 +434,119 @@ def test_no_history_never_yields_nan_rates():
     model = fit_count_model(WORLD, 2025, 2)
     assert not math.isnan(model.field_rate)
     assert not model.fit_rows[["circuit_rate", "team_rate"]].isna().any().any()
+
+
+# --- incident risk --------------------------------------------------------------------------------
+
+def test_a_fit_rows_incident_comes_from_the_mart():
+    rows = fit_count_model(WORLD, 2025, 4).fit_rows
+    flagged = {(s, r) for s, r, i in zip(rows["season"], rows["round"], rows["incident"]) if i == 1}
+    assert flagged == INCIDENTS and set(rows["incident"]) == {0, 1}
+    assert "incident" in fit_count_model(WORLD, 2025, 4).columns
+    # A race missing from the mart is clean.
+    tables = replace(WORLD, race_incidents=WORLD.race_incidents.query("not (season == 2025 and round == 3)"))
+    rows = fit_count_model(tables, 2025, 4).fit_rows
+    assert set(rows.loc[(rows["season"] == 2025) & (rows["round"] == 3), "incident"]) == {0}
+
+
+@pytest.mark.parametrize("given, chance", [(True, 1.0), (False, 0.0), (0.3, 0.3), (np.float64(0.3), 0.3), (1, 1.0)])
+def test_a_given_incident_sets_the_chance(given, chance):
+    assert forecast(WORLD, *ARGS, **DRY_MEDIUM, incident=given).incident_chance == chance
+
+
+def test_the_default_incident_is_the_races_incident_chance():
+    result = forecast(WORLD, *ARGS, **DRY_MEDIUM)
+    assert result.incident_chance == incident_chance(WORLD, "c1", 2025, 4) == pytest.approx(1 / 4)
+    assert result == forecast(WORLD, *ARGS, **DRY_MEDIUM, incident=1 / 4)
+
+
+@pytest.mark.parametrize("bad", [1.5, -0.1, math.nan, math.inf, "yes", "0.3"])
+def test_a_bad_incident_raises(bad):
+    with pytest.raises(ValueError, match=r"^incident must be a chance in \[0, 1\] or true/false, got "):
+        forecast(WORLD, *ARGS, **DRY_MEDIUM, incident=bad)
+
+
+@pytest.mark.parametrize("args, message", [
+    (("nope", 2025, 4), "unknown circuit_id 'nope'"),
+    (("c1", 2030, 1), "no races in season 2030"),
+    (("c1", 2025, 9), "no round 9 in season 2025"),
+])
+def test_incident_chance_bad_ids_raise_story_4s_messages(args, message):
+    with pytest.raises(UnknownInputError) as info:
+        incident_chance(WORLD, *args)
+    assert str(info.value) == message
+
+
+def test_incident_chance_pools_the_circuit_and_the_season_counting_each_race_once():
+    # c3 before 2025 R4: 2024 R3 (clean) and 2025 R3 (incident); the season: 2025 R1, R2 (clean) and R3.
+    # 2025 R3 is in both halves and counts once: 1 of 4 races, not 2 of 5.
+    assert incident_chance(WORLD, "c3", 2025, 4) == pytest.approx(1 / 4)
+    # c2 in 2025 R1: no earlier round this season, so only 2024 R2 (incident) at c2.
+    assert incident_chance(WORLD, "c2", 2025, 1) == 1.0
+
+
+def test_incident_chance_falls_back_to_all_earlier_races_then_zero():
+    # c4 has never been raced and 2025 R1 has no earlier round: all earlier races, 2024 R1-R3 (R2 incident).
+    assert incident_chance(WORLD, "c4", 2025, 1) == pytest.approx(1 / 3)
+    assert incident_chance(WORLD, "c1", 2024, 1) == 0.0
+    no_mart = PitStopTables(**{name: getattr(WORLD, name) for name in PitStopTables.__dataclass_fields__
+                               if name != "race_incidents"})
+    assert incident_chance(no_mart, "c3", 2025, 4) == 0.0
+
+
+def test_a_constant_incident_is_dropped_and_the_chance_changes_nothing():
+    tables = replace(WORLD, race_incidents=WORLD.race_incidents.assign(incident=True))
+    model = fit_count_model(tables, 2025, 4)
+    assert "incident" in model.dropped and "incident" not in model.columns
+    on = forecast(tables, *ARGS, **DRY_MEDIUM, incident=True, model=model)
+    off = forecast(tables, *ARGS, **DRY_MEDIUM, incident=False, model=model)
+    assert on.total == off.total and (on.incident_chance, off.incident_chance) == (1.0, 0.0)
+
+
+def test_one_incident_draw_is_shared_by_the_teams_cars():
+    model = fit_count_model(WORLD, 2025, 4)
+    # Every coefficient 0 but incident's +5, and no coefficient spread or car-out: mu is 1 clean, e^5 in an incident.
+    params = np.where(np.array(model.columns) == "incident", 5.0, 0.0)
+    k = len(model.columns)
+    model = replace(model, params=params, cov_params=np.eye(k) * 1e-20, car_out_rate=0.0)
+    x = _grid(model, 2.0, 2.0, 25.0, ["MEDIUM", "SOFT"])
+    stops, incident_draw = _draw(model, x, np.array([1.0, 0.0, 0.0]), 0.3)
+    assert stops.shape == (DRAWS, 2) and 0.25 < incident_draw.mean() < 0.35
+    high = stops > 50
+    assert (high[:, 0] == incident_draw).all() and (high[:, 1] == incident_draw).all()
+
+
+def test_an_incident_raises_the_forecast_when_the_fit_says_so():
+    model = fit_count_model(WORLD, 2025, 4)
+    beta = model.params[model.columns.index("incident")]
+    on = forecast(WORLD, *ARGS, **DRY_MEDIUM, incident=True, model=model).total.raw_mean
+    off = forecast(WORLD, *ARGS, **DRY_MEDIUM, incident=False, model=model).total.raw_mean
+    assert (on > off) == (beta > 0)
+
+
+def test_backtest_rows_carry_the_races_incident_and_chance():
+    rows = backtest(WORLD, 2025, [2, 3, 4]).rows
+    by_round = rows.groupby("round")[["incident", "incident_chance"]].first()
+    assert by_round["incident"].to_dict() == {2: 0, 3: 1, 4: 0}
+    for round_, circuit in ((2, "c2"), (3, "c3"), (4, "c1")):
+        assert by_round.loc[round_, "incident_chance"] == incident_chance(WORLD, circuit, 2025, round_)
+    # A race missing from the mart is clean.
+    tables = replace(WORLD, race_incidents=WORLD.race_incidents.query("not (season == 2025 and round == 3)"))
+    assert set(backtest(tables, 2025, [3]).rows["incident"]) == {0}
+
+
+def test_backtest_split_maes_and_width_match_a_hand_split():
+    result = backtest(WORLD, 2025, [2, 3, 4])
+    rows, table = result.rows, result.table.set_index("method")
+    clean, dirty = rows[rows["round"] != 3], rows[rows["round"] == 3]
+    for method in ("model", "circuit_history", "season_form"):
+        assert table.loc[method, "mae_clean"] == pytest.approx((clean[method] - clean["actual"]).abs().mean())
+        assert table.loc[method, "mae_incident"] == pytest.approx((dirty[method] - dirty["actual"]).abs().mean())
+    assert table.loc["model", "width"] == pytest.approx((rows["model_p90"] - rows["model_p10"]).mean())
+
+
+def test_score_leaves_a_split_with_no_rows_empty():
+    rows = backtest(WORLD, 2025, [2, 4]).rows
+    table = score(rows)
+    assert table["mae_incident"].isna().all() and table["mae_clean"].notna().all()
+    assert table["mae_clean"].tolist() == pytest.approx(table["mae"].tolist())

@@ -358,7 +358,8 @@ unit_tests:
     description: >
       A fetch-weather file (open_meteo/day_before/2026-03.json, two hours): kind,
       season and round come from the path, the hourly arrays stay aligned, the
-      probability becomes 0-1 and a null value stays NULL.
+      probability stays a percent here (the weather_forecasts mart makes it
+      0-1) and a null value stays NULL.
     model: stg_open_meteo__forecasts
     given:
       - input: source('open_meteo', 'forecasts')
@@ -390,3 +391,34 @@ unit_tests:
       rows:
         - {season: 2026, round: 3, hour_utc: '2026-03-29 05:00:00', precipitation_probability: 0.4}
         - {season: 2026, round: 3, hour_utc: '2026-03-29 06:00:00', precipitation_probability: 1.0}
+
+  # --- race incidents --------------------------------------------------------
+
+  - name: race_incidents_count_sc_and_red_flags_not_vsc
+    description: >
+      Race 1 has an sc period, so it is an incident. Race 2 has a red_flag
+      period, so it is one too. Race 3 has only a vsc period, which does not
+      count, so it is clean. Race 4 has no period at all, so it is clean. Race 5
+      has an sc period but no car_races rows, so it has no row.
+    model: race_incidents
+    given:
+      - input: ref('car_races')
+        rows:
+          - {season: 2026, round: 1, driver_id: a}
+          - {season: 2026, round: 1, driver_id: b}
+          - {season: 2026, round: 2, driver_id: a}
+          - {season: 2026, round: 3, driver_id: a}
+          - {season: 2026, round: 4, driver_id: a}
+      - input: ref('stg_fastf1_summary__track_status_periods')
+        rows:
+          - {season: 2026, round: 1, status: sc, start_lap: 10, end_lap: 12}
+          - {season: 2026, round: 1, status: vsc, start_lap: 20, end_lap: 20}
+          - {season: 2026, round: 2, status: red_flag, start_lap: 30, end_lap: 31}
+          - {season: 2026, round: 3, status: vsc, start_lap: 5, end_lap: 6}
+          - {season: 2026, round: 5, status: sc, start_lap: 9, end_lap: 11}
+    expect:
+      rows:
+        - {season: 2026, round: 1, incident: true}
+        - {season: 2026, round: 2, incident: true}
+        - {season: 2026, round: 3, incident: false}
+        - {season: 2026, round: 4, incident: false}

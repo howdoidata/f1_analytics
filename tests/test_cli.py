@@ -29,7 +29,7 @@ CURATED_TABLES = {
     "race_results_enriched", "driver_standings_by_round", "constructor_standings_by_round",
     "final_driver_standings", "final_constructor_standings",
     "raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather",
-    "pit_stops", "car_races", "practice_stints", "weather_forecasts",
+    "pit_stops", "car_races", "practice_stints", "weather_forecasts", "race_incidents",
 }
 
 
@@ -572,3 +572,10 @@ def test_build_refuses_to_shrink_weather_forecasts(existing_db: Path, raw_dir: P
     path.write_text(json.dumps(record))
     err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
     assert "weather_forecasts: this build has 47 row(s), fewer than the 48" in err and "refusing to replace" in err
+
+
+def test_build_refuses_to_shrink_race_incidents():
+    # The fixture's car_races.csv holds one race (2025 R1), so dropping a whole race empties
+    # car_races too, and the guard (tables checked in name order) reports car_races first: the
+    # behavioural shrink cannot reach race_incidents here, so this checks the table is guarded.
+    assert "race_incidents" in cli.REGRESSION_GUARDED_TABLES

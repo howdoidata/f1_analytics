@@ -86,12 +86,20 @@ def _no_weather_forecasts() -> pd.DataFrame:
     return pd.DataFrame(columns=WEATHER_FORECAST_COLUMNS)
 
 
+RACE_INCIDENT_COLUMNS = ["season", "round", "incident"]
+
+
+def _no_race_incidents() -> pd.DataFrame:
+    return pd.DataFrame(columns=RACE_INCIDENT_COLUMNS)
+
+
 @dataclass(frozen=True)
 class PitStopTables:
-    """The eight marts the pit-stop analysis reads, one DataFrame each.
+    """The nine marts the pit-stop analysis reads, one DataFrame each.
 
-    `weather_forecasts` defaults to an empty frame, so callers that build the
-    tables by hand and need no forecasts can leave it out.
+    `weather_forecasts` and `race_incidents` default to empty frames, so callers
+    that build the tables by hand and need no forecasts or incidents can leave
+    them out.
     """
 
     races: pd.DataFrame
@@ -102,10 +110,11 @@ class PitStopTables:
     car_races: pd.DataFrame
     practice_stints: pd.DataFrame
     weather_forecasts: pd.DataFrame = field(default_factory=_no_weather_forecasts)
+    race_incidents: pd.DataFrame = field(default_factory=_no_race_incidents)
 
 
 def load_pit_stop_tables(db_path: Path = DUCKDB_PATH) -> PitStopTables:
-    """Every row of the eight pit-stop marts, in one read-only pass."""
+    """Every row of the nine pit-stop marts, in one read-only pass."""
     with open_database(db_path) as con:
         return PitStopTables(**{
             name: con.execute(f"SELECT * FROM {name}").df()

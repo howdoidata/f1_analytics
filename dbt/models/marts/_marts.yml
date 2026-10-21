@@ -397,3 +397,21 @@ models:
         data_tests: [not_null]
       - name: race_start_utc
         data_tests: [not_null]
+
+  - name: race_incidents
+    description: >
+      One row per race with car_races rows (W5): incident is true when the
+      race's FastF1 track-status periods hold an sc or red_flag period, false
+      when they hold only vsc periods or none. The count model's incident
+      covariate and incident chance read it.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round]
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+      - name: incident
+        data_tests: [not_null]

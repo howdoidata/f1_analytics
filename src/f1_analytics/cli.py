@@ -37,7 +37,7 @@ LOGIN_COMMAND = "uv run python -m fastf1 auth f1tv --authenticate"
 REGRESSION_GUARDED_TABLES = frozenset(
     {
         "results", "sprint_results", "qualifying", "raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather",
-        "pit_stops", "car_races", "practice_stints", "weather_forecasts",
+        "pit_stops", "car_races", "practice_stints", "weather_forecasts", "race_incidents",
     }
 )
 # Failing rows printed per failing dbt test.

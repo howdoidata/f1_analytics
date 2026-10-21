@@ -16,13 +16,21 @@ Model terms:
 - Covariates: the circuit history rate (all stops per car at the circuit from
   2011), the team rate (the team's stops per car, all stops, in the season's
   earlier rounds; the previous season's when the season has no earlier round), the car's mean air temperature, the race's
-  weather category (story 4's `_weather_category`) and the car's start compound.
+  weather category (story 4's `_weather_category`), the car's start compound
+  and the race's `incident` (1 when the `race_incidents` mart says it had a
+  safety car or red flag period, VSC not counted; 0 otherwise, and for a race
+  missing from the mart).
   A circuit or team with no history uses the field mean: stops per car (all
   stops) over the fit races (for a fit row, the fit races before its race).
   A covariate with one value across the fit rows, or one the others already
   explain, is left out of that fit.
+- Incident chance (`incident_chance`): races with a safety car or red flag ÷
+  races, over the earlier `race_incidents` races at the circuit and the earlier
+  races of the season, each race counted once; with neither, all earlier
+  `race_incidents` races; with none, 0.0. No tuned weight.
 - A draw: one GLM coefficient vector from their estimated normal (`params`,
   `cov_params`), shared by the team's cars; weather from the weights; then
+  `incident` from the incident chance, also shared by the team's cars; then
   per car, the car out before its first stop with probability
   `car_out_rate` (0 stops), else Poisson(mu). The
   team total is the sum over its cars; red-flag stops are inside mu, with no
@@ -31,6 +39,8 @@ Model terms:
 
 from __future__ import annotations
 
+import math
+import numbers
 import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Mapping, Sequence
@@ -69,6 +79,7 @@ COMPOUND_FALLBACK = {
     "WET": ("INTERMEDIATE", "MEDIUM", "SOFT", "HARD"),
 }
 NUMERIC_TERMS = ("circuit_rate", "team_rate", "air_temp")
+INCIDENT_TERM = "incident"
 
 MODEL_NOTES = [
     "Penalty stops with no tyre change cannot be told apart from other stops in the data, "
@@ -92,6 +103,10 @@ MODEL_NOTES = [
     "and its scores are optimistic.",
     "Tyre wear is not a model input: the race wear slope is often negative, because the car "
     "getting lighter as fuel burns outweighs the wear.",
+    "The incident chance rests on few races: it is the share of earlier races at the circuit and "
+    "earlier races of the season with a safety car or red flag (a VSC does not count), and the "
+    "backtest tests it only through its season half, because no backtest round is at a circuit "
+    "with earlier races in the data.",
 ]
 
 
@@ -184,6 +199,41 @@ def car_out_rate(tables: PitStopTables, season: int, round: int) -> float:
     return float(out.mean())
 
 
+def _race_incidents(tables: PitStopTables) -> pd.DataFrame:
+    """season, round (int64) and incident (0/1) of every race in the `race_incidents` mart."""
+    frame = tables.race_incidents
+    return pd.DataFrame({
+        "season": frame["season"].astype("int64"),
+        "round": frame["round"].astype("int64"),
+        "incident": frame["incident"].astype(bool).astype("int64"),
+    })
+
+
+def incident_chance(tables: PitStopTables, circuit_id: str, season: int, round: int) -> float:
+    """The chance of a safety car or red flag (not a VSC) at the race, from races before it.
+
+    Races with an incident ÷ races, over the earlier `race_incidents` races at
+    the circuit and the earlier races of the season, each race counted once.
+    With neither, all earlier `race_incidents` races; with none, 0.0.
+
+    Unlike `car_out_rate` it checks its inputs, as the subpackage's public
+    functions do: an unknown circuit, season or round raises story 4's
+    `UnknownInputError` message.
+    """
+    if circuit_id not in set(tables.circuits["circuit_id"]):
+        raise UnknownInputError(f"unknown circuit_id '{circuit_id}'")
+    _check_race(tables, season, round)
+    incidents = _race_incidents(tables)
+    circuits = tables.races[["season", "round", "circuit_id"]].astype({"season": "int64", "round": "int64"})
+    earlier = incidents[_before(incidents, season, round)].merge(circuits, on=["season", "round"], how="left")
+    pool = earlier[(earlier["circuit_id"] == circuit_id) | (earlier["season"] == season)]
+    if pool.empty:
+        pool = earlier
+    if pool.empty:
+        return 0.0
+    return float(pool["incident"].mean())
+
+
 # --------------------------------------------------------------------------
 # Fit
 # --------------------------------------------------------------------------
@@ -221,6 +271,8 @@ def _check_race(tables: PitStopTables, season: int, round: int) -> None:
 def _fit_rows(tables: PitStopTables, history: _History, season: int, round: int) -> pd.DataFrame:
     """One row per car of each race before the target with a known start compound and air temperature.
 
+    Each row carries its race's `incident` (0/1) from the `race_incidents` mart.
+
     A car out before its first stop (no stop and a status `_finished` rejects)
     is left out: the forecast draws it separately. A row whose circuit and team rates stay unknown (no earlier fit race to
     take a field mean from) is left out.
@@ -249,6 +301,9 @@ def _fit_rows(tables: PitStopTables, history: _History, season: int, round: int)
         weather=[weather[(s, r)] for s, r in zip(rows["season"], rows["round"])],
     )
     rows = rows.dropna(subset=["circuit_rate", "team_rate"])
+    # A race missing from the mart is clean.
+    rows = rows.merge(_race_incidents(tables), on=["season", "round"], how="left")
+    rows = rows.assign(incident=rows["incident"].fillna(0).astype("int64"))
     return rows.astype({"circuit_rate": "float64", "team_rate": "float64", "air_temp": "float64"}) \
         .sort_values(["season", "round", "driver_id"]).reset_index(drop=True)
 
@@ -259,12 +314,12 @@ def _seen(values: pd.Series, order: Sequence[str]) -> tuple[str, ...]:
 
 
 def _design(frame: pd.DataFrame, columns: Sequence[str]) -> np.ndarray:
-    """The design matrix of `frame` (circuit_rate, team_rate, air_temp, weather, start_compound) for `columns`."""
+    """The design matrix of `frame` (circuit_rate, team_rate, air_temp, weather, start_compound, incident) for `columns`."""
     out = np.empty((len(frame), len(columns)))
     for j, name in enumerate(columns):
         if name == "const":
             out[:, j] = 1.0
-        elif name in NUMERIC_TERMS:
+        elif name in NUMERIC_TERMS or name == INCIDENT_TERM:
             out[:, j] = frame[name].to_numpy(dtype=float)
         else:
             term, level = name.split(":", 1)
@@ -294,6 +349,7 @@ def _fit(tables: PitStopTables, season: int, round: int, history: _History) -> C
         "const", *NUMERIC_TERMS,
         *(f"weather:{level}" for level in weather_levels if level != weather_ref),
         *(f"start_compound:{level}" for level in compound_levels if level != compound_ref),
+        INCIDENT_TERM,
     ]
     # Keep a term only if it adds to the rank: a constant or already-explained term is dropped.
     full = _design(rows, candidates)
@@ -348,6 +404,7 @@ class Forecast:
     air_temp: float
     circuit_rate: float
     team_rate: float
+    incident_chance: float
 
 
 def _weights(weather: str | Mapping[str, float]) -> np.ndarray:
@@ -364,6 +421,17 @@ def _weights(weather: str | Mapping[str, float]) -> np.ndarray:
     return weights / weights.sum()
 
 
+def _incident(incident: float | bool) -> float:
+    """A chance in [0, 1] from `incident`: true/false is 1/0, a finite real number in [0, 1] is itself."""
+    if isinstance(incident, (bool, np.bool_)):
+        return 1.0 if incident else 0.0
+    if isinstance(incident, numbers.Real):
+        value = float(incident)
+        if math.isfinite(value) and 0.0 <= value <= 1.0:
+            return value
+    raise ValueError(f"incident must be a chance in [0, 1] or true/false, got {incident!r}")
+
+
 def _nearest(level: str, seen: Sequence[str], fallback: Mapping[str, Sequence[str]]) -> str:
     for candidate in (level, *fallback[level]):
         if candidate in seen:
@@ -377,6 +445,39 @@ def _range(totals: np.ndarray) -> StopRange:
     return StopRange(mean=round(raw_mean, 1), p10=float(p10), p90=float(p90), raw_mean=raw_mean)
 
 
+def _grid(
+    model: CountModel, circuit_rate: float, team_rate: float, air_temp: float, compounds: Sequence[str]
+) -> np.ndarray:
+    """The design rows, shape (weather category, incident 0/1, car, column)."""
+    grid = pd.DataFrame(
+        [
+            {"circuit_rate": circuit_rate, "team_rate": team_rate, "air_temp": float(air_temp),
+             "weather": _nearest(w, model.weather_levels, WEATHER_FALLBACK),
+             "start_compound": _nearest(c, model.compound_levels, COMPOUND_FALLBACK),
+             INCIDENT_TERM: incident}
+            for w in WEATHER_CATEGORIES for incident in (0, 1) for c in compounds
+        ]
+    )
+    return _design(grid, model.columns).reshape(len(WEATHER_CATEGORIES), 2, len(compounds), len(model.columns))
+
+
+def _draw(model: CountModel, x: np.ndarray, weights: np.ndarray, chance: float) -> tuple[np.ndarray, np.ndarray]:
+    """Each car's stops in each of the `DRAWS` seeded draws, and each draw's incident (True/False).
+
+    Draw order: coefficients, weather, incident (one per draw, shared by the
+    team's cars), car out, Poisson.
+    """
+    rng = np.random.default_rng(SEED)
+    # Cholesky, not the default SVD: its factor is unique, so draws match across LAPACK builds.
+    betas = rng.multivariate_normal(model.params, model.cov_params, size=DRAWS, method="cholesky")
+    weather_draw = rng.choice(len(WEATHER_CATEGORIES), size=DRAWS, p=weights)
+    incident_draw = rng.random(DRAWS) < chance
+    mu = np.exp(np.einsum("dck,dk->dc", x[weather_draw, incident_draw.astype(int)], betas))
+    out = rng.random((DRAWS, x.shape[2])) < model.car_out_rate
+    stops = rng.poisson(mu) * ~out
+    return stops, incident_draw
+
+
 def forecast(
     tables: PitStopTables,
     constructor_id: str,
@@ -387,13 +488,16 @@ def forecast(
     start_compounds: Sequence[str],
     air_temp: float,
     weather: str | Mapping[str, float],
+    incident: float | bool | None = None,
     model: CountModel | None = None,
 ) -> Forecast:
     """The team's total stops at the race (all stops), over `DRAWS` draws seeded `SEED`.
 
     `weather` is a category (`dry`, `mixed`, `wet`) or weights over them;
-    `start_compounds` has one compound per car. `model` reuses a fit for the
-    same `(season, round)`.
+    `start_compounds` has one compound per car. `incident` is the chance of a
+    safety car or red flag in [0, 1], or true/false for a race known to have
+    one or not; by default it is `incident_chance` for the race. `model`
+    reuses a fit for the same `(season, round)`.
     """
     check_inputs(tables, constructor_id, circuit_id, season, round)
     compounds = tuple(str(c).upper() for c in start_compounds)
@@ -401,36 +505,21 @@ def forecast(
     if not compounds or bad:
         raise ValueError(f"start compounds must be from {', '.join(COMPOUNDS)}, got {list(start_compounds)}")
     weights = _weights(weather)
+    chance = incident_chance(tables, circuit_id, season, round) if incident is None else _incident(incident)
     if model is None:
         model = fit_count_model(tables, season, round)
     elif (model.season, model.round) != (season, round):
         raise ValueError(f"model is fitted for {model.season} round {model.round}, not {season} round {round}")
 
     circuit_rate, team_rate = model.history.rates(constructor_id, circuit_id, season, round)
-    # One design row per (weather category, car).
-    grid = pd.DataFrame(
-        [
-            {"circuit_rate": circuit_rate, "team_rate": team_rate, "air_temp": float(air_temp),
-             "weather": _nearest(w, model.weather_levels, WEATHER_FALLBACK),
-             "start_compound": _nearest(c, model.compound_levels, COMPOUND_FALLBACK)}
-            for w in WEATHER_CATEGORIES for c in compounds
-        ]
-    )
-    x = _design(grid, model.columns).reshape(len(WEATHER_CATEGORIES), len(compounds), len(model.columns))
-
-    rng = np.random.default_rng(SEED)
-    # Cholesky, not the default SVD: its factor is unique, so draws match across LAPACK builds.
-    betas = rng.multivariate_normal(model.params, model.cov_params, size=DRAWS, method="cholesky")
-    weather_draw = rng.choice(len(WEATHER_CATEGORIES), size=DRAWS, p=weights)
-    mu = np.exp(np.einsum("dck,dk->dc", x[weather_draw], betas))
-    out = rng.random((DRAWS, len(compounds))) < model.car_out_rate
-    running = ~out
-    total = (rng.poisson(mu) * running).sum(axis=1)
+    x = _grid(model, circuit_rate, team_rate, air_temp, compounds)
+    stops, _ = _draw(model, x, weights, chance)
 
     return Forecast(
         constructor_id=constructor_id, circuit_id=circuit_id, season=season, round=round,
-        total=_range(total),
+        total=_range(stops.sum(axis=1)),
         weather_weights=dict(zip(WEATHER_CATEGORIES, (float(w) for w in weights))),
         start_compounds=compounds, air_temp=float(air_temp),
         circuit_rate=float(circuit_rate), team_rate=float(team_rate),
+        incident_chance=chance,
     )

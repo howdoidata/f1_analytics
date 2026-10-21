@@ -25,6 +25,7 @@ from f1_analytics.analysis.pit_stops.model import (
     car_out_rate,
     fit_count_model,
     forecast,
+    incident_chance,
 )
 from f1_analytics.analysis.pit_stops.practice import PracticeWear, practice_wear_vs_history
 from f1_analytics.analysis.pit_stops.weather import race_weather, weather_weights
@@ -44,6 +45,7 @@ __all__ = [
     "circuit_stop_history",
     "fit_count_model",
     "forecast",
+    "incident_chance",
     "model_inputs",
     "practice_wear_vs_history",
     "race_conditions",
