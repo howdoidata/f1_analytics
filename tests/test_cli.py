@@ -29,7 +29,7 @@ CURATED_TABLES = {
     "race_results_enriched", "driver_standings_by_round", "constructor_standings_by_round",
     "final_driver_standings", "final_constructor_standings",
     "raw_fastf1_laps", "raw_fastf1_stints", "raw_fastf1_weather",
-    "pit_stops", "car_races", "practice_stints",
+    "pit_stops", "car_races", "practice_stints", "weather_forecasts", "race_incidents",
 }
 
 
@@ -43,9 +43,10 @@ def _extract(raw_dir: Path, season: int, dir_name: str, fixture: str = "normal_r
 
 
 def _add_session_summaries(raw: Path) -> None:
-    """The FastF1 summary and practice files (2025 R1 only); their sources fail the build when missing."""
+    """The FastF1 summary and practice files and the weather forecast (2025 R1 only); their sources fail the build when missing."""
     shutil.copytree(FIXTURES / "fastf1_summary", raw / "fastf1_summary")
     shutil.copytree(FIXTURES / "fastf1_practice", raw / "fastf1_practice")
+    shutil.copytree(FIXTURES / "open_meteo", raw / "open_meteo")
 
 
 def _make_raw_dir(root: Path) -> Path:
@@ -540,7 +541,8 @@ def test_build_rejects_a_practice_session_outside_fp1_to_fp3(existing_db: Path, 
     assert "accepted_values_practice_stints_session" in err and "FP4" in err
 
 
-@pytest.mark.parametrize("missing", ["fastf1_summary/car_races.csv", "fastf1_summary/track_status_periods.csv", "fastf1_practice"])
+@pytest.mark.parametrize("missing", [
+    "fastf1_summary/car_races.csv", "fastf1_summary/track_status_periods.csv", "fastf1_practice", "open_meteo"])
 def test_build_fails_when_a_session_summary_source_is_missing(existing_db: Path, raw_dir: Path, capsys, missing: str):
     target = raw_dir / missing
     shutil.rmtree(target) if target.is_dir() else target.unlink()
@@ -560,3 +562,20 @@ def test_build_refuses_to_shrink_a_new_mart(existing_db: Path, raw_dir: Path, ca
     _drop_last_csv_row(raw_dir / relative)
     err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
     assert f"{table}: this build has {existing - 1} row(s), fewer than the {existing}" in err and "refusing to replace" in err
+
+
+def test_build_refuses_to_shrink_weather_forecasts(existing_db: Path, raw_dir: Path, capsys):
+    path = raw_dir / "open_meteo" / "day_before" / "2025-01.json"
+    record = json.loads(path.read_text())
+    hourly = record["response"]["hourly"]
+    record["response"]["hourly"] = {name: values[:-1] for name, values in hourly.items()}
+    path.write_text(json.dumps(record))
+    err = _assert_build_fails_unchanged(raw_dir, existing_db, capsys)
+    assert "weather_forecasts: this build has 47 row(s), fewer than the 48" in err and "refusing to replace" in err
+
+
+def test_build_refuses_to_shrink_race_incidents():
+    # The fixture's car_races.csv holds one race (2025 R1), so dropping a whole race empties
+    # car_races too, and the guard (tables checked in name order) reports car_races first: the
+    # behavioural shrink cannot reach race_incidents here, so this checks the table is guarded.
+    assert "race_incidents" in cli.REGRESSION_GUARDED_TABLES

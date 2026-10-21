@@ -1,6 +1,7 @@
 """The pit-stop chain test: from a DuckDB built from the chain fixture world to model inputs.
 
-Stories 5 and 6 extend this file (count model, backtest, scenario table). The
+Story 5 extends it to the count model's forecast and the backtest table; story 6
+adds the scenario table. The
 chain follows `CHAIN_TEAM` (not Williams) at non-COTA circuits, and checks that
 every input comes from races before the target round.
 """
@@ -16,7 +17,9 @@ import pytest
 from chain_world import CHAIN_CIRCUIT, CHAIN_EARLIER_SEASON, CHAIN_SEASON, CHAIN_TEAM, make_chain_world
 from f1_analytics import cli
 from f1_analytics.analysis.data import PitStopTables, load_pit_stop_tables
-from f1_analytics.analysis.pit_stops import model_inputs, practice_wear_vs_history
+from f1_analytics.analysis.pit_stops import (
+    backtest, fit_count_model, forecast, incident_chance, model_inputs, practice_wear_vs_history,
+)
 
 
 @pytest.fixture(scope="module")
@@ -71,7 +74,7 @@ def test_albert_park_round_3_uses_the_seasons_first_two_rounds(chain_tables):
 
 
 def _as_of(tables: PitStopTables, season: int, round_: int) -> PitStopTables:
-    """The tables with every row at or after the target dropped.
+    """The tables with every row at or after the target dropped (`race_incidents` too).
 
     `races` keeps the target's own schedule row (it is known in advance and the
     inputs check needs it); `practice_stints` keeps the target's practice,
@@ -86,6 +89,7 @@ def _as_of(tables: PitStopTables, season: int, round_: int) -> PitStopTables:
     return replace(
         tables, races=drop(tables.races, keep_target=True), results=drop(tables.results),
         pit_stops=drop(tables.pit_stops), car_races=drop(tables.car_races),
+        race_incidents=drop(tables.race_incidents),
         practice_stints=drop(tables.practice_stints, keep_target=True),
     )
 
@@ -112,3 +116,69 @@ def test_every_chain_round_ignores_the_target_race_and_later(chain_tables):
             _assert_same(practice_wear_vs_history(chain_tables, *args), practice_wear_vs_history(trimmed, *args))
             checked += 1
     assert checked == 4 * 3
+
+
+# --- story 5: count model and backtest ----------------------------------------------------------
+
+CHAIN_DRY_MEDIUM = {"start_compounds": ["MEDIUM", "MEDIUM"], "air_temp": 24.5, "weather": "dry"}
+
+
+def test_round_3_forecast_reaches_a_total_and_range(chain_tables):
+    model = fit_count_model(chain_tables, CHAIN_SEASON, 3)
+    # 2022 R1 has no earlier fit race, so the fit is 2023 R1-R2: 12 cars, whose targets count
+    # every stop (2023 R2's 4 red-flag stops included). Every car is dry, on MEDIUM, at 24.5 °C.
+    assert (model.n_rows, model.n_races) == (12, 2)
+    assert model.fit_rows["stops"].sum() == chain_tables.pit_stops.query(
+        f"season == {CHAIN_SEASON} and round in (1, 2)").shape[0]
+    assert {"air_temp"} <= set(model.dropped) and model.weather_levels == ("dry",)
+    assert model.car_out_rate == 0.0
+
+    result = forecast(chain_tables, CHAIN_TEAM, "albert_park", CHAIN_SEASON, 3, **CHAIN_DRY_MEDIUM, model=model)
+    assert result == forecast(chain_tables, CHAIN_TEAM, "albert_park", CHAIN_SEASON, 3, **CHAIN_DRY_MEDIUM)
+    band = result.total
+    assert 0 <= band.p10 <= band.mean <= band.p90
+    # albert_park has no earlier race: the field mean of the fit races (2023 R1-R2, all stops).
+    assert result.circuit_rate == pytest.approx(model.field_rate)
+    # R1: 1 + 1 stops; R2: hamilton 2 (one under the red flag) + russell 1; all stops over 4 cars.
+    assert result.team_rate == 1.25
+
+
+def test_chain_race_incidents_mart(chain_tables):
+    incidents = chain_tables.race_incidents.sort_values(["season", "round"])
+    # 2022 R1 has only a VSC; 2023 R1 an SC; 2023 R2 a VSC, an SC and a red flag; 2023 R3 no period.
+    assert [(int(s), int(r), bool(i)) for s, r, i in incidents[["season", "round", "incident"]].itertuples(index=False)] == [
+        (CHAIN_EARLIER_SEASON, 1, False), (CHAIN_SEASON, 1, True), (CHAIN_SEASON, 2, True), (CHAIN_SEASON, 3, False)]
+
+
+def test_chain_incident_chance(chain_tables):
+    # albert_park has no earlier race; the season's R1 and R2 both had an incident.
+    assert incident_chance(chain_tables, "albert_park", CHAIN_SEASON, 3) == 1.0
+    # bahrain 2023 R1: no earlier round this season; bahrain 2022 R1 had only a VSC.
+    assert incident_chance(chain_tables, CHAIN_CIRCUIT, CHAIN_SEASON, 1) == 0.0
+    result = forecast(chain_tables, CHAIN_TEAM, "albert_park", CHAIN_SEASON, 3, **CHAIN_DRY_MEDIUM)
+    assert result.incident_chance == 1.0
+
+
+def test_chain_backtest_table(chain_tables):
+    result = backtest(chain_tables, CHAIN_SEASON, [2, 3])
+    assert result.table["method"].tolist() == ["model", "circuit_history", "season_form"]
+    assert result.table["n"].tolist() == [6, 6, 6]
+    assert result.table["hit_rate"].isna().tolist() == [False, True, True]
+    assert result.table["width"].isna().tolist() == [False, True, True]
+    assert result.table.columns.tolist() == ["method", "mae", "mae_clean", "mae_incident", "hit_rate", "width", "n"]
+    # R2 had an incident and R3 none, so both splits have rows.
+    assert result.table[["mae", "mae_clean", "mae_incident"]].notna().all().all()
+    assert result.rows.groupby("round")["incident"].first().to_dict() == {2: 1, 3: 0}
+    team = result.rows[result.rows["constructor_id"] == CHAIN_TEAM]
+    # R2: hamilton 2 (one under the red flag) + russell 1; R3: hamilton 2 + russell 1.
+    assert team[["round", "actual"]].values.tolist() == [[2, 3], [3, 3]]
+    with pytest.raises(ValueError, match=f"^no fit races before {CHAIN_SEASON} round 1$"):
+        backtest(chain_tables, CHAIN_SEASON, [1])
+
+
+def test_chain_forecast_ignores_the_target_race_and_later(chain_tables):
+    for round_, circuit in ((2, "jeddah"), (3, "albert_park")):
+        trimmed = _as_of(chain_tables, CHAIN_SEASON, round_)
+        for team in sorted(set(chain_tables.constructors["constructor_id"])):
+            args = (team, circuit, CHAIN_SEASON, round_)
+            assert forecast(chain_tables, *args, **CHAIN_DRY_MEDIUM) == forecast(trimmed, *args, **CHAIN_DRY_MEDIUM)

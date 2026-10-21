@@ -230,15 +230,23 @@ def test_no_practice_gives_an_empty_practice_side_and_keeps_history():
 
 # --- loader -------------------------------------------------------------------------------------
 
-def test_load_pit_stop_tables_reads_the_seven_marts(tmp_path: Path):
+def test_load_pit_stop_tables_reads_the_eight_marts(tmp_path: Path):
     db_path = tmp_path / "tiny.duckdb"
+    forecast_row = pd.DataFrame([{
+        "season": 2021, "round": 2, "kind": "day_before", "hour_utc": pd.Timestamp("2021-05-02 13:00"),
+        "endpoint": "e", "fetched_at": pd.Timestamp("2026-10-20 12:00"),
+        "race_start_utc": pd.Timestamp("2021-05-02 13:00"), "precipitation_probability": 0.3,
+        "precipitation_mm": 0.0, "air_temp": 21.5}])
+    tables = replace(TABLES, weather_forecasts=forecast_row)
     with duckdb.connect(str(db_path)) as con:
-        for name, frame in vars(TABLES).items():
+        for name, frame in vars(tables).items():
             con.register("frame", frame)
             con.execute(f"CREATE TABLE {name} AS SELECT * FROM frame")
             con.unregister("frame")
     loaded = load_pit_stop_tables(db_path)
     assert {name: len(frame) for name, frame in vars(loaded).items()} == {
-        name: len(frame) for name, frame in vars(TABLES).items()}
+        name: len(frame) for name, frame in vars(tables).items()}
+    assert len(loaded.weather_forecasts) == 1
+    assert loaded.weather_forecasts.loc[0, "precipitation_probability"] == 0.3
     with pytest.raises(MissingDatabaseError):
         load_pit_stop_tables(tmp_path / "nope.duckdb")
