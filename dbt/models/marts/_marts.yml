@@ -417,3 +417,21 @@ models:
         data_tests: [not_null]
       - name: incident
         data_tests: [not_null]
+
+  - name: stop_rules
+    description: >
+      One row per circuit rule from the `stop_rules_seed` seed (W5): from
+      `from_season` on, a running car in a dry race at `circuit_id` makes at
+      least `dry_minimum` stops. A circuit with no row uses 1. The count
+      model's race minimum reads it.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [circuit_id, from_season]
+    columns:
+      - name: circuit_id
+        data_tests: [not_null]
+      - name: from_season
+        data_tests: [not_null]
+      - name: dry_minimum
+        data_tests: [not_null]

@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 from dataclasses import replace
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -21,6 +22,7 @@ from f1_analytics.analysis.pit_stops import (
     SCENARIO_COLUMNS, backtest, fit_count_model, forecast, incident_chance, model_inputs, practice_wear_vs_history,
     scenario_grid,
 )
+from f1_analytics.analysis.pit_stops.model import _draw, _grid
 
 
 @pytest.fixture(scope="module")
@@ -198,3 +200,23 @@ def test_round_3_scenario_grid_reaches_the_scenario_table(chain_tables):
         ["wet", "MEDIUM|MEDIUM", pytest.approx(0.2), False]]
     dry = forecast(chain_tables, CHAIN_TEAM, "albert_park", CHAIN_SEASON, 3, **CHAIN_DRY_MEDIUM, incident=None)
     assert grid.loc[0, ["mean", "p10", "p90"]].tolist() == [dry.total.mean, dry.total.p10, dry.total.p90]
+
+
+# --- story 8: race minimum and team link --------------------------------------------------------
+
+def test_chain_stop_rules_mart_is_built_from_the_seed(chain_tables):
+    assert chain_tables.stop_rules[["circuit_id", "from_season", "dry_minimum"]].values.tolist() == [["monaco", 2025, 2]]
+
+
+def test_chain_round_3_link_and_minimum(chain_tables):
+    model = fit_count_model(chain_tables, CHAIN_SEASON, 3)
+    assert 0.0 <= model.team_link <= 1.0
+    # Every chain race is dry with no stop rule: minimum 1, and every fit car made at least one stop.
+    assert model.minimums == {"dry": 1, "mixed": 1, "wet": 1}
+    rows = model.fit_rows
+    assert (rows["stops"] >= rows["minimum"]).all() and (rows["extra"] == rows["stops"] - rows["minimum"]).all()
+    circuit_rate, team_rate = model.history.rates(CHAIN_TEAM, "albert_park", CHAIN_SEASON, 3)
+    x = _grid(model, circuit_rate, team_rate, 24.5, ["MEDIUM", "MEDIUM"])
+    stops, _ = _draw(replace(model, car_out_rate=0.0), x, np.array([1.0, 0.0, 0.0]), 1.0)
+    # No running car is drawn below its minimum.
+    assert stops.min() >= model.minimums["dry"]

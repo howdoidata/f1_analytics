@@ -495,6 +495,7 @@ dependencies = [
     { name = "plotly" },
     { name = "pyjwt" },
     { name = "requests" },
+    { name = "scipy" },
     { name = "statsmodels" },
 ]
 
@@ -520,6 +521,7 @@ requires-dist = [
     { name = "plotly", specifier = ">=6.9,<7" },
     { name = "pyjwt", specifier = ">=2.8,<3" },
     { name = "requests", specifier = ">=2.32,<3" },
+    { name = "scipy", specifier = "~=1.18.1" },
     { name = "statsmodels", specifier = "~=0.14.5" },
 ]
 

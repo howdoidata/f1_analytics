@@ -27,6 +27,7 @@ from f1_analytics.analysis.pit_stops.model import (
     fit_count_model,
     forecast,
     incident_chance,
+    team_split_check,
 )
 from f1_analytics.analysis.pit_stops.practice import PracticeWear, practice_wear_vs_history
 from f1_analytics.analysis.pit_stops.scenarios import SCENARIO_COLUMNS, scenario_grid, start_tyre_weights
@@ -56,6 +57,7 @@ __all__ = [
     "scenario_grid",
     "start_tyre_weights",
     "team_start_compounds",
+    "team_split_check",
     "team_stop_form",
     "weather_weights",
 ]

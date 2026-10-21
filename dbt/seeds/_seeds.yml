@@ -24,3 +24,22 @@ seeds:
         data_tests: [unique, not_null]
       - name: constructor_id
         data_tests: [not_null]
+  - name: stop_rules_seed
+    description: >
+      The race minimum stops a circuit's rules set for a running car in a dry
+      race, from `from_season` on (the `stop_rules` mart reads it). A circuit
+      with no row uses the sporting rules' 1; a mixed or wet race has a
+      minimum of 1 whatever the circuit. Holds Monaco's mandated two stops from 2025.
+    config:
+      column_types: {circuit_id: varchar, from_season: integer, dry_minimum: integer}
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [circuit_id, from_season]
+    columns:
+      - name: circuit_id
+        data_tests: [not_null]
+      - name: from_season
+        data_tests: [not_null]
+      - name: dry_minimum
+        data_tests: [not_null]

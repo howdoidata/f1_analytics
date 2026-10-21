@@ -26,7 +26,7 @@ The FastF1 extracts are committed with an attribution note (see `data/raw/NOTICE
 
 The dbt project in `dbt/` reads the raw CSVs directly. Staging models type and rename them, and the marts are the tables the analysis reads. Checks that matter, such as every result pointing at a known driver or every lap extract being complete, are dbt tests that fail the build.
 
-`uv run build` runs `dbt build` into a fresh temporary DuckDB file and swaps it in only if every model and test passes. It also refuses the swap if a table that only ever grows (results, sprint results, qualifying, the FastF1 tables) would shrink, because that means a raw file was truncated or lost. In both cases the previous DuckDB file is left as it was. The dbt project carries its own profile and has no package dependencies, so it never downloads anything.
+`uv run build` runs `dbt build` into a fresh temporary DuckDB file and swaps it in only if every model and test passes. It also refuses the swap if a table that only ever grows (results, sprint results, qualifying, the FastF1 tables, pit stops, car races, practice stints, weather forecasts, race incidents and the stop rules) would shrink, because that means a raw file was truncated or lost. In both cases the previous DuckDB file is left as it was. The dbt project carries its own profile and has no package dependencies, so it never downloads anything.
 
 ## Reports are Quarto documents that only call `analysis/`
 

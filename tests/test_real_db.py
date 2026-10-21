@@ -8,15 +8,19 @@ races up to 2026 R17, so a later refresh adds rows without breaking them.
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import duckdb
+import numpy as np
 import pandas as pd
 import pytest
 
 from f1_analytics import config
 from f1_analytics.analysis.data import load_pit_stop_tables
-from f1_analytics.analysis.pit_stops import backtest, forecast, incident_chance
+from f1_analytics.analysis.pit_stops import backtest, fit_count_model, forecast, incident_chance
+from f1_analytics.analysis.pit_stops.model import _draw, _grid
+from f1_analytics.analysis.pit_stops.weather import LIVE, race_weather
 
 
 MISSING_DB = "real DuckDB not built; run uv run build"
@@ -24,7 +28,7 @@ MISSING_DB = "real DuckDB not built; run uv run build"
 UP_TO_2026_R17 = "(season < 2026 OR (season = 2026 AND round <= 17))"
 
 
-REQUIRED_TABLES = ("pit_stops", "weather_forecasts", "race_incidents")
+REQUIRED_TABLES = ("pit_stops", "weather_forecasts", "race_incidents", "stop_rules")
 
 
 def _has_required_tables(path: Path) -> bool:
@@ -35,7 +39,7 @@ def _has_required_tables(path: Path) -> bool:
 
 
 def require_real_db(path: Path, environ=os.environ) -> Path:
-    """`path` if it exists and has `pit_stops`, `weather_forecasts` and `race_incidents`; otherwise skip, or fail when `CI` is set.
+    """`path` if it exists and has every `REQUIRED_TABLES` mart; otherwise skip, or fail when `CI` is set.
 
     A DB built before those marts counts as not built.
     """
@@ -86,13 +90,15 @@ def test_car_races_and_practice_stints_rows(conn):
 
 
 # --- story 5: the count model on the committed data -------------------------
-# Pinned from the incident covariate's decision run on the committed data/raw/
-# (2026-10-20). They change only in a PR that says why.
+# Pinned from the race-minimum and team-link run on the committed data/raw/
+# (2026-10-21, story 8). They change only in a PR that says why. Distance of each
+# model value to its rounding boundary: mae 0.0023, clean 0.0013, incident 0.0041,
+# hit rate 0.0025, width 0.0015; the COTA forecast mean 0.0072 (raw 3.0572).
 
 BACKTEST_PINS = {
     # method: (mae, mae_clean, mae_incident, hit_rate, width, n); every method scored against
     # all of the team's stops, split by whether the race had a safety car or red flag
-    "model": (1.71, 1.53, 1.84, 0.85, 5.25, 187),
+    "model": (1.70, 1.36, 1.93, 0.81, 4.18, 187),
     "circuit_history": (1.56, 1.31, 1.73, None, None, 187),
     "season_form": (1.67, 1.39, 1.87, None, None, 187),
 }
@@ -139,7 +145,19 @@ def test_forecast_at_cota_2026_round_18(tables):
                       start_compounds=["MEDIUM", "MEDIUM"], air_temp=25.0, weather="dry")
     assert result.incident_chance == incident_chance(tables, "americas", 2026, 18)
     total = result.total
-    assert (total.mean, total.p10, total.p90) == (3.0, 1.0, 6.0)
+    assert (total.mean, total.p10, total.p90) == (3.1, 2.0, 5.0)
+
+
+def test_cota_preset_never_draws_a_running_car_below_one_stop(tables):
+    # The R18 preset: dry, SOFT|MEDIUM, at the live forecast's air temperature; no car out, so every car runs.
+    model = fit_count_model(tables, 2026, 18)
+    assert model.minimums["dry"] == 1
+    _, air_temp = race_weather(tables, 2026, 18, kind=LIVE)
+    circuit_rate, team_rate = model.history.rates("williams", "americas", 2026, 18)
+    x = _grid(model, circuit_rate, team_rate, air_temp, ["SOFT", "MEDIUM"])
+    stops, _ = _draw(replace(model, car_out_rate=0.0), x, np.array([1.0, 0.0, 0.0]),
+                     incident_chance(tables, "americas", 2026, 18))
+    assert stops.min() >= 1
 
 
 # --- the skip / fail rule ----------------------------------------------------
@@ -181,6 +199,17 @@ def test_a_db_without_race_incidents_counts_as_not_built(tmp_path: Path, environ
     with duckdb.connect(str(path)) as connection:
         connection.execute("CREATE TABLE pit_stops AS SELECT 1 AS x")
         connection.execute("CREATE TABLE weather_forecasts AS SELECT 1 AS x")
+    expected = pytest.fail.Exception if "CI" in environ else pytest.skip.Exception
+    with pytest.raises(expected, match=MISSING_DB):
+        require_real_db(path, environ=environ)
+
+
+@pytest.mark.parametrize("environ", [{}, {"CI": ""}])
+def test_a_db_without_stop_rules_counts_as_not_built(tmp_path: Path, environ):
+    path = tmp_path / "85588d8.duckdb"
+    with duckdb.connect(str(path)) as connection:
+        for table in ("pit_stops", "weather_forecasts", "race_incidents"):
+            connection.execute(f"CREATE TABLE {table} AS SELECT 1 AS x")
     expected = pytest.fail.Exception if "CI" in environ else pytest.skip.Exception
     with pytest.raises(expected, match=MISSING_DB):
         require_real_db(path, environ=environ)
