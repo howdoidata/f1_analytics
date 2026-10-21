@@ -38,7 +38,7 @@ bench = pr.benchmarks(report)
 
 The first number is the average over `{python} count(pr.DRAWS)` simulated races; the two in brackets are the range: in at least 8 of 10 simulated races the team made between those two numbers of stops, inclusive. This is the most likely scenario: **`{python} report.preset["weather"]`** weather, with the cars starting on **`{python} pr.tyre_label(report.preset["start_tyres"], report.compounds)`**.
 
-That total already allows for a **`{python} share(report.incident_chance)` chance of a safety car or red flag**, from how often one came out in earlier races at this circuit and earlier races this season.
+That total already allows for a **`{python} pr.chance_text(report.incident_chance)` chance of a safety car or red flag**, from how often one came out in earlier races at this circuit and earlier races this season.
 
 - With no safety car or red flag: **`{python} pr.range_text(report.clean)`** stops.
 - With a safety car or red flag: **`{python} pr.range_text(report.incident)`** stops.
@@ -47,7 +47,7 @@ For comparison, two simple rules of thumb for this race: the circuit's history (
 
 ## Try other weather and start tyres
 
-The page opens on the most likely scenario. Each option shows its chance under the current weather forecast and the team's start tyres in earlier races this season. An option at 0% is not expected under the current forecast, but you can still pick it to see its total.
+The page opens on the most likely scenario. Each weather option shows its chance under the current weather forecast. Each start-tyre option shows the chance of that weather and those start tyres together, from the forecast and the team's start tyres in earlier races this season. An option at 0% is not expected under the current forecast, but you can still pick it to see its total.
 
 ```{python}
 #| output: asis
@@ -74,7 +74,7 @@ print(markdown_table(pr.scenario_table(report), "llrrl"))
 ```{python}
 #| output: asis
 if report.backtest is None:
-    print(pr.untested_sentence(race.season, report.untested_rounds) or pr.no_backtest_sentence(race.season))
+    print((pr.untested_sentence(race.season, report.untested_rounds) + " " + pr.no_backtest_sentence(race.season)).strip())
 else:
     table = report.backtest.table
     print(
@@ -93,7 +93,7 @@ else:
 
 ### Model notes
 
-`{python} pr.minimum_sentence(model)` `{python} pr.team_link_sentence(model)` How often the team's two cars made the same number of extra stops in the races the link is set from, as the model has it and as it happened:
+`{python} pr.minimum_sentence(model)` `{python} pr.team_link_sentence(model)` How often the team's two cars made the same number of extra stops, numbers 1 apart, or numbers 2 or more apart, in the races the link is set from, as the model has it and as it happened:
 
 ```{python}
 #| output: asis
@@ -137,7 +137,7 @@ else:
 
 ## Data and method
 
-Every number on this page comes from `f1_analytics.analysis.pit_stops`, run on the local DuckDB file built from the committed raw data, with the scenarios read from `data/processed/scenarios/` and checked against the database when the page is rendered. The model is a Poisson count model of each running car's stops above the race minimum, fitted on races before this one, with `{python} count(pr.DRAWS)` seeded draws.
+Every number on this page comes from `f1_analytics.analysis.pit_stops`, run on the local DuckDB file built from the committed raw data, with the scenarios read from the scenario file `uv run scenarios` writes and checked against the database when the page is rendered. The model is a Poisson count model of each running car's stops above the race minimum, fitted on races before this one, with `{python} count(pr.DRAWS)` seeded draws.
 
 ```{=html}
 <footer class="credits">

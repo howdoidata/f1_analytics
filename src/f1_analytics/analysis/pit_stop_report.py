@@ -245,11 +245,13 @@ def range_text(result: Forecast) -> str:
 
 
 def chance_text(probability: float) -> str:
-    """A scenario chance: a whole percentage, '<1%' for a small non-zero one, '0%' for none."""
+    """A chance as a whole percentage: '<1%' / '>99%' for one that would round to 0% / 100% but is not."""
     if probability <= 0:
         return "0%"
     if probability < 0.005:
         return "<1%"
+    if 0.995 <= probability < 1:
+        return ">99%"
     return share(probability)
 
 

@@ -21,7 +21,7 @@ from chain_world import CHAIN_SEASON, CHAIN_TEAM, make_chain_world
 from f1_analytics import cli, scenarios
 from f1_analytics.analysis import pit_stop_report as pr
 from f1_analytics.analysis.data import load_pit_stop_tables
-from f1_analytics.analysis.pit_stops import PracticeWear
+from f1_analytics.analysis.pit_stops import PracticeWear, practice_wear_vs_history
 from f1_analytics.config import PROJECT_ROOT
 
 
@@ -88,6 +88,8 @@ def test_chance_text_and_labels():
     assert pr.chance_text(0.0) == "0%"
     assert pr.chance_text(0.001) == "<1%"
     assert pr.chance_text(4 / 7) == "57%"
+    assert pr.chance_text(0.996) == ">99%"
+    assert pr.chance_text(1.0) == "100%"
     assert pr.scenario_label("mixed", 0.0) == f"mixed: 0%, {pr.NOT_EXPECTED}"
     assert pr.scenario_label("dry", 1.0) == "dry: 100%"
     assert pr.tyre_label("SOFT|INTERMEDIATE", {"SOFT": "C4"}) == "SOFT (C4) + INTERMEDIATE"
@@ -205,6 +207,17 @@ def test_round_one_has_no_backtest(chain):
     assert pr.season_backtest(tables, CHAIN_SEASON, [1]) == (None, (1,))
     assert pr.untested_sentence(CHAIN_SEASON, ()) == ""
     assert pr.no_backtest_sentence(CHAIN_SEASON) == f"There are no earlier rounds in {CHAIN_SEASON} to test on."
+
+
+def test_practice_tables_on_the_chain_world(chain):
+    """2023 R1 has an FP2 stints file, so the practice panel's tables come from real output."""
+    tables = load_pit_stop_tables(chain["db"])
+    wear = practice_wear_vs_history(tables, CHAIN_TEAM, "bahrain", CHAIN_SEASON, 1)
+    assert pr.practice_loaded(wear)
+    table = pr.practice_table(wear, "Team")
+    assert table["Session"].tolist() == ["FP2"]
+    history = pr.practice_history_table(wear, "Team")
+    assert len(history) == len(wear.history) > 0
 
 
 # --------------------------------------------------------------------------
