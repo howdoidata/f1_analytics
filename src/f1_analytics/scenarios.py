@@ -9,15 +9,19 @@ command runs offline.
 
 Exits 1 and writes nothing for an unknown constructor, season or round, a
 missing forecast file (names the `fetch-weather` command), a forecast file the
-database does not hold yet (names `uv run build`), or a missing database.
+database does not hold yet or holds from an older fetch (names `uv run build`),
+or a missing database.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Sequence
+
+import pandas as pd
 
 from f1_analytics.analysis.data import MissingDatabaseError, PitStopTables, load_pit_stop_tables
 from f1_analytics.analysis.pit_stops import UnknownInputError, scenario_grid
@@ -58,9 +62,21 @@ def _circuit(tables: PitStopTables, constructor_id: str, season: int, round_numb
     return str(races.loc[(races["season"] == season) & (races["round"] == round_number), "circuit_id"].iloc[0])
 
 
-def _has_live_rows(tables: PitStopTables, season: int, round_number: int) -> bool:
+def _utc_naive(value) -> pd.Timestamp:
+    moment = pd.Timestamp(value)
+    return moment.tz_convert("UTC").tz_localize(None) if moment.tzinfo is not None else moment
+
+
+def _is_built(tables: PitStopTables, forecast_file: Path, season: int, round_number: int) -> bool:
+    """The mart holds live rows for the race, fetched at the forecast file's `fetched_at`."""
     rows = tables.weather_forecasts
-    return bool(((rows["season"] == season) & (rows["round"] == round_number) & (rows["kind"] == LIVE)).any())
+    rows = rows[(rows["season"] == season) & (rows["round"] == round_number) & (rows["kind"] == LIVE)]
+    if rows.empty:
+        return False
+    fetched_at = json.loads(forecast_file.read_text()).get("fetched_at")
+    if fetched_at is None:
+        return False
+    return {_utc_naive(value) for value in rows["fetched_at"]} == {_utc_naive(fetched_at)}
 
 
 def main(
@@ -84,9 +100,9 @@ def main(
         _err(f"no live forecast file {forecast_file}; fetch it with "
              f"`uv run fetch-weather --season {season} --round {round_number}`, then `uv run build`")
         return 1
-    if not _has_live_rows(tables, season, round_number):
-        _err(f"the database has no live forecast for {season} round {round_number}, though {forecast_file} "
-             f"exists; load it with `uv run build`")
+    if not _is_built(tables, forecast_file, season, round_number):
+        _err(f"the database has no live forecast for {season} round {round_number} from {forecast_file} "
+             f"(missing, or an older fetch); load it with `uv run build`")
         return 1
 
     try:
@@ -98,7 +114,8 @@ def main(
     path = Path(out_dir) / f"{season}-{round_number:02d}-{team}.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
-    grid.to_csv(tmp, index=False)
+    # Lowercase true/false, as the 6 → 7 interface and d3's autoType expect.
+    grid.assign(preset=grid["preset"].map({True: "true", False: "false"})).to_csv(tmp, index=False)
     tmp.replace(path)
     preset = grid[grid["preset"]].iloc[0]
     _out(f"{season} R{round_number} {team} at {circuit}: {len(grid)} scenario(s), preset {preset['weather']} "

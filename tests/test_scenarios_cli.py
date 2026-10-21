@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
@@ -45,6 +46,9 @@ def test_writes_the_scenario_file(chain, tmp_path: Path, capsys):
     assert frame[["weather", "start_tyres"]].values.tolist() == [
         ["dry", "MEDIUM|MEDIUM"], ["mixed", "MEDIUM|MEDIUM"], ["wet", "MEDIUM|MEDIUM"]]
     assert (frame["mean"] == frame["mean"].round(1)).all()
+    lines = path.read_text().splitlines()[1:]
+    assert [line for line in lines if line.endswith(",true")] == [lines[0]]
+    assert all(line.endswith(",false") for line in lines[1:])
     assert f"3 scenario(s), preset dry MEDIUM|MEDIUM" in capsys.readouterr().out
 
 
@@ -69,6 +73,22 @@ def test_a_forecast_file_not_built_names_the_build_command(chain, tmp_path: Path
     err = capsys.readouterr().err
     assert f"the database has no live forecast for {CHAIN_SEASON} round 2" in err and "`uv run build`" in err
     assert "fetch-weather" not in err
+    assert not out.exists()
+
+
+def test_a_refetched_forecast_not_built_names_the_build_command(chain, tmp_path: Path, capsys):
+    raw, _ = chain
+    copy = tmp_path / "raw"
+    shutil.copytree(raw / "open_meteo", copy / "open_meteo")
+    path = copy / "open_meteo" / "forecast" / f"{CHAIN_SEASON}-03.json"
+    record = json.loads(path.read_text())
+    record["fetched_at"] = "2026-10-23T08:00:00Z"
+    path.write_text(json.dumps(record) + "\n")
+    out = tmp_path / "scenarios"
+
+    assert _run(chain, out, *_args(), raw_dir=copy) == 1
+    err = capsys.readouterr().err
+    assert "older fetch" in err and "`uv run build`" in err
     assert not out.exists()
 
 

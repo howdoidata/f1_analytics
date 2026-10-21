@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 
 SCENARIO_COLUMNS = ["weather", "start_tyres", "probability", "mean", "p10", "p90", "preset"]
 CARS_PER_TEAM = 2
+PRESET_DECIMALS = 12
 
 
 def _option(compounds: list[str]) -> str:
@@ -77,8 +78,8 @@ def scenario_grid(
 
     `mean` is the forecast's total to one decimal (`Forecast.total.mean`),
     `p10` and `p90` its percentiles. Exactly one row is the `preset`: the
-    highest probability, ties going to the earlier weather, then the earlier
-    option. Raises `ValueError("no live forecast for <s> round <r>")` when the
+    highest probability (compared to 12 decimals), ties going to the earlier
+    weather, then the earlier option. Raises `ValueError("no live forecast for <s> round <r>")` when the
     `weather_forecasts` mart has no live forecast for the race.
     """
     check_inputs(tables, constructor_id, circuit_id, season, round)
@@ -101,7 +102,8 @@ def scenario_grid(
                 "preset": False,
             })
     grid = pd.DataFrame(rows, columns=SCENARIO_COLUMNS)
-    # idxmax returns the first maximum: rows are in weather, then option order.
-    grid.loc[grid["probability"].idxmax(), "preset"] = True
+    # idxmax returns the first maximum: rows are in weather, then option order. Rounding first
+    # makes a tie in exact arithmetic (e.g. 0.6 × 1/3 vs 0.2 × 1) a tie in floats too.
+    grid.loc[grid["probability"].round(PRESET_DECIMALS).idxmax(), "preset"] = True
     return grid.astype({"probability": "float64", "mean": "float64", "p10": "float64", "p90": "float64",
                         "preset": "bool"})

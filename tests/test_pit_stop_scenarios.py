@@ -95,6 +95,19 @@ def test_a_tie_across_weathers_goes_to_the_earlier_weather():
         ["mixed", "MEDIUM|HARD", 0.5]]
 
 
+def test_a_tie_in_exact_arithmetic_but_not_in_floats_goes_to_the_earlier_weather():
+    # Target 2025 R5: R4 becomes HARD + HARD, so dry has 3 pairs at 1/3 and mixed MEDIUM|HARD at 1.
+    # At p = 0.4, dry 0.6 × 1/3 is 0.19999999999999998 in floats and mixed 0.2 × 1 is 0.2.
+    tables = with_compound(with_compound(WORLD, 4, "a1", "HARD"), 4, "a2", "HARD")
+    args = ("aa", "c4", 2025, 5)
+    assert start_tyre_weights(tables, *args)["dry"] == pytest.approx(
+        {"SOFT|MEDIUM": 1 / 3, "SOFT|HARD": 1 / 3, "MEDIUM|HARD": 0.0, "HARD|HARD": 1 / 3})
+    grid = scenario_grid(with_live(tables, 0.4, round_=5), *args)
+    assert grid.loc[grid["preset"], ["weather", "start_tyres"]].values.tolist() == [["dry", "SOFT|MEDIUM"]]
+    # The column itself stays unrounded.
+    assert grid.loc[0, "probability"] == 0.6 * (1 / 3) != 0.2
+
+
 def test_p_0_leaves_mixed_and_wet_at_0_and_the_preset_dry():
     grid = scenario_grid(with_live(WORLD, 0.0), *ARGS)
     assert (grid.loc[grid["weather"] != "dry", "probability"] == 0).all()
