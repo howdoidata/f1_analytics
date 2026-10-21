@@ -44,6 +44,23 @@ def test_fetch_asks_for_the_hourly_race_window_at_the_circuit():
     })]
 
 
+def test_the_live_fetch_asks_the_forecast_api_with_the_same_query():
+    getter = RecordedGetter(recorded_response())
+    start = datetime(2025, 3, 1, 15, tzinfo=timezone.utc)
+
+    response = om.OpenMeteoClient(getter).fetch_forecast(26.0325, 50.5106, start)
+
+    assert response == recorded_response()
+    assert om.FORECAST_URL == "https://api.open-meteo.com/v1/forecast"
+    assert getter.calls == [(om.FORECAST_URL, om.day_before_request(26.0325, 50.5106, start)[1])]
+    assert om.forecast_request(26.0325, 50.5106, start) == (om.FORECAST_URL, getter.calls[0][1])
+
+
+def test_a_live_response_without_hourly_data_raises():
+    with pytest.raises(om.OpenMeteoRequestError, match=f"^response for {om.FORECAST_URL} has no hourly time"):
+        om.OpenMeteoClient(RecordedGetter({})).fetch_forecast(1.0, 2.0, datetime(2025, 3, 1, 15))
+
+
 def test_the_window_uses_the_utc_race_date():
     # 23:30 in UTC-5 is 04:30 UTC the next day.
     from datetime import timedelta

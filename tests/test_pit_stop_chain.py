@@ -18,7 +18,8 @@ from chain_world import CHAIN_CIRCUIT, CHAIN_EARLIER_SEASON, CHAIN_SEASON, CHAIN
 from f1_analytics import cli
 from f1_analytics.analysis.data import PitStopTables, load_pit_stop_tables
 from f1_analytics.analysis.pit_stops import (
-    backtest, fit_count_model, forecast, incident_chance, model_inputs, practice_wear_vs_history,
+    SCENARIO_COLUMNS, backtest, fit_count_model, forecast, incident_chance, model_inputs, practice_wear_vs_history,
+    scenario_grid,
 )
 
 
@@ -182,3 +183,18 @@ def test_chain_forecast_ignores_the_target_race_and_later(chain_tables):
         for team in sorted(set(chain_tables.constructors["constructor_id"])):
             args = (team, circuit, CHAIN_SEASON, round_)
             assert forecast(chain_tables, *args, **CHAIN_DRY_MEDIUM) == forecast(trimmed, *args, **CHAIN_DRY_MEDIUM)
+
+
+# --- story 6: scenario grid ---------------------------------------------------------------------
+
+def test_round_3_scenario_grid_reaches_the_scenario_table(chain_tables):
+    grid = scenario_grid(chain_tables, CHAIN_TEAM, "albert_park", CHAIN_SEASON, 3)
+    assert grid.columns.tolist() == SCENARIO_COLUMNS
+    # R1 and R2 are dry, both cars on MEDIUM: one option; mixed and wet fall back to dry.
+    # The live forecast's p is 0.4 (05:00 5 %, 06:00 40 %).
+    assert grid[["weather", "start_tyres", "probability", "preset"]].values.tolist() == [
+        ["dry", "MEDIUM|MEDIUM", pytest.approx(0.6), True],
+        ["mixed", "MEDIUM|MEDIUM", pytest.approx(0.2), False],
+        ["wet", "MEDIUM|MEDIUM", pytest.approx(0.2), False]]
+    dry = forecast(chain_tables, CHAIN_TEAM, "albert_park", CHAIN_SEASON, 3, **CHAIN_DRY_MEDIUM, incident=None)
+    assert grid.loc[0, ["mean", "p10", "p90"]].tolist() == [dry.total.mean, dry.total.p10, dry.total.p90]

@@ -100,9 +100,41 @@ def test_a_failed_request_writes_nothing(raw_dir: Path, capsys):
     assert not (raw_dir / "open_meteo").exists()
 
 
-def test_day_before_is_required(raw_dir: Path):
-    with pytest.raises(SystemExit):
-        _run(raw_dir, "--season", "2025", "--round", "1")
+def test_without_day_before_the_live_forecast_is_written(raw_dir: Path, capsys):
+    getter = RecordedGetter(recorded_response())
+
+    assert _run(raw_dir, "--season", "2025", "--round", "1", getter=getter) == 0
+
+    path = raw_dir / "open_meteo" / "forecast" / "2025-01.json"
+    record = json.loads(path.read_text())
+    assert getter.calls[0][0] == om.FORECAST_URL
+    assert record["endpoint"] == om.FORECAST_URL
+    assert record["params"] == getter.calls[0][1]
+    assert record["fetched_at"] == "2026-10-20T09:30:05Z"
+    assert record["race_start_utc"] == "2025-03-01T15:00:00Z"
+    assert record["response"] == recorded_response()
+    assert f"2025 R1: 48 hour(s) -> {path}" in capsys.readouterr().out
+    assert [p.name for p in (raw_dir / "open_meteo").iterdir()] == ["forecast"]
+
+
+def test_a_failed_live_request_writes_nothing(raw_dir: Path, capsys):
+    def failing(url, params):
+        raise om.OpenMeteoRequestError(f"HTTP 500 for {url}")
+
+    assert _run(raw_dir, "--season", "2025", "--round", "1", getter=failing) == 1
+    assert f"FAILED -- OpenMeteoRequestError: HTTP 500 for {om.FORECAST_URL}" in capsys.readouterr().err
+    assert not (raw_dir / "open_meteo").exists()
+
+
+def test_the_committed_2026_round_18_live_forecast_covers_its_race_start():
+    """data/raw/open_meteo/forecast/2026-18.json is from the Forecast API and holds both race-window hours."""
+    record = json.loads((Path(fetch_weather.RAW_DATA_DIR) / "open_meteo" / "forecast" / "2026-18.json").read_text())
+    assert record["endpoint"] == om.FORECAST_URL
+    assert record["race_start_utc"] == "2026-10-25T20:00:00Z"
+    hours = record["response"]["hourly"]["time"]
+    index = hours.index("2026-10-25T20:00")
+    for name in om.HOURLY_VARIABLES:
+        assert None not in record["response"]["hourly"][name][index:index + 2], name
 
 
 def test_every_committed_2026_forecast_covers_its_race_start():

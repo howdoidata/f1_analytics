@@ -1,4 +1,5 @@
-"""Pit-stop forecast analysis: stop history, model inputs, practice wear, the count model and its backtest.
+"""Pit-stop forecast analysis: stop history, model inputs, practice wear, the count model, its backtest
+and the scenario grid.
 
 Pure functions over the `PitStopTables` that `analysis.data.load_pit_stop_tables`
 returns. Each history function takes `(tables, constructor_id, circuit_id, season,
@@ -28,10 +29,12 @@ from f1_analytics.analysis.pit_stops.model import (
     incident_chance,
 )
 from f1_analytics.analysis.pit_stops.practice import PracticeWear, practice_wear_vs_history
+from f1_analytics.analysis.pit_stops.scenarios import SCENARIO_COLUMNS, scenario_grid, start_tyre_weights
 from f1_analytics.analysis.pit_stops.weather import race_weather, weather_weights
 
 __all__ = [
     "MODEL_NOTES",
+    "SCENARIO_COLUMNS",
     "Backtest",
     "CountModel",
     "Forecast",
@@ -50,6 +53,8 @@ __all__ = [
     "practice_wear_vs_history",
     "race_conditions",
     "race_weather",
+    "scenario_grid",
+    "start_tyre_weights",
     "team_start_compounds",
     "team_stop_form",
     "weather_weights",

@@ -1,8 +1,11 @@
-"""`uv run fetch-weather --season <s> --round <r> --day-before`: commit one race's forecast.
+"""`uv run fetch-weather --season <s> --round <r> [--day-before]`: commit one race's forecast.
 
-Writes `data/raw/open_meteo/day_before/<s>-<RR>.json` holding the endpoint, the
-query, the fetch time (UTC), the race start (UTC) and Open-Meteo's response,
-for the circuit's latitude and longitude (Jolpica `circuits`) and the race
+With `--day-before`, writes `data/raw/open_meteo/day_before/<s>-<RR>.json` from
+Open-Meteo's Historical Forecast API (the backtest's weather). Without it, the
+live mode writes `data/raw/open_meteo/forecast/<s>-<RR>.json` from the Forecast
+API (an upcoming race's weather, which the scenario grid reads). Each file
+holds the endpoint, the query, the fetch time (UTC), the race start (UTC) and
+Open-Meteo's response, for the circuit's latitude and longitude (Jolpica `circuits`) and the race
 start (Jolpica `races` date and time). dbt reads these files into the
 `weather_forecasts` mart; the analysis reads the mart, never the files.
 
@@ -22,12 +25,13 @@ import pandas as pd
 
 from f1_analytics.config import RAW_DATA_DIR
 from f1_analytics.data_sources.jolpica_fetch import read_raw_table
-from f1_analytics.data_sources.open_meteo import OpenMeteoClient, day_before_request
+from f1_analytics.data_sources.open_meteo import OpenMeteoClient, day_before_request, forecast_request
 
 
 PREFIX = "[fetch-weather]"
 OPEN_METEO_DIR = "open_meteo"
 DAY_BEFORE_KIND = "day_before"
+FORECAST_KIND = "forecast"
 
 
 class UsageError(Exception):
@@ -50,8 +54,9 @@ def _parse(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--season", type=int, required=True)
     parser.add_argument("--round", type=int, dest="round_number", required=True)
     parser.add_argument(
-        "--day-before", action="store_true", required=True,
-        help="the forecast for the race window, written to open_meteo/day_before/",
+        "--day-before", action="store_true",
+        help="the Historical Forecast API's race window, written to open_meteo/day_before/ "
+        "(default: the live Forecast API, written to open_meteo/forecast/)",
     )
     return parser.parse_args(argv)
 
@@ -97,9 +102,13 @@ def main(
         return 1
 
     client = client or OpenMeteoClient()
-    endpoint, params = day_before_request(lat, lng, start)
+    if args.day_before:
+        kind, request, fetch = DAY_BEFORE_KIND, day_before_request, client.fetch_day_before
+    else:
+        kind, request, fetch = FORECAST_KIND, forecast_request, client.fetch_forecast
+    endpoint, params = request(lat, lng, start)
     try:
-        response = client.fetch_day_before(lat, lng, start)
+        response = fetch(lat, lng, start)
     except Exception as error:  # Live services raise diverse failure types.
         _err(f"{args.season} R{args.round_number}: FAILED -- {type(error).__name__}: {error}")
         return 1
@@ -111,7 +120,7 @@ def main(
         "race_start_utc": _iso(start),
         "response": response,
     }
-    path = raw_dir / OPEN_METEO_DIR / DAY_BEFORE_KIND / f"{args.season}-{args.round_number:02d}.json"
+    path = raw_dir / OPEN_METEO_DIR / kind / f"{args.season}-{args.round_number:02d}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(record) + "\n")

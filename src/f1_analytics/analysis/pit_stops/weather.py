@@ -2,8 +2,9 @@
 
 `race_weather` reads the forecast rows of the race-start hour and the next
 hour. p is the higher of the two hours' precipitation probability (0-1, from
-Open-Meteo's Historical Forecast API); the air temperature is the mean over the
-same hours.
+Open-Meteo's Historical Forecast API for kind `day_before`, its Forecast API
+for the live kind `forecast`); the air temperature is the mean over the same
+hours.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 
 
 DAY_BEFORE = "day_before"
+LIVE = "forecast"
 WEATHER_CATEGORIES = ("dry", "mixed", "wet")
 RACE_WINDOW_HOURS = 2
 
@@ -25,9 +27,10 @@ def race_window(tables: PitStopTables, season: int, round: int, kind: str = DAY_
     """The forecast rows of the race-start hour and the next hour, in hour order.
 
     Raises `ValueError("no day-before forecast for <s> round <r>")` (the kind
-    named) when the race has no rows of that kind or lacks either hour.
+    named; `no live forecast` for `LIVE`) when the race has no rows of that
+    kind or lacks either hour.
     """
-    label = kind.replace("_", "-")
+    label = "live" if kind == LIVE else kind.replace("_", "-")
     forecasts = tables.weather_forecasts
     rows = forecasts[(forecasts["season"] == season) & (forecasts["round"] == round) & (forecasts["kind"] == kind)]
     if rows.empty:

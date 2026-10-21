@@ -10,7 +10,9 @@ practice stints file for a small world kept apart from the shared
   at in an earlier season;
 - `car_races` rows for every car of every race, and track-status periods of
   all three statuses (2023 R2 has an sc / red_flag overlap; 2023 R3 none);
-- a 2023 R1 FP2 stints file.
+- a 2023 R1 FP2 stints file;
+- day-before forecasts for 2023 R1-R3 and a live forecast (kind `forecast`)
+  for 2023 R3 at albert_park, rain chance 0.4 in the race window.
 
 `make_chain_world` copies it and adds one FastF1 extract (the `normal_race`
 fixture, VER/HAM/ALO) as 2023 R1, since the `fastf1` sources fail on no match.
