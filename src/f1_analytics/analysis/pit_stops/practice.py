@@ -2,8 +2,8 @@
 
 A displayed check, not a model input. Practice of the target round happens
 before its race, so it may be used; race history uses only earlier races.
-`deg_s_per_lap` is passed through unchanged (the epic leaves the fuel
-correction to the model story).
+`deg_s_per_lap` is passed through unchanged: raw slopes, not fuel-corrected
+(the count model does not use tyre wear; see `MODEL_NOTES`).
 """
 
 from __future__ import annotations

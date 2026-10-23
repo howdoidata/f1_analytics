@@ -34,6 +34,8 @@ Each report is `reports/<date>-<slug>/report.qmd`. Every figure, table and numbe
 
 The rendered HTML is committed so the reports can be read without rendering them. It loads plotly.js from its CDN rather than embedding it, which keeps each file small. The PDFs are generated locally and gitignored.
 
+One exception: the pit-stop forecast page (`reports/2026-10-24-williams-cota-pit-stop-forecast/`) is rendered with `embed-resources: true` and to HTML only, so it is one self-contained file that works offline. It has no plotly chart, and its weather and start-tyre controls are a small inline script over data embedded in the page, not Quarto's OJS, whose runtime loads its input library from a CDN and does not run from a `file://` URL.
+
 CI runs the test suite and the build, but it does not render the reports: rendering needs Quarto, TeX and Chrome. The reports are rendered locally from a fresh clone before they are committed.
 
 ## Golden comparison

@@ -1,0 +1,149 @@
+---
+title: "Williams pit stops: 2026 United States Grand Prix"
+subtitle: "How many pit stops will Williams make in total at the Circuit of the Americas? Round 18, Sunday 2026-10-25"
+date: 2026-10-24
+date-format: iso
+format:
+  html:
+    embed-resources: true
+---
+
+```{python}
+#| tags: [parameters]
+# The page's only team, season, round and Pirelli values. Another team's or race's page:
+# quarto render report.qmd -P constructor_id:<id> -P season:<s> -P round:<r> -M title:"…" -M subtitle:"…"
+constructor_id = "williams"
+season = 2026
+round = 18
+# The Pirelli allocation for the race: labels only, the model never reads them.
+compounds = {"HARD": "C2", "MEDIUM": "C3", "SOFT": "C4"}
+# Empty: the project's DuckDB file and data/processed/scenarios/.
+db_path = ""
+scenarios_dir = ""
+```
+
+```{python}
+#| label: setup
+from f1_analytics.analysis import pit_stop_report as pr
+from f1_analytics.analysis.formatting import count, markdown_table, num, share
+
+report = pr.build_report(constructor_id, season, round, compounds, db_path, scenarios_dir)
+race, model = report.race, report.model
+bench = pr.benchmarks(report)
+```
+
+## The answer
+
+`{python} race.team_name` are expected to make **`{python} pr.headline(report)` pit stops** in total at the `{python} race.season` `{python} race.race_name` (`{python} race.circuit_name`, round `{python} race.round`, `{python} race.date`), counting both cars and every stop.
+
+The first number is the average over `{python} count(pr.DRAWS)` simulated races; the two in brackets are the range: in at least 8 of 10 simulated races the team made between those two numbers of stops, inclusive. This is the most likely scenario: **`{python} report.preset["weather"]`** weather, with the cars starting on **`{python} pr.tyre_label(report.preset["start_tyres"], report.compounds)`**.
+
+That total already allows for a **`{python} pr.chance_text(report.incident_chance)` chance of a safety car or red flag**, from how often one came out in earlier races at this circuit and earlier races this season.
+
+- With no safety car or red flag: **`{python} pr.range_text(report.clean)`** stops.
+- With a safety car or red flag: **`{python} pr.range_text(report.incident)`** stops.
+
+For comparison, two simple rules of thumb for this race: the circuit's history (two cars × its stops per car since `{python} pr.HISTORY_START_SEASON`) gives **`{python} num(bench["circuit_history"])`** stops, and the team's season so far (two cars × its stops per car this season) gives **`{python} num(bench["season_form"])`**.
+
+## Try other weather and start tyres
+
+The page opens on the most likely scenario. Each weather option shows its chance under the current weather forecast. Each start-tyre option shows the chance of that weather and those start tyres together, from the forecast and the team's start tyres in earlier races this season. An option at 0% is not expected under the current forecast, but you can still pick it to see its total.
+
+```{python}
+#| output: asis
+print("```{=html}\n" + pr.controls_html(report) + "\n```")
+```
+
+```{python}
+#| output: asis
+for note in pr.unseen_weather_notes(model):
+    print(note + "\n")
+```
+
+The start-tyre effect is a pattern in past races, not cause and effect: teams pick their start tyres for reasons that also change how often they stop. The compound names in brackets are the Pirelli allocation for this race, as labels only.
+
+Every scenario (all stops, safety-car and red-flag stops included):
+
+```{python}
+#| output: asis
+print(markdown_table(pr.scenario_table(report), "llrrl"))
+```
+
+## How well the model did this season
+
+```{python}
+#| output: asis
+if report.backtest is None:
+    print((pr.untested_sentence(race.season, report.untested_rounds) + " " + pr.no_backtest_sentence(race.season)).strip())
+else:
+    table = report.backtest.table
+    print(
+        f"Each earlier round of {race.season} was forecast for every team from what was known before it, "
+        "and each forecast was compared with the team's actual total. "
+        + pr.backtest_sentence(table) + " " + pr.coverage_sentence(table) + " "
+        + pr.untested_sentence(race.season, report.untested_rounds) + "\n"
+    )
+    print(markdown_table(pr.backtest_table(table), "lrrrrrr"))
+    print(
+        "\nMAE is the mean absolute error in stops per team-race. Circuit history and season form are the two "
+        "rules of thumb above, worked out for each race. The hit rate is the share of actual totals inside the "
+        "model's p10–p90 range, and the range width is that range's mean size in stops."
+    )
+```
+
+### Model notes
+
+`{python} pr.minimum_sentence(model)` `{python} pr.team_link_sentence(model)` How often the team's two cars made the same number of extra stops, numbers 1 apart, or numbers 2 or more apart, in the races the link is set from, as the model has it and as it happened:
+
+```{python}
+#| output: asis
+print(markdown_table(pr.split_table(report.split_check), "lrr"))
+```
+
+```{python}
+#| output: asis
+for note in pr.MODEL_NOTES:
+    print(f"- {note}")
+```
+
+## Past races at this circuit
+
+Every car's stops at each earlier race at this circuit since `{python} pr.HISTORY_START_SEASON`, split by type. This is shown for reference only; the stop types are not a forecast figure. "Type unknown" counts stops the data does not classify.
+
+```{python}
+#| output: asis
+print(markdown_table(pr.history_table(report.circuit_history), "rrrrrrrr"))
+```
+
+## Friday practice
+
+A check against history: practice tyre wear does not change the forecast.
+
+```{python}
+#| output: asis
+if not pr.practice_loaded(report.practice):
+    print(f"**{pr.PRACTICE_NOT_LOADED}.**\n")
+else:
+    print(
+        "Tyre wear in seconds per lap lost over a stint, lap-weighted, this weekend's practice sessions next to "
+        "earlier races at this circuit. The slopes are raw, not fuel-corrected: a car gets lighter as it burns "
+        "fuel, which hides some of the wear, so a slope can be negative. A car in FP1 that does not match a race "
+        "driver (a rookie run) is skipped.\n"
+    )
+    print(markdown_table(pr.practice_table(report.practice, race.team_name), "lrrrr"))
+    print("\nEarlier races at this circuit:\n")
+    print(markdown_table(pr.practice_history_table(report.practice, race.team_name), "rrrr"))
+```
+
+## Data and method
+
+Every number on this page comes from `f1_analytics.analysis.pit_stops`, run on the local DuckDB file built from the committed raw data, with the scenarios read from the scenario file `uv run scenarios` writes and checked against the database when the page is rendered. The model is a Poisson count model of each running car's stops above the race minimum, fitted on races before this one, with `{python} count(pr.DRAWS)` seeded draws.
+
+```{=html}
+<footer class="credits">
+<p>Results and pit stops: <a href="https://github.com/jolpica/jolpica-f1">Jolpica F1 API</a>, CC BY-NC-SA 4.0.
+Lap and practice data: Formula 1 timing data obtained with <a href="https://github.com/theOehrly/Fast-F1">FastF1</a>;
+F1 timing data © Formula One World Championship Limited. This page is unofficial and not associated with the Formula 1 companies.
+Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a>, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</p>
+</footer>
+```

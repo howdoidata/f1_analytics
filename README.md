@@ -33,10 +33,11 @@ cd f1_analytics
 uv sync                          # creates .venv/ with Python 3.13 and the pinned packages (needs network)
 uv run pytest                    # offline test suite, about 8 minutes
 uv run build                     # data/raw/ -> data/processed/f1_analytics.duckdb (offline, no credentials)
+uv run scenarios --constructor williams --season 2026 --round 18   # the pit-stop page's scenario file (offline)
 uv run quarto render reports     # every report to report.html and report.pdf, about 5 minutes
 ```
 
-Each report is then at `reports/<date>-<slug>/report.html` and `report.pdf`. Open the HTML in a browser; it loads plotly.js from its CDN, so the charts need an internet connection.
+Each report is then at `reports/<date>-<slug>/report.html` and `report.pdf`. Open the HTML in a browser; it loads plotly.js from its CDN, so the charts need an internet connection. The pit-stop forecast page is the exception: it is HTML only, with everything embedded, so it works offline. It reads the scenario file `uv run scenarios` writes to `data/processed/scenarios/`, and its render stops with an error naming that command when the file is missing or out of date with the database.
 
 The render prints Jupyter kernel warnings such as "Kernel is running over TCP without encryption"; they are expected and harmless. A render also rewrites the random chart IDs in the committed `report.html` files, so `git status` shows them as modified even when no number changed.
 
@@ -52,6 +53,8 @@ The render prints Jupyter kernel warnings such as "Kernel is running over TCP wi
 uv run build     # data/raw/ -> data/processed/f1_analytics.duckdb (offline, no credentials)
 uv run refresh   # maintainer only: append new Jolpica rounds, fetch missing FastF1 extracts, then build
 uv run fetch-sessions --circuit americas --since 2018   # maintainer only: summarise FastF1 sessions into data/raw/fastf1_summary/ and fastf1_practice/ (see --help)
+uv run fetch-weather --season 2026 --round 18   # maintainer only: Open-Meteo's live race-window forecast into data/raw/open_meteo/forecast/ (--day-before: the backtest's weather); no login
+uv run scenarios --constructor williams --season 2026 --round 18   # the weather x start-tyre scenario file, from the built database, into data/processed/scenarios/ (offline)
 ```
 
 `uv run build` runs `dbt build` on the project in `dbt/`: staging tables (schema `staging`) type the raw CSVs, the marts in `main` are the tables the analysis reads, and the dbt tests check them. It builds into a fresh temporary file and swaps it in only if every model and test passes and no guarded table (`results`, `sprint_results`, `qualifying`, `raw_fastf1_*`, `pit_stops`, `car_races`, `practice_stints`, `weather_forecasts`, `race_incidents`, `stop_rules`) has shrunk; otherwise it exits 1 and leaves the previous DuckDB file as it was. Each build's test results are in `dbt/target/run_results.json`. Paths resolve from the package location, so `uv run build` writes to this repo's `data/processed/` whatever the current directory.
@@ -88,13 +91,14 @@ A test fails while the committed gallery is out of date. On each push to `main`,
 ## Data and attribution
 
 - Results, qualifying, pit stops, standings, drivers, constructors and circuits come from the [Jolpica F1 API](https://github.com/jolpica/jolpica-f1), which continues the Ergast dataset. They are licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/): non-commercial use only, and derived data must be shared under the same licence.
+- Race-window weather forecasts come from [Open-Meteo](https://open-meteo.com/) (its Historical Forecast and Forecast APIs), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Weather data by Open-Meteo.com.
 - Lap and weather data is Formula 1 timing data, obtained with [FastF1](https://github.com/theOehrly/Fast-F1). F1 timing data © Formula One World Championship Limited. This project is unofficial and is not associated in any way with the Formula 1 companies. The extracts are kept for non-commercial analysis only.
 
 Details are in [`data/raw/NOTICE.md`](data/raw/NOTICE.md).
 
 ## License
 
-The code is under the [MIT License](LICENSE). The data in `data/raw/` is not covered by it and stays under its own terms: Jolpica data under CC BY-NC-SA 4.0, and F1 timing data owned by Formula One World Championship Limited.
+The code is under the [MIT License](LICENSE). The data in `data/raw/` is not covered by it and stays under its own terms: Jolpica data under CC BY-NC-SA 4.0, Open-Meteo forecasts under CC BY 4.0, and F1 timing data owned by Formula One World Championship Limited.
 
 ## AI use
 
