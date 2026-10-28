@@ -73,7 +73,7 @@ Each report is `reports/<date>-<slug>/report.qmd`, a Quarto document whose figur
 
 The HTML is committed; the PDFs are gitignored. `reports/golden/` holds the original Singapore and Zandvoort PDF reports that the current values are compared against whenever the pipeline changes. CI runs the tests and the build but does not render.
 
-The gallery (`reports/README.md` and `reports/index.html`) is generated from each report's frontmatter. After adding a report or changing a title, subtitle or date, run:
+The gallery (`reports/README.md` and `reports/index.html`) is generated from each report's frontmatter. A report may also carry the optional hand-written fields `status: provisional | validated` and a `gaps:` list of known gaps (one line each), which its gallery card shows. After adding a report or changing a title, subtitle, date, status or gaps, run:
 
 ```bash
 uv run gallery

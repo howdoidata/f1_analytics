@@ -11,6 +11,8 @@ four tables through `analysis.data` and hands them to `conversion_report`.
 
 from __future__ import annotations
 
+import math
+
 import duckdb
 import pandas as pd
 
@@ -293,3 +295,24 @@ def rate_text(summary: dict[str, int | float | None]) -> str:
     if not summary["total"]:
         return "no seasons"
     return f"{summary['converted']} of {summary['total']} ({summary['rate'] * 100:.1f}%)"
+
+
+def wilson_interval(converted: int, total: int, z: float = 1.96) -> tuple[float, float]:
+    """The Wilson score interval for `converted` of `total` (95% with the default `z`), as 0-1 fractions."""
+    if total <= 0:
+        raise ValueError("wilson_interval needs at least one season")
+    p = converted / total
+    denominator = 1 + z**2 / total
+    centre = (p + z**2 / (2 * total)) / denominator
+    half_width = z * math.sqrt(p * (1 - p) / total + z**2 / (4 * total**2)) / denominator
+    return max(0.0, centre - half_width), min(1.0, centre + half_width)
+
+
+def rate_range_text(summary: dict[str, int | float | None]) -> str:
+    """'89% of 28 seasons (95% interval 73–96%)', or 'no seasons' when there are none."""
+    total = summary["total"]
+    if not total:
+        return "no seasons"
+    low, high = wilson_interval(summary["converted"], total)
+    noun = "season" if total == 1 else "seasons"
+    return f"{summary['rate'] * 100:.0f}% of {total} {noun} (95% interval {low * 100:.0f}–{high * 100:.0f}%)"

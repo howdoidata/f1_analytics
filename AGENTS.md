@@ -14,4 +14,6 @@ The test suite is offline: `tests/conftest.py` blocks all network access, so no 
 
 Reports are Quarto files at `reports/<date>-<slug>/report.qmd`; they only call `f1_analytics.analysis` (no plotly, SQL or computation in a `.qmd`), and `uv run quarto render reports` re-renders them after `uv run build`.
 
+Report frontmatter may carry the optional `status: provisional | validated` and a `gaps:` list (one known gap per `- ` line); the gallery shows both, and any other `status` fails `uv run gallery`.
+
 `reports/README.md` and `reports/index.html` are generated: after adding a report or changing its frontmatter, run `uv run gallery` (a test fails until you do).

@@ -3,6 +3,11 @@ title: "Championship leader conversion at the current-season cutoff"
 subtitle: "How often did the driver or constructor leading at this point in the season go on to win the championship?"
 date: 2026-10-11
 date-format: iso
+status: provisional
+gaps:
+  - Only 28 historical seasons reach this round
+  - Tied co-leaders count as converted if either becomes champion
+  - Round 17 is a different share of the season across eras
 ---
 
 ```{python}
@@ -11,6 +16,7 @@ from f1_analytics.analysis.championship_leaders import (
     conversion_display,
     leader_conversion,
     leaders_display,
+    rate_range_text,
     rate_text,
 )
 from f1_analytics.analysis.data import open_database
@@ -20,12 +26,11 @@ with open_database() as con:
     report = leader_conversion(con)
 ```
 
-## Answer
+## In short
 
-At the cutoff (round `{python} report["cutoff_round"]` of `{python} report["target_season"]`, the `{python} report["cutoff_race"]` on `{python} report["cutoff_date"]`):
-
-- **Drivers:** the championship leader after round `{python} report["cutoff_round"]` became champion in `{python} rate_text(report["driver_summary"])` of historical seasons.
-- **Constructors:** the leader became champion in `{python} rate_text(report["constructor_summary"])` of historical seasons.
+- **Answer:** at the cutoff (round `{python} report["cutoff_round"]` of `{python} report["target_season"]`, the `{python} report["cutoff_race"]` on `{python} report["cutoff_date"]`), the drivers' championship leader became champion in **`{python} rate_range_text(report["driver_summary"])`**, and the constructors' leader in **`{python} rate_range_text(report["constructor_summary"])`**.
+- **How sure:** descriptive. A count of past seasons, not a forecast tested on held-out seasons.
+- **What would make it wrong:** a close title fight this season, where a small lead converts less often than these rates; the cutoff moving as new rounds are added. Known gaps: only `{python} report["driver_summary"]["total"]` historical seasons reach this round; tied co-leaders count as converted if either becomes champion; round `{python} report["cutoff_round"]` is a different share of the season across eras.
 
 ## Cutoff definition
 

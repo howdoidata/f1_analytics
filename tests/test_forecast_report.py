@@ -12,6 +12,7 @@ import shutil
 import subprocess
 from html.parser import HTMLParser
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -71,6 +72,12 @@ def test_coverage_sentence_gives_hit_rate_target_and_width():
     assert pr.coverage_sentence(_table(1.7, 1.56, 1.67)) == (
         "The model's p10–p90 range held the actual total in 81% of the 187 team-races, against a target of 80%; "
         "the range was 4.2 stops wide on average.")
+
+
+def test_hit_rate_text_reads_the_model_row_or_says_descriptive():
+    with_backtest = SimpleNamespace(backtest=SimpleNamespace(table=_table(1.7, 1.56, 1.67)))
+    assert pr.hit_rate_text(with_backtest) == "81% of 187 team-races inside the range (target 80%)"
+    assert pr.hit_rate_text(SimpleNamespace(backtest=None)) == "descriptive"
 
 
 def test_no_earlier_rounds_sentence():
@@ -195,6 +202,7 @@ def test_report_on_the_chain_world(chain):
     assert report.untested_rounds == (1,)
     assert report.backtest is not None and set(report.backtest.table["n"]) == {3}
     assert pr.backtest_table(report.backtest.table)["MAE, clean races"].tolist() == ["–", "–", "–"]
+    assert pr.hit_rate_text(report).endswith(" of 3 team-races inside the range (target 80%)")
     html = pr.controls_html(report)
     assert 'src="' not in html and "http" not in html
     assert html.count('name="scenario-weather"') == len(pr.weather_chances(report.scenarios))
