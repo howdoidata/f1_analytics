@@ -3,6 +3,10 @@ title: "Albon grid-to-finish change: 2026 Singapore GP"
 subtitle: "Alex Albon, places gained or lost from grid. 2026 Singapore Grand Prix, Marina Bay, Sunday 2026-10-11"
 date: 2026-10-08
 date-format: iso
+status: provisional
+gaps:
+  - Round 16 arrived labelled "Bahrain Grand Prix in Malaysia" and which race it was is unresolved
+  - Small sample, one season of Albon's races
 ---
 
 ```{python}
@@ -25,10 +29,13 @@ pooled = sim.pooled
 actual = sg.actual_result(results)
 ```
 
-## Answer
+## In short
 
-**Estimated change, grid slot to finish: `{python} signed(pooled["median"])`**
-(middle half `{python} span(*pooled["middle_half"])`, middle 80% `{python} span(*pooled["middle_80"])`).
+- **Answer:** a change of **`{python} signed(pooled["median"])`** from grid slot to finish (+ is places gained, − places lost; median of the simulated races; middle half `{python} span(*pooled["middle_half"])`, middle 80% `{python} span(*pooled["middle_80"])`).
+- **How sure:** descriptive. The simulation is built from 2026 results so far and has not been backtested.
+- **What would make it wrong:** his grid slot (qualifying had not run, so it is simulated); a retirement (`{python} pct(pooled["retire"], 0)` chance); anything 2026 results do not capture, as there is no Singapore, weather or safety-car adjustment. Known gaps: round 16 arrived labelled "Bahrain Grand Prix in Malaysia" and which race it was is unresolved; a small sample of `{python} summary["starts"]` races.
+
+## Answer
 
 **Actual result (R`{python} sg.RACE_ROUND`, added after the race): `{python} sg.actual_text(actual)`.**
 

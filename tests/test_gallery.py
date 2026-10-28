@@ -117,3 +117,87 @@ def test_bad_date_is_reported(tmp_path):
     _report(tmp_path, "2026-01-01-x", 'title: "T"\ndate: soon\n')
     with pytest.raises(gallery.GalleryError, match="ISO date"):
         gallery.find_reports(tmp_path)
+
+
+_STATUS_AND_GAPS = (
+    'title: "Q"\n'
+    "date: 2026-01-01\n"
+    "status: provisional\n"
+    "gaps:\n"
+    "  - Small sample <n=11>\n"
+    '  - "Round 16 label: unresolved"\n'
+)
+
+
+def test_status_and_gaps_show_on_both_cards(tmp_path):
+    """Matrix row: `status: provisional` and a two-item `gaps` block list."""
+    _report(tmp_path, "2026-01-01-q", _STATUS_AND_GAPS)
+
+    [report] = gallery.find_reports(tmp_path)
+
+    assert report.status == "provisional"
+    assert report.gaps == ("Small sample <n=11>", "Round 16 label: unresolved")
+    markdown = gallery.render_markdown([report])
+    assert "Status: **provisional**" in markdown
+    assert "- Small sample <n=11>\n- Round 16 label: unresolved" in markdown
+    index = gallery.render_html([report])
+    assert "Status: <strong>provisional</strong>" in index
+    assert "<li>Small sample &lt;n=11&gt;</li>" in index
+    assert "<li>Round 16 label: unresolved</li>" in index
+
+
+def test_report_without_status_or_gaps_renders_as_before(tmp_path):
+    """Matrix row: only title and date, so the card has no status or gaps."""
+    _report(tmp_path, "2026-01-01-q", 'title: "Q"\ndate: 2026-01-01\n')
+
+    [report] = gallery.find_reports(tmp_path)
+
+    assert (report.status, report.gaps) == ("", ())
+    assert gallery.render_markdown([report]).endswith(
+        "## Q\n\n**2026-01-01**\n\n"
+        "[Report (HTML)](2026-01-01-q/report.html) · [Source (`report.qmd`)](2026-01-01-q/report.qmd)\n"
+    )
+    index = gallery.render_html([report])
+    assert (
+        '<p class="date">2026-01-01</p>\n    <p><a href="2026-01-01-q/report.html">Report</a>' in index
+    )
+
+
+def test_bad_status_names_file_and_allowed_values(tmp_path):
+    """Matrix row: `status: done` is not an allowed value."""
+    _report(tmp_path, "2026-01-01-x", 'title: "T"\ndate: 2026-01-01\nstatus: done\n')
+
+    with pytest.raises(gallery.GalleryError) as excinfo:
+        gallery.find_reports(tmp_path)
+
+    message = str(excinfo.value)
+    assert "2026-01-01-x/report.qmd" in message
+    assert "provisional" in message and "validated" in message and "'done'" in message
+
+
+def test_status_without_gaps_shows_no_gaps_list(tmp_path):
+    """Matrix row: `status: validated` and no gaps."""
+    _report(tmp_path, "2026-01-01-q", 'title: "Q"\ndate: 2026-01-01\nstatus: validated\n')
+
+    [report] = gallery.find_reports(tmp_path)
+
+    assert (report.status, report.gaps) == ("validated", ())
+    markdown = gallery.render_markdown([report])
+    assert "Status: **validated**" in markdown and "Known gaps" not in markdown
+    index = gallery.render_html([report])
+    assert "Status: <strong>validated</strong>" in index and "Known gaps" not in index
+
+
+def test_nested_mapping_is_not_read_as_a_list(tmp_path):
+    """`format:` with a nested mapping (the COTA page) stays out of the fields."""
+    _report(tmp_path, "2026-01-01-q", 'title: "Q"\ndate: 2026-01-01\nformat:\n  html:\n    embed-resources: true\n')
+
+    fields = gallery.read_frontmatter(tmp_path / "2026-01-01-q" / "report.qmd")
+
+    assert "format" not in fields and "html" not in fields
+
+
+def test_date_as_a_list_is_a_gallery_error(tmp_path):
+    _report(tmp_path, "2026-01-01-x", 'title: "T"\ndate:\n  - 2026-01-01\n')
+    with pytest.raises(gallery.GalleryError, match="'date' must be one line of text"):
+        gallery.find_reports(tmp_path)

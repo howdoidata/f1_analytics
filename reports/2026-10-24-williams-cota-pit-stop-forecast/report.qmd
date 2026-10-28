@@ -6,6 +6,12 @@ date-format: iso
 format:
   html:
     embed-resources: true
+status: provisional
+gaps:
+  - Friday practice is not loaded
+  - The backtest uses forecasts issued after the race, so its hit rate is optimistic
+  - No wet race in the data
+  - Circuit history beats the model's mean absolute error (1.56 vs 1.70 stops)
 ---
 
 ```{python}
@@ -32,11 +38,15 @@ race, model = report.race, report.model
 bench = pr.benchmarks(report)
 ```
 
+## In short
+
+- **Answer:** `{python} race.team_name` are expected to make **`{python} pr.headline(report)` pit stops** in total at the `{python} race.season` `{python} race.race_name` (`{python} race.circuit_name`, round `{python} race.round`, `{python} race.date`), counting both cars and every stop: the average, with the p10–p90 range in brackets.
+- **How sure:** `{python} pr.hit_rate_text(report)`.
+- **What would make it wrong:** weather or start tyres other than the most likely scenario below; a safety car or red flag (`{python} pr.range_text(report.incident)` stops with one). Known gaps: Friday practice is not loaded; the backtest uses weather forecasts issued after each race, so its hit rate is optimistic; there is no wet race in the data; circuit history beat the model on mean absolute error in the backtest (see *How well the model did this season*).
+
 ## The answer
 
-`{python} race.team_name` are expected to make **`{python} pr.headline(report)` pit stops** in total at the `{python} race.season` `{python} race.race_name` (`{python} race.circuit_name`, round `{python} race.round`, `{python} race.date`), counting both cars and every stop.
-
-The first number is the average over `{python} count(pr.DRAWS)` simulated races; the two in brackets are the range: in at least 8 of 10 simulated races the team made between those two numbers of stops, inclusive. This is the most likely scenario: **`{python} report.preset["weather"]`** weather, with the cars starting on **`{python} pr.tyre_label(report.preset["start_tyres"], report.compounds)`**.
+In the headline under *In short* above, the first number is the average over `{python} count(pr.DRAWS)` simulated races; the two in brackets are the range: in at least 8 of 10 simulated races the team made between those two numbers of stops, inclusive. This is the most likely scenario: **`{python} report.preset["weather"]`** weather, with the cars starting on **`{python} pr.tyre_label(report.preset["start_tyres"], report.compounds)`**.
 
 That total already allows for a **`{python} pr.chance_text(report.incident_chance)` chance of a safety car or red flag**, from how often one came out in earlier races at this circuit and earlier races this season.
 

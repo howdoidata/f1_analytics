@@ -3,6 +3,11 @@ title: "Williams combined finishing position: 2026 Dutch GP"
 subtitle: "2026 Dutch Grand Prix, Zandvoort, round 12, Sunday 2026-08-23"
 date: 2026-08-21
 date-format: iso
+status: provisional
+gaps:
+  - The 29–33 range is a hand-set judgement, not a computed interval
+  - Only 11 rounds of 2026 results behind the estimate
+  - Standings points differ from the original report (now derived from results)
 ---
 
 ```{python}
@@ -28,6 +33,12 @@ estimate = zv.estimate(results, standings)
 inputs = estimate["inputs"]
 actual = zv.actual_result(results)
 ```
+
+## In short
+
+- **Answer:** a combined finishing position of **`{python} estimate["text"]`** (both cars' places added, lower is better; a judgement range).
+- **How sure:** descriptive. The estimate is a judgement weighed from the season's results, not a backtested forecast.
+- **What would make it wrong:** qualifying (both cars in the top 12 moves it to `{python} zv.REVISE_WHEN_QUALIFYING[0][1]`; both 17th or worse to `{python} zv.REVISE_WHEN_QUALIFYING[2][1]`); a retirement (a DNF or DNS in `{python} inputs["rounds_with_non_finish"]` of `{python} inputs["rounds"]` rounds so far); form worsening further (the last 4 rounds averaged `{python} num(inputs["last_4_mean"])`). Known gaps: the `{python} estimate["text"]` range is a hand-set judgement, not a computed interval; only `{python} inputs["rounds"]` rounds of `{python} zv.SEASON` results; standings points differ from the original report.
 
 ## Answer
 

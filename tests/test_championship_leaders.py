@@ -11,7 +11,9 @@ from f1_analytics.analysis.championship_leaders import (
     current_leaders,
     determine_cutoff_round,
     format_names,
+    rate_range_text,
     summarize_conversion,
+    wilson_interval,
 )
 
 
@@ -216,3 +218,28 @@ def test_constructor_comeback_cases_empty_keeps_columns():
 
     assert cases.empty
     assert "points_deficit_overcome" in cases.columns
+
+
+def test_wilson_interval_matches_known_values():
+    # 25 of 28 by hand: centre 0.8455, half-width 0.1174.
+    low, high = wilson_interval(25, 28)
+    assert low == pytest.approx(0.7281, abs=1e-4)
+    assert high == pytest.approx(0.9629, abs=1e-4)
+    assert low < 25 / 28 < high
+
+
+def test_wilson_interval_stays_inside_zero_and_one():
+    assert wilson_interval(0, 5)[0] == 0.0
+    assert wilson_interval(5, 5)[1] == pytest.approx(1.0)
+    assert 0 < wilson_interval(5, 5)[0] < 1
+
+
+def test_wilson_interval_rejects_no_seasons():
+    with pytest.raises(ValueError):
+        wilson_interval(0, 0)
+
+
+def test_rate_range_text():
+    assert rate_range_text({"converted": 25, "total": 28, "rate": 25 / 28}) == "89% of 28 seasons (95% interval 73–96%)"
+    assert rate_range_text({"converted": 1, "total": 1, "rate": 1.0}).startswith("100% of 1 season (95% interval ")
+    assert rate_range_text({"converted": 0, "total": 0, "rate": None}) == "no seasons"

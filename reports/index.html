@@ -13,6 +13,8 @@
   h2 { font-size: 1.2rem; margin: 0.2rem 0; }
   p { margin: 0.2rem 0; }
   .date, .subtitle { color: #52514e; }
+  ul.gaps { list-style: disc; padding-left: 1.4rem; margin: 0.2rem 0; }
+  ul.gaps li { border-bottom: none; padding: 0; }
 </style>
 </head>
 <body>
@@ -23,24 +25,52 @@
     <h2><a href="2026-10-24-williams-cota-pit-stop-forecast/report.html">Williams pit stops: 2026 United States Grand Prix</a></h2>
     <p class="date">2026-10-24</p>
     <p class="subtitle">How many pit stops will Williams make in total at the Circuit of the Americas? Round 18, Sunday 2026-10-25</p>
+    <p class="status">Status: <strong>provisional</strong></p>
+    <p class="gaps">Known gaps:</p>
+    <ul class="gaps">
+      <li>Friday practice is not loaded</li>
+      <li>The backtest uses forecasts issued after the race, so its hit rate is optimistic</li>
+      <li>No wet race in the data</li>
+      <li>Circuit history beats the model&#x27;s mean absolute error (1.56 vs 1.70 stops)</li>
+    </ul>
     <p><a href="2026-10-24-williams-cota-pit-stop-forecast/report.html">Report</a> · <a href="2026-10-24-williams-cota-pit-stop-forecast/report.qmd">Source (<code>report.qmd</code>)</a></p>
   </li>
   <li>
     <h2><a href="2026-10-11-championship-leader-conversion/report.html">Championship leader conversion at the current-season cutoff</a></h2>
     <p class="date">2026-10-11</p>
     <p class="subtitle">How often did the driver or constructor leading at this point in the season go on to win the championship?</p>
+    <p class="status">Status: <strong>provisional</strong></p>
+    <p class="gaps">Known gaps:</p>
+    <ul class="gaps">
+      <li>Only 28 historical seasons reach this round</li>
+      <li>Tied co-leaders count as converted if either becomes champion</li>
+      <li>Round 17 is a different share of the season across eras</li>
+    </ul>
     <p><a href="2026-10-11-championship-leader-conversion/report.html">Report</a> · <a href="2026-10-11-championship-leader-conversion/report.qmd">Source (<code>report.qmd</code>)</a></p>
   </li>
   <li>
     <h2><a href="2026-10-08-singapore-albon-grid-to-finish/report.html">Albon grid-to-finish change: 2026 Singapore GP</a></h2>
     <p class="date">2026-10-08</p>
     <p class="subtitle">Alex Albon, places gained or lost from grid. 2026 Singapore Grand Prix, Marina Bay, Sunday 2026-10-11</p>
+    <p class="status">Status: <strong>provisional</strong></p>
+    <p class="gaps">Known gaps:</p>
+    <ul class="gaps">
+      <li>Round 16 arrived labelled &quot;Bahrain Grand Prix in Malaysia&quot; and which race it was is unresolved</li>
+      <li>Small sample, one season of Albon&#x27;s races</li>
+    </ul>
     <p><a href="2026-10-08-singapore-albon-grid-to-finish/report.html">Report</a> · <a href="2026-10-08-singapore-albon-grid-to-finish/report.qmd">Source (<code>report.qmd</code>)</a></p>
   </li>
   <li>
     <h2><a href="2026-08-21-zandvoort-williams-combined-finish/report.html">Williams combined finishing position: 2026 Dutch GP</a></h2>
     <p class="date">2026-08-21</p>
     <p class="subtitle">2026 Dutch Grand Prix, Zandvoort, round 12, Sunday 2026-08-23</p>
+    <p class="status">Status: <strong>provisional</strong></p>
+    <p class="gaps">Known gaps:</p>
+    <ul class="gaps">
+      <li>The 29–33 range is a hand-set judgement, not a computed interval</li>
+      <li>Only 11 rounds of 2026 results behind the estimate</li>
+      <li>Standings points differ from the original report (now derived from results)</li>
+    </ul>
     <p><a href="2026-08-21-zandvoort-williams-combined-finish/report.html">Report</a> · <a href="2026-08-21-zandvoort-williams-combined-finish/report.qmd">Source (<code>report.qmd</code>)</a></p>
   </li>
 </ul>

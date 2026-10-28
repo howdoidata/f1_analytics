@@ -1,7 +1,8 @@
 """`uv run gallery`: the report gallery, generated from each report's frontmatter.
 
 Every `reports/<date>-<slug>/report.qmd` contributes one entry (title, date,
-subtitle, links to its `report.html` and `report.qmd`), newest first. The
+subtitle, the optional `status` and `gaps`, links to its `report.html` and
+`report.qmd`), newest first. The
 gallery is written twice:
 
 - `reports/README.md`, which GitHub shows when a reader opens `reports/`;
@@ -27,6 +28,7 @@ from f1_analytics.config import PROJECT_ROOT
 REPORTS_DIR = PROJECT_ROOT / "reports"
 REGENERATE_COMMAND = "uv run gallery"
 REQUIRED_FIELDS = ("title", "date")
+STATUSES = ("provisional", "validated")
 
 
 class GalleryError(Exception):
@@ -39,6 +41,8 @@ class Report:
     title: str
     date: date
     subtitle: str
+    status: str = ""
+    gaps: tuple[str, ...] = ()
 
 
 def _scalar(raw: str) -> str:
@@ -51,24 +55,40 @@ def _scalar(raw: str) -> str:
     return value
 
 
-def read_frontmatter(path: Path) -> dict[str, str]:
-    """The top-level `key: value` pairs of a `.qmd`'s YAML frontmatter.
+def read_frontmatter(path: Path) -> dict[str, str | list[str]]:
+    """The top-level fields of a `.qmd`'s YAML frontmatter.
 
-    Reports use only one-line scalar fields, so this reads them without a
-    YAML library; nested or multi-line values are skipped.
+    Reports use one-line scalar fields plus block lists (`gaps:` followed by
+    indented `- item` lines), so this reads them without a YAML library. A
+    key with no value collects the `- item` lines under it as a list; other
+    nested or multi-line values are skipped.
     """
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or lines[0].strip() != "---":
         raise GalleryError(f"{path}: no YAML frontmatter (the file must start with '---')")
-    fields: dict[str, str] = {}
+    fields: dict[str, str | list[str]] = {}
+    list_key: str | None = None
     for line in lines[1:]:
         if line.strip() == "---":
             return fields
-        if not line or line[0].isspace() or line.lstrip().startswith("#") or ":" not in line:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if line[0].isspace():
+            if list_key is not None and stripped.startswith("- "):
+                items = fields.get(list_key)
+                if not isinstance(items, list):
+                    items = fields[list_key] = []
+                items.append(_scalar(stripped[2:]))
+            continue
+        list_key = None
+        if ":" not in line:
             continue
         key, _, value = line.partition(":")
         if value.strip():
             fields[key.strip()] = _scalar(value)
+        else:
+            list_key = key.strip()
     raise GalleryError(f"{path}: frontmatter is not closed with '---'")
 
 
@@ -77,16 +97,32 @@ def load_report(qmd: Path) -> Report:
     for field in REQUIRED_FIELDS:
         if not fields.get(field):
             raise GalleryError(f"{qmd}: frontmatter has no '{field}' field")
+    raw_date = _text(qmd, fields, "date")
     try:
-        report_date = date.fromisoformat(fields["date"])
+        report_date = date.fromisoformat(raw_date)
     except ValueError as exc:
-        raise GalleryError(f"{qmd}: 'date' is not an ISO date (YYYY-MM-DD): {fields['date']!r}") from exc
+        raise GalleryError(f"{qmd}: 'date' is not an ISO date (YYYY-MM-DD): {raw_date!r}") from exc
+    status = _text(qmd, fields, "status")
+    if status and status not in STATUSES:
+        raise GalleryError(f"{qmd}: 'status' must be one of {', '.join(STATUSES)}, not {status!r}")
+    gaps = fields.get("gaps", [])
+    if isinstance(gaps, str):
+        gaps = [gaps]
     return Report(
         folder=qmd.parent.name,
-        title=fields["title"],
+        title=_text(qmd, fields, "title"),
         date=report_date,
-        subtitle=fields.get("subtitle", ""),
+        subtitle=_text(qmd, fields, "subtitle"),
+        status=status,
+        gaps=tuple(gaps),
     )
+
+
+def _text(qmd: Path, fields: dict[str, str | list[str]], name: str) -> str:
+    value = fields.get(name, "")
+    if not isinstance(value, str):
+        raise GalleryError(f"{qmd}: '{name}' must be one line of text, not a list")
+    return value
 
 
 def find_reports(reports_dir: Path = REPORTS_DIR) -> list[Report]:
@@ -108,6 +144,10 @@ def render_markdown(reports: Sequence[Report]) -> str:
         lines += [f"## {r.title}", "", f"**{r.date.isoformat()}**"]
         if r.subtitle:
             lines += ["", r.subtitle]
+        if r.status:
+            lines += ["", f"Status: **{r.status}**"]
+        if r.gaps:
+            lines += ["", "Known gaps:", ""] + [f"- {gap}" for gap in r.gaps]
         lines += [
             "",
             f"[Report (HTML)]({r.folder}/report.html) · [Source (`report.qmd`)]({r.folder}/report.qmd)",
@@ -121,10 +161,18 @@ def render_html(reports: Sequence[Report]) -> str:
     items = []
     for r in reports:
         subtitle = f'\n    <p class="subtitle">{esc(r.subtitle)}</p>' if r.subtitle else ""
+        status = f'\n    <p class="status">Status: <strong>{esc(r.status)}</strong></p>' if r.status else ""
+        gaps = (
+            '\n    <p class="gaps">Known gaps:</p>\n    <ul class="gaps">\n'
+            + "\n".join(f"      <li>{esc(gap)}</li>" for gap in r.gaps)
+            + "\n    </ul>"
+            if r.gaps
+            else ""
+        )
         items.append(
             "  <li>\n"
             f'    <h2><a href="{esc(r.folder)}/report.html">{esc(r.title)}</a></h2>\n'
-            f'    <p class="date">{r.date.isoformat()}</p>{subtitle}\n'
+            f'    <p class="date">{r.date.isoformat()}</p>{subtitle}{status}{gaps}\n'
             f'    <p><a href="{esc(r.folder)}/report.html">Report</a> · '
             f'<a href="{esc(r.folder)}/report.qmd">Source (<code>report.qmd</code>)</a></p>\n'
             "  </li>"
@@ -145,6 +193,8 @@ def render_html(reports: Sequence[Report]) -> str:
   h2 {{ font-size: 1.2rem; margin: 0.2rem 0; }}
   p {{ margin: 0.2rem 0; }}
   .date, .subtitle {{ color: #52514e; }}
+  ul.gaps {{ list-style: disc; padding-left: 1.4rem; margin: 0.2rem 0; }}
+  ul.gaps li {{ border-bottom: none; padding: 0; }}
 </style>
 </head>
 <body>

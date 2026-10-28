@@ -10,6 +10,15 @@ Each report answers one question about Formula 1 results. Newest first.
 
 How many pit stops will Williams make in total at the Circuit of the Americas? Round 18, Sunday 2026-10-25
 
+Status: **provisional**
+
+Known gaps:
+
+- Friday practice is not loaded
+- The backtest uses forecasts issued after the race, so its hit rate is optimistic
+- No wet race in the data
+- Circuit history beats the model's mean absolute error (1.56 vs 1.70 stops)
+
 [Report (HTML)](2026-10-24-williams-cota-pit-stop-forecast/report.html) · [Source (`report.qmd`)](2026-10-24-williams-cota-pit-stop-forecast/report.qmd)
 
 ## Championship leader conversion at the current-season cutoff
@@ -17,6 +26,14 @@ How many pit stops will Williams make in total at the Circuit of the Americas? R
 **2026-10-11**
 
 How often did the driver or constructor leading at this point in the season go on to win the championship?
+
+Status: **provisional**
+
+Known gaps:
+
+- Only 28 historical seasons reach this round
+- Tied co-leaders count as converted if either becomes champion
+- Round 17 is a different share of the season across eras
 
 [Report (HTML)](2026-10-11-championship-leader-conversion/report.html) · [Source (`report.qmd`)](2026-10-11-championship-leader-conversion/report.qmd)
 
@@ -26,6 +43,13 @@ How often did the driver or constructor leading at this point in the season go o
 
 Alex Albon, places gained or lost from grid. 2026 Singapore Grand Prix, Marina Bay, Sunday 2026-10-11
 
+Status: **provisional**
+
+Known gaps:
+
+- Round 16 arrived labelled "Bahrain Grand Prix in Malaysia" and which race it was is unresolved
+- Small sample, one season of Albon's races
+
 [Report (HTML)](2026-10-08-singapore-albon-grid-to-finish/report.html) · [Source (`report.qmd`)](2026-10-08-singapore-albon-grid-to-finish/report.qmd)
 
 ## Williams combined finishing position: 2026 Dutch GP
@@ -33,5 +57,13 @@ Alex Albon, places gained or lost from grid. 2026 Singapore Grand Prix, Marina B
 **2026-08-21**
 
 2026 Dutch Grand Prix, Zandvoort, round 12, Sunday 2026-08-23
+
+Status: **provisional**
+
+Known gaps:
+
+- The 29–33 range is a hand-set judgement, not a computed interval
+- Only 11 rounds of 2026 results behind the estimate
+- Standings points differ from the original report (now derived from results)
 
 [Report (HTML)](2026-08-21-zandvoort-williams-combined-finish/report.html) · [Source (`report.qmd`)](2026-08-21-zandvoort-williams-combined-finish/report.qmd)
