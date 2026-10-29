@@ -16,8 +16,10 @@ gaps:
 
 ```{python}
 #| tags: [parameters]
-# The page's only team, season, round and Pirelli values. Another team's or race's page:
-# quarto render report.qmd -P constructor_id:<id> -P season:<s> -P round:<r> -P compounds:HARD=C3,MEDIUM=C4,SOFT=C5 -M title:"…" -M subtitle:"…"
+# The page's only team, season, round and Pirelli values. Another team's or race's page: edit
+# title, subtitle, date, status and gaps in the front matter above (the gallery reads them), then
+# quarto render report.qmd -P constructor_id:<id> -P season:<s> -P round:<r> -P compounds:HARD=C3,MEDIUM=C4,SOFT=C5
+# and run `uv run gallery`.
 constructor_id = "williams"
 season = 2026
 round = 18

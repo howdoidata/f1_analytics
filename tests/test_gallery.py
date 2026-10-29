@@ -52,7 +52,9 @@ def test_new_report_fails_check_naming_regenerate_command(tmp_path):
 
 
 def test_committed_gallery_lists_every_report():
-    folders = sorted(r.folder for r in gallery.find_reports())
+    root = gallery.REPORTS_DIR
+    qmds = [*root.glob("*/recurring/report.qmd"), *root.glob("*/editions/*/report.qmd")]
+    folders = sorted(qmd.parent.relative_to(root).as_posix() for qmd in qmds)
     assert len(folders) >= 5
     markdown = (gallery.REPORTS_DIR / "README.md").read_text(encoding="utf-8")
     index = (gallery.REPORTS_DIR / "index.html").read_text(encoding="utf-8")
@@ -228,3 +230,18 @@ def test_recurring_page_first_with_its_label_then_editions_newest_first(tmp_path
     index = gallery.render_html(reports)
     assert '<span class="kind">Recurring</span>' in index
     assert 'href="u/editions/2026-03-01-new/report.html"' in index
+
+
+def test_quarto_project_renders_only_recurring_pages():
+    """Matrix row: `uv run quarto render reports` renders the recurring pages and leaves editions frozen."""
+    text = (gallery.REPORTS_DIR / "_quarto.yml").read_text(encoding="utf-8")
+    after_render = text.split("\n  render:\n", 1)[1].splitlines()
+    render = []
+    for line in after_render:
+        if not line.strip().startswith("- "):
+            break
+        render.append(line.strip()[2:].strip('"'))
+    assert render == ["*/recurring/report.qmd"]
+    rendered = {p.relative_to(gallery.REPORTS_DIR).as_posix() for p in gallery.REPORTS_DIR.glob(render[0])}
+    assert "team_stops/recurring/report.qmd" in rendered
+    assert not [path for path in rendered if "editions/" in path]
