@@ -1,6 +1,6 @@
 """The pit-stop forecast page: every value, sentence and table it shows.
 
-The page (`reports/<date>-<slug>/report.qmd` for a team and race) calls
+The page (`reports/team_stops/recurring/report.qmd`, re-rendered for a team and race) calls
 `build_report` once with its parameters and prints what this module returns,
 so the `.qmd` computes nothing itself. Every figure comes from
 `f1_analytics.analysis.pit_stops`; this module only reads the scenario file,
@@ -41,7 +41,7 @@ from f1_analytics.analysis.pit_stops import (
 )
 from f1_analytics.analysis.pit_stops.backtest import CARS_PER_TEAM
 from f1_analytics.analysis.pit_stops.history import HISTORY_START_SEASON, STOP_TYPES
-from f1_analytics.analysis.pit_stops.model import DRAWS, WEATHER_FALLBACK
+from f1_analytics.analysis.pit_stops.model import COMPOUNDS, DRAWS, WEATHER_FALLBACK
 from f1_analytics.analysis.pit_stops.weather import LIVE, WEATHER_CATEGORIES
 from f1_analytics.config import DUCKDB_PATH, PROCESSED_DATA_DIR
 
@@ -253,6 +253,28 @@ def chance_text(probability: float) -> str:
     if 0.995 <= probability < 1:
         return ">99%"
     return share(probability)
+
+
+def parse_compounds(text: str) -> dict[str, str]:
+    """`"HARD=C2,MEDIUM=C3,SOFT=C4"` -> `{"HARD": "C2", ...}`: the page's `compounds` parameter.
+
+    A string, so `quarto render -P compounds:...` can set it. Raises `ValueError` on a pair
+    without `=`, an empty name or label, a repeated name, or a name not in `COMPOUNDS`.
+    """
+    form = "NAME=LABEL,NAME=LABEL,... (e.g. HARD=C2,MEDIUM=C3,SOFT=C4)"
+    labels: dict[str, str] = {}
+    for pair in text.split(","):
+        name, sep, label = (part.strip() for part in pair.partition("="))
+        if not sep or not name or not label:
+            raise ValueError(f"compounds {text!r}: pair {pair!r} is not NAME=LABEL; expected {form}")
+        if name not in COMPOUNDS:
+            raise ValueError(
+                f"compounds {text!r}: unknown compound {name!r}, not one of {', '.join(COMPOUNDS)}; expected {form}"
+            )
+        if name in labels:
+            raise ValueError(f"compounds {text!r}: {name!r} appears twice; expected {form}")
+        labels[name] = label
+    return labels
 
 
 def tyre_label(option: str, compounds: Mapping[str, str]) -> str:

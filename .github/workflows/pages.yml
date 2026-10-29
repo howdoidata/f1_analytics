@@ -33,8 +33,10 @@ jobs:
         run: |
           mkdir -p _site
           cp reports/index.html _site/
-          for html in reports/*/report.html; do
-            folder="$(basename "$(dirname "$html")")"
+          # Topic folders: reports/<topic>/recurring/ and reports/<topic>/editions/<name>/
+          for html in reports/*/recurring/report.html reports/*/editions/*/report.html; do
+            [ -e "$html" ] || continue
+            folder="$(dirname "${html#reports/}")"
             mkdir -p "_site/$folder"
             cp "$html" "reports/$folder/report.qmd" "_site/$folder/"
           done

@@ -22,7 +22,7 @@ from f1_analytics.mart_check import breaches, marts
 from test_real_db import require_real_db
 
 
-COTA = "2026-10-24-williams-cota-pit-stop-forecast"
+COTA = "team_stops"  # the topic folder of the COTA pit-stop page
 ONE_OFF_MARTS = {"pit_stops", "car_races", "practice_stints", "weather_forecasts", "race_incidents", "stop_rules"}
 
 
@@ -190,13 +190,13 @@ def test_an_orphan_one_off_fails_rule_2(tree):
 def test_a_report_reading_another_questions_one_off_fails_rule_3(tree):
     _module(tree, "f1_analytics.analysis.a_logic", "from f1_analytics.analysis.data import load_a, load_b\n")
     found = _check(_manifest(), tree)
-    assert found == ["rule 3: report `a` reads `b_table`, a one_off mart of `b`"]
+    assert found == ["rule 3: topic `a` reads `b_table`, a one_off mart of `b`"]
 
 
 def test_reads_are_followed_through_nested_and_relative_imports(tree):
     _module(tree, "f1_analytics.analysis.pkg.inner", "from ..data import load_b\n")
     _module(tree, "f1_analytics.analysis.a_logic", "from f1_analytics.analysis.pkg import inner\n")
-    assert _check(_manifest(), tree) == ["rule 3: report `a` reads `b_table`, a one_off mart of `b`"]
+    assert _check(_manifest(), tree) == ["rule 3: topic `a` reads `b_table`, a one_off mart of `b`"]
 
 
 @pytest.mark.parametrize("where", ["report", "module"])
@@ -234,7 +234,7 @@ def test_a_loader_declaring_a_staging_model_fails_rule_3(tree):
     loaders = {**LOADERS, "load_lib": frozenset({"lib", "stg_x"})}
     found = _check(_manifest(), tree, loaders)
     assert any(line.startswith("rule 3") and "`load_lib`" in line and "`stg_x`" in line for line in found)
-    assert any(line.startswith("rule 3") and "report `a`" in line and "`stg_x`" in line for line in found)
+    assert any(line.startswith("rule 3") and "topic `a`" in line and "`stg_x`" in line for line in found)
 
 
 def test_a_loader_without_reads_fails_rule_3(tree):
@@ -308,13 +308,16 @@ def test_a_core_mart_on_a_one_off_fails_rule_7(tree):
 
 
 def test_the_real_loaders_are_used_by_default(repo_manifest):
-    """With no loaders passed, a report reaching load_pit_stop_tables is judged on its ten tables."""
+    """With no loaders passed, a report reaching load_pit_stop_tables is judged on its ten tables.
+
+    Matrix row: `pit_stops` re-owned by another topic, so `team_stops` reads a cross-topic one_off.
+    """
     manifest = copy.deepcopy(repo_manifest)
     node = manifest["nodes"]["model.f1_analytics.pit_stops"]
-    node["meta"] = node["config"]["meta"] = {"question": "2026-10-11-championship-leader-conversion"}
+    node["meta"] = node["config"]["meta"] = {"question": "leader_conversion"}
     found = breaches(manifest, config.PROJECT_ROOT)
     assert found == [
-        f"rule 3: report `{COTA}` reads `pit_stops`, a one_off mart of `2026-10-11-championship-leader-conversion`"
+        f"rule 3: topic `{COTA}` reads `pit_stops`, a one_off mart of `leader_conversion`"
     ]
 
 
@@ -331,13 +334,13 @@ def test_a_one_off_naming_a_folder_without_a_report_fails_rule_2(tree):
 def test_imports_outside_the_analysis_package_are_followed(tree):
     _module(tree, "f1_analytics.scenarios", "from f1_analytics.analysis.data import load_b\n")
     _report(tree, "a", "from f1_analytics import scenarios")
-    assert _check(_manifest(), tree) == ["rule 3: report `a` reads `b_table`, a one_off mart of `b`"]
+    assert _check(_manifest(), tree) == ["rule 3: topic `a` reads `b_table`, a one_off mart of `b`"]
 
 
 def test_a_loader_named_only_in_an_inline_expression_is_read(tree):
     path = tree / "reports" / "a" / "report.qmd"
     path.write_text(path.read_text() + "\nRows: `{python} data.load_b()`.\n")
-    assert _check(_manifest(), tree) == ["rule 3: report `a` reads `b_table`, a one_off mart of `b`"]
+    assert _check(_manifest(), tree) == ["rule 3: topic `a` reads `b_table`, a one_off mart of `b`"]
 
 
 def test_sql_in_a_nested_report_file_fails_rule_3(tree):
@@ -346,3 +349,42 @@ def test_sql_in_a_nested_report_file_fails_rule_3(tree):
     nested.write_text("```{python}\nx = con.execute('x')\n```\n")
     found = _check(_manifest(), tree)
     assert any(line.startswith("rule 3") and "reports/b/parts/extra.qmd" in line for line in found), found
+
+
+@pytest.fixture()
+def topic_tree(tree: Path) -> Path:
+    """Topic `t` laid out as recurring + editions, reading only `t_table`; topic `a` as before."""
+    _module(tree, "f1_analytics.analysis.data", "def load_lib(): ...\ndef load_a(): ...\ndef load_b(): ...\ndef load_t(): ...\n")
+    _report(tree, "t/recurring", "from f1_analytics.analysis.data import load_t, load_lib")
+    _report(tree, "t/editions/2026-01-01-x", "from f1_analytics.analysis.data import load_t")
+    return tree
+
+
+def _topic_manifest() -> dict:
+    manifest = _manifest()
+    node = _model("t_table", ["one_off"], question="t")
+    manifest["nodes"][node["unique_id"]] = node
+    return manifest
+
+
+TOPIC_LOADERS = {**LOADERS, "load_t": frozenset({"t_table"})}
+
+
+def test_a_topic_folder_with_recurring_and_editions_passes_rules_2_and_3(topic_tree):
+    """Rule 2 accepts `t`: its `.qmd` files sit two and three levels down."""
+    assert _check(_topic_manifest(), topic_tree, TOPIC_LOADERS) == []
+
+
+def test_an_edition_reading_another_topics_one_off_fails_rule_3(topic_tree):
+    _report(topic_tree, "t/editions/2026-01-01-x", "from f1_analytics.analysis.data import load_t, load_a")
+    found = _check(_topic_manifest(), topic_tree, TOPIC_LOADERS)
+    assert found == ["rule 3: topic `t` reads `a_table`, a one_off mart of `a`"]
+
+
+def test_a_one_off_naming_a_report_subfolder_fails_rule_2(topic_tree):
+    """`meta.question` names the topic, not its `recurring` or edition folder."""
+    manifest = _topic_manifest()
+    node = manifest["nodes"]["model.f1_analytics.t_table"]
+    node["meta"] = node["config"]["meta"] = {"question": "recurring"}
+    found = _check(manifest, topic_tree, TOPIC_LOADERS)
+    assert any(line.startswith("rule 2") and "`t_table`" in line and "recurring" in line for line in found), found

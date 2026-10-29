@@ -7,6 +7,11 @@ files under `repo_root` and, for rule 3, the tables each `analysis/data.py`
 loader declares with `@reads`. `tests/test_mart_check.py` runs it on a fresh
 `dbt parse`.
 
+Reports live in topic folders (`reports/<topic>/recurring/`,
+`reports/<topic>/editions/<name>/`). Rules 2 and 3 work per topic folder: a
+`one_off` mart's `meta.question` names one, and every `.qmd` and `.py` at any
+depth under it is that topic's report code.
+
 The stray-SQL part of rule 3 skips files named `explore.qmd`: a report's
 exploration may query raw and staging tables directly (conventions,
 "Exploration done-criteria"); `report.qmd`, `data.py` loaders and analysis
@@ -122,7 +127,7 @@ def rule_1_one_tag(all_marts: Mapping[str, dict]) -> list[str]:
 
 
 def rule_2_question_exists(all_marts: Mapping[str, dict], repo_root: Path) -> list[str]:
-    """A `one_off` mart's `meta.question` names an existing `reports/` folder."""
+    """A `one_off` mart's `meta.question` names an existing `reports/` topic folder."""
     reports = {path.name for path in _report_dirs(repo_root)}
     found = []
     for name, node in sorted(all_marts.items()):
@@ -133,7 +138,7 @@ def rule_2_question_exists(all_marts: Mapping[str, dict], repo_root: Path) -> li
             found.append(f"rule 2: one_off mart `{name}` has no meta.question")
         elif question not in reports:
             found.append(
-                f"rule 2: one_off mart `{name}` names meta.question `{question}`, which is not a reports/ folder with a .qmd"
+                f"rule 2: one_off mart `{name}` names meta.question `{question}`, which is not a reports/ topic folder with a .qmd"
             )
     return found
 
@@ -233,7 +238,7 @@ def _report_code(path: Path) -> list[str]:
 
 
 def report_reads(repo_root: Path, report_dir: Path, loaders: Mapping[str, frozenset[str] | None]) -> tuple[set[str], list[str]]:
-    """The tables a report folder reads, and any file the check could not parse."""
+    """The tables a topic folder's reports read (every .qmd and .py at any depth), and any file the check could not parse."""
     problems: list[str] = []
     trees: list[ast.AST] = []
     for path in sorted(report_dir.rglob("*.qmd")) + sorted(report_dir.rglob("*.py")):
@@ -268,16 +273,17 @@ def report_reads(repo_root: Path, report_dir: Path, loaders: Mapping[str, frozen
 
 
 def _report_dirs(repo_root: Path) -> list[Path]:
+    """The topic folders: each directory directly under `reports/` with a `.qmd` at any depth."""
     root = repo_root / REPORTS_DIR
     if not root.is_dir():
         return []
-    return sorted(path for path in root.iterdir() if path.is_dir() and any(path.glob("*.qmd")))
+    return sorted(path for path in root.iterdir() if path.is_dir() and any(path.rglob("*.qmd")))
 
 
 def rule_3_reads(
     all_marts: Mapping[str, dict], repo_root: Path, loaders: Mapping[str, frozenset[str] | None]
 ) -> list[str]:
-    """A report reads only `core` marts or its own `one_off` marts, through data.py loaders only."""
+    """A topic's reports read only `core` marts or the topic's own `one_off` marts, through data.py loaders only."""
     found = stray_sql(repo_root) + loader_declarations(loaders, all_marts)
     for report_dir in _report_dirs(repo_root):
         folder = report_dir.name
@@ -286,7 +292,7 @@ def rule_3_reads(
         for table in sorted(tables):
             node = all_marts.get(table)
             if node is None:
-                found.append(f"rule 3: report `{folder}` reads `{table}`, which is not a mart")
+                found.append(f"rule 3: topic `{folder}` reads `{table}`, which is not a mart")
                 continue
             tag = _tag(node)
             if tag == CORE:
@@ -294,7 +300,7 @@ def rule_3_reads(
             if tag == ONE_OFF and _meta(node).get("question") == folder:
                 continue
             owner = f"a one_off mart of `{_meta(node).get('question')}`" if tag == ONE_OFF else "not tagged core"
-            found.append(f"rule 3: report `{folder}` reads `{table}`, {owner}")
+            found.append(f"rule 3: topic `{folder}` reads `{table}`, {owner}")
     return found
 
 
