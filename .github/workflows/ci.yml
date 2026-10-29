@@ -21,6 +21,12 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      # Quarto lets the three @needs_quarto render tests in
+      # tests/test_forecast_report.py run instead of skipping. It comes
+      # before the build so a failed build still leaves the renders to run.
+      - name: Install Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
       # dbt build on the committed data/raw/: every model and test must pass.
       # It runs first so tests/test_real_db.py reads the built file.
       - name: Build the DuckDB file

@@ -71,7 +71,7 @@ The Jolpica dump was made once with `uv run python scripts/dump_jolpica.py` (alr
 
 Each report is a `report.qmd` in a topic folder (`reports/<topic>/recurring/` or `reports/<topic>/editions/<date>-<slug>/`), a Quarto document whose figures, tables and numbers all come from `f1_analytics.analysis` (tested in `tests/test_analysis_*.py`). Quarto runs the Python through the Jupyter engine in the uv environment and reads the DuckDB file read-only. If you render before `uv run build`, the render stops with an error that names the missing file and says to run `uv run build`.
 
-The HTML is committed; the PDFs are gitignored. `reports/golden/` holds the original Singapore and Zandvoort PDF reports that the current values are compared against whenever the pipeline changes. CI runs the tests and the build but does not render.
+The HTML is committed; the PDFs are gitignored. `reports/golden/` holds the original Singapore and Zandvoort PDF reports that the current values are compared against whenever the pipeline changes. CI runs the build and the tests, and installs Quarto so the tests render the recurring page on a fixture database; it does not render the committed reports.
 
 The gallery (`reports/README.md` and `reports/index.html`) is generated from each report's frontmatter. A report may also carry the optional hand-written fields `status: provisional | validated` and a `gaps:` list of known gaps (one line each), which its gallery card shows. After adding a report or changing a title, subtitle, date, status or gaps, run:
 
