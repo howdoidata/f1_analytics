@@ -1,0 +1,32 @@
+{
+  "drivers": [
+    "ALB",
+    "ALO",
+    "ANT",
+    "BEA",
+    "BOR",
+    "BOT",
+    "COL",
+    "GAS",
+    "HAD",
+    "HAM",
+    "HUL",
+    "LAW",
+    "LEC",
+    "LIN",
+    "NOR",
+    "OCO",
+    "PER",
+    "PIA",
+    "RUS",
+    "SAI",
+    "STR",
+    "VER"
+  ],
+  "event": "United States Grand Prix",
+  "lap_count": 1163,
+  "race_label": "18-united-states-grand-prix",
+  "round": 18,
+  "season": 2026,
+  "weather_count": 159
+}
