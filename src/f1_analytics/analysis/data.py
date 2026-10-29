@@ -2,18 +2,36 @@
 
 This is the only analysis module that touches DuckDB. Every other module takes
 the DataFrames these functions return, so tests can pass synthetic frames.
+
+Every public loader declares the marts it reads with `@reads(...)` (its
+`fn.reads`); `f1_analytics.mart_check` follows each report's imports to the
+loaders it names and checks those tables against the mart tags.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable, TypeVar
 
 import duckdb
 import pandas as pd
 
 from f1_analytics.config import DUCKDB_PATH
 from f1_analytics.database.duckdb_io import connect_duckdb
+
+
+F = TypeVar("F", bound=Callable)
+
+
+def reads(*tables: str) -> Callable[[F], F]:
+    """Declare the marts a loader reads: sets `fn.reads` to `tables` as a frozenset."""
+
+    def mark(fn: F) -> F:
+        fn.reads = frozenset(tables)
+        return fn
+
+    return mark
 
 
 class MissingDatabaseError(FileNotFoundError):
@@ -30,6 +48,7 @@ def open_database(db_path: Path = DUCKDB_PATH) -> duckdb.DuckDBPyConnection:
     return connect_duckdb(db_path, read_only=True)
 
 
+@reads("results")
 def load_results(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     """Every race result, all seasons."""
     return con.execute(
@@ -38,6 +57,7 @@ def load_results(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     ).df()
 
 
+@reads("constructor_standings_by_round")
 def load_constructor_standings(con: duckdb.DuckDBPyConnection, season: int) -> pd.DataFrame:
     """Constructor standings after every round of `season`."""
     return con.execute(
@@ -47,6 +67,7 @@ def load_constructor_standings(con: duckdb.DuckDBPyConnection, season: int) -> p
     ).df()
 
 
+@reads("raw_fastf1_laps")
 def load_laps(con: duckdb.DuckDBPyConnection, season: int) -> pd.DataFrame:
     """FastF1 laps of `season` (only the columns the analysis uses)."""
     return con.execute(
@@ -56,6 +77,10 @@ def load_laps(con: duckdb.DuckDBPyConnection, season: int) -> pd.DataFrame:
     ).df()
 
 
+@reads(
+    "driver_standings_by_round", "constructor_standings_by_round",
+    "final_driver_standings", "final_constructor_standings",
+)
 def load_standings_tables(con: duckdb.DuckDBPyConnection) -> dict[str, pd.DataFrame]:
     """The four standings marts the championship-leader analysis reads."""
     return {
@@ -66,6 +91,7 @@ def load_standings_tables(con: duckdb.DuckDBPyConnection) -> dict[str, pd.DataFr
     }
 
 
+@reads(*(load_results.reads | load_constructor_standings.reads | load_laps.reads))
 def load_race_data(db_path: Path = DUCKDB_PATH, season: int = 2026) -> dict[str, pd.DataFrame]:
     """Results (all seasons), constructor standings and laps (`season`) in one read-only pass."""
     with open_database(db_path) as con:
@@ -121,6 +147,7 @@ class PitStopTables:
     stop_rules: pd.DataFrame = field(default_factory=_no_stop_rules)
 
 
+@reads(*PitStopTables.__dataclass_fields__)
 def load_pit_stop_tables(db_path: Path = DUCKDB_PATH) -> PitStopTables:
     """Every row of the ten pit-stop marts, in one read-only pass."""
     with open_database(db_path) as con:
