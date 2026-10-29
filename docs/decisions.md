@@ -36,7 +36,7 @@ The rendered HTML is committed so the reports can be read without rendering them
 
 One exception: the pit-stop forecast page (`reports/team_stops/recurring/` and its COTA edition) is rendered with `embed-resources: true` and to HTML only, so it is one self-contained file that works offline. It has no plotly chart, and its weather and start-tyre controls are a small inline script over data embedded in the page, not Quarto's OJS, whose runtime loads its input library from a CDN and does not run from a `file://` URL.
 
-CI runs the test suite and the build, but it does not render the reports: rendering needs Quarto, TeX and Chrome. The reports are rendered locally from a fresh clone before they are committed.
+CI runs the test suite and the build. It installs Quarto so the tests render the recurring pit-stop page on a fixture database, but it does not render the committed reports (the PDFs need TeX and Chrome). The reports are rendered locally from a fresh clone before they are committed.
 
 ## Golden comparison
 

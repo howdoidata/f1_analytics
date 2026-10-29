@@ -135,6 +135,8 @@ class ForecastReport:
     incident: Forecast
     backtest: Backtest | None
     untested_rounds: tuple[int, ...]
+    forecast_fetched_at: str
+    results_through: int | None
     split_check: pd.DataFrame
     circuit_history: pd.DataFrame
     practice: PracticeWear
@@ -191,11 +193,17 @@ def build_report(
 
     earlier = sorted(int(r) for r in tables.races.loc[tables.races["season"] == season, "round"] if r < round)
     tested, untested = season_backtest(tables, season, earlier)
+    live = tables.weather_forecasts
+    live = live[(live["season"] == season) & (live["round"] == round) & (live["kind"] == LIVE)]
+    results = tables.results
+    resulted = results.loc[(results["season"] == season) & (results["round"] < round), "round"]
     return ForecastReport(
         constructor_id=constructor_id, race=race, compounds=dict(compounds),
         scenarios=scenarios, preset=preset, model=model, air_temp=air_temp, incident_chance=chance,
         preset_forecast=run(None), clean=run(False), incident=run(True),
         backtest=tested, untested_rounds=untested,
+        forecast_fetched_at=pd.Timestamp(live["fetched_at"].max()).strftime("%Y-%m-%d %H:%M UTC"),
+        results_through=int(resulted.max()) if not resulted.empty else None,
         split_check=team_split_check(model),
         circuit_history=circuit_stop_history(tables, constructor_id, circuit, season, round),
         practice=practice_wear_vs_history(tables, constructor_id, circuit, season, round),
@@ -223,6 +231,15 @@ def season_backtest(tables: PitStopTables, season: int, rounds: list[int]) -> tu
 # --------------------------------------------------------------------------
 # Wording
 # --------------------------------------------------------------------------
+
+
+def freshness_text(report: ForecastReport) -> str:
+    """When the live forecast was fetched (UTC) and the latest earlier round of the season with results."""
+    results = (
+        f"results through round {report.results_through}" if report.results_through is not None
+        else "no results yet this season"
+    )
+    return f"forecast as of {report.forecast_fetched_at}; {results}"
 
 
 def stop_range(mean: float, p10: float, p90: float) -> str:

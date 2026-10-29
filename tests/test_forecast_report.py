@@ -1,12 +1,13 @@
 """The pit-stop forecast page: its wording helpers, the scenario-file check and the rendered HTML.
 
 The Quarto renders (chain world, stale and missing scenario files) skip when
-Quarto is absent, as in CI. The committed `report.html` checks run everywhere.
+Quarto is absent, and fail in CI, which installs it. The committed `report.html` checks run everywhere.
 """
 
 from __future__ import annotations
 
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -32,7 +33,23 @@ CHAIN_ROUND = 3
 CHAIN_CIRCUIT = "albert_park"
 FORBIDDEN = re.compile(r"williams|albon|sainz|americas|\bcota\b|austin", re.IGNORECASE)
 QUARTO = shutil.which("quarto")
-needs_quarto = pytest.mark.skipif(QUARTO is None, reason="Quarto is not installed")
+
+
+def require_quarto(environ=os.environ) -> str:
+    """Quarto's path; without it, skip locally but fail in CI (`CI` set), where the renders must run."""
+    if QUARTO is not None:
+        return QUARTO
+    if "CI" in environ:
+        pytest.fail("Quarto is not installed: CI must run the page renders")
+    pytest.skip("Quarto is not installed")
+
+
+@pytest.fixture
+def _quarto() -> str:
+    return require_quarto()
+
+
+needs_quarto = pytest.mark.usefixtures("_quarto")
 
 
 # --------------------------------------------------------------------------
@@ -83,6 +100,11 @@ def test_hit_rate_text_reads_the_model_row_or_says_not_backtested():
 
 def test_no_earlier_rounds_sentence():
     assert "no earlier rounds in 2023 to test on" in pr.no_backtest_sentence(2023)
+
+
+def test_freshness_text_with_no_earlier_results():
+    report = SimpleNamespace(forecast_fetched_at="2026-10-21 14:42 UTC", results_through=None)
+    assert pr.freshness_text(report) == "forecast as of 2026-10-21 14:42 UTC; no results yet this season"
 
 
 def test_untested_sentence():
@@ -220,6 +242,8 @@ def test_report_on_the_chain_world(chain):
     assert report.backtest is not None and set(report.backtest.table["n"]) == {3}
     assert pr.backtest_table(report.backtest.table)["MAE, clean races"].tolist() == ["–", "–", "–"]
     assert pr.hit_rate_text(report).endswith(" of 3 team-races inside the range (target 80%)")
+    # The chain world's live forecast file was fetched 2026-10-20T12:00:00Z; rounds 1-2 have results.
+    assert pr.freshness_text(report) == "forecast as of 2026-10-20 12:00 UTC; results through round 2"
     html = pr.controls_html(report)
     assert 'src="' not in html and "http" not in html
     assert html.count('name="scenario-weather"') == len(pr.weather_chances(report.scenarios))
@@ -250,6 +274,14 @@ def test_practice_tables_on_the_chain_world(chain):
 # --------------------------------------------------------------------------
 
 
+def test_require_quarto_skips_locally_and_fails_in_ci(monkeypatch):
+    monkeypatch.setitem(globals(), "QUARTO", None)
+    with pytest.raises(pytest.skip.Exception):
+        require_quarto(environ={})
+    with pytest.raises(pytest.fail.Exception):
+        require_quarto(environ={"CI": "true"})
+
+
 OTHER_COMPOUNDS = "HARD=C3,MEDIUM=C4,SOFT=C5"
 
 
@@ -278,6 +310,7 @@ def test_other_team_render_names_no_williams_or_cota(chain, tmp_path):
     assert not (tmp_path / "reports" / PAGE / "report.pdf").exists()
     assert FORBIDDEN.findall(html) == []
     assert "Mercedes" in html and pr.PRACTICE_NOT_LOADED in html
+    assert "forecast as of 2026-10-20 12:00 UTC" in html and "results through round 2" in html
     assert _external_assets(html) == []
     # The `-P compounds:` labels, not the COTA defaults, name the tyres.
     assert re.search(r"(SOFT \(C5\)|MEDIUM \(C4\)|HARD \(C3\))", html)
