@@ -29,6 +29,8 @@ dbt/.user.yml
 # Quarto: rendered PDFs (the HTML is committed; reports/golden/ PDFs are baselines), caches and side folders
 reports/**/*.pdf
 !reports/golden/*.pdf
+# Exploration pages are not published: commit explore.qmd, never its rendered HTML
+reports/*/explore.html
 .quarto/
 *_files/
 **/*.quarto_ipynb

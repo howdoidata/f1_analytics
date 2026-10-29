@@ -1,0 +1,344 @@
+---
+title: "Exploration: Williams pit stops at the 2026 United States Grand Prix"
+subtitle: "The reference explore.qmd: question kind, rules, outliers, missing inputs and method, on staging tables only"
+date: 2026-10-24
+date-format: iso
+format:
+  html:
+    embed-resources: true
+execute:
+  echo: true
+  warning: false
+---
+
+::: {.callout-note}
+**Hindsight.** This exploration was written after the COTA report was built and published, as the
+reference example for the exploration step. It proves the format, the rule-3 exemption for
+`explore.qmd` and the toolkit in `f1_analytics.analysis.explore`, not the one-session timing. Each
+rule below was found during the build; a check run now, knowing the answer, can be fitted to it.
+The verdicts say whether each rule was visible in the data before the build, not whether it was found.
+:::
+
+```{python}
+#| label: setup
+#| echo: false
+import pandas as pd
+
+from f1_analytics.analysis.data import open_database
+from f1_analytics.analysis.explore import compare, profile, violations
+
+pd.set_option("display.precision", 2)
+
+# The cutoff: the forecast race is 2026 round 18, so every check uses only earlier races.
+SEASON, ROUND = 2026, 18
+FINISHED = "(results.status in ('Finished', 'Lapped') or results.status like '+%')"
+
+# One row per car per race with a FastF1 summary, before the cutoff. stop_type and incident are
+# rebuilt here from the track status periods, as the pit_stops and race_incidents marts do.
+CARS = f"""
+with cars as (
+    select season, round, circuit_id, driver_id, constructor_id, start_compound,
+           air_temp_mean, wet_laps, laps_completed
+    from staging.stg_fastf1_summary__car_races
+    where season < {SEASON} or round < {ROUND}
+),
+periods as (
+    select season, round, status, start_lap, end_lap
+    from staging.stg_fastf1_summary__track_status_periods
+),
+race_weather as (
+    select season, round, coalesce(sum(wet_laps), 0) / nullif(sum(laps_completed), 0) as wet_share
+    from cars
+    group by season, round
+),
+race_periods as (
+    select season, round,
+           bool_or(status = 'red_flag') as red_flag,
+           bool_or(status = 'sc') as sc,
+           bool_or(status = 'vsc') as vsc
+    from periods
+    group by season, round
+),
+stop_laps as (
+    select stops.season, stops.round, stops.driver_id, stops.stop,
+           coalesce(bool_or(periods.status = 'red_flag'), false) as in_red_flag
+    from staging.stg_jolpica__pit_stops as stops
+    left join periods
+        on periods.season = stops.season
+        and periods.round = stops.round
+        and stops.lap between periods.start_lap and periods.end_lap
+    group by stops.season, stops.round, stops.driver_id, stops.stop
+),
+car_stops as (
+    select season, round, driver_id,
+           count(*) as stops,
+           count(*) filter (where in_red_flag) as red_flag_stops
+    from stop_laps
+    group by season, round, driver_id
+)
+select
+    cars.*,
+    results.status,
+    {FINISHED} as finished,
+    coalesce(car_stops.stops, 0) as stops,
+    coalesce(car_stops.red_flag_stops, 0) as red_flag_stops,
+    case when coalesce(race_weather.wet_share, 0) = 0 then 'dry'
+         when race_weather.wet_share >= 0.5 then 'wet'
+         else 'mixed' end as weather,
+    case when race_periods.red_flag then 'red flag'
+         when race_periods.sc then 'safety car'
+         when race_periods.vsc then 'VSC only'
+         else 'clean' end as race_status,
+    coalesce(race_periods.red_flag or race_periods.sc, false) as incident,
+    case when coalesce(race_weather.wet_share, 0) > 0 then 1
+         else coalesce((
+             select arg_max(rules.dry_minimum, rules.from_season)
+             from staging.stop_rules_seed as rules
+             where rules.circuit_id = cars.circuit_id and rules.from_season <= cars.season
+         ), 1) end as minimum
+from cars
+left join staging.stg_jolpica__results as results using (season, round, driver_id)
+left join car_stops using (season, round, driver_id)
+left join race_weather using (season, round)
+left join race_periods using (season, round)
+order by season, round, constructor_id, driver_id
+"""
+
+# Every finisher since Jolpica's pit stop data starts (2011), before the cutoff: weather unknown,
+# so only the sporting rules' one stop applies.
+ALL_FINISHERS = f"""
+select results.season, results.round, races.circuit_id, results.driver_id, results.constructor_id,
+       results.status, count(stops.stop) as stops
+from staging.stg_jolpica__results as results
+join staging.stg_jolpica__races as races using (season, round)
+left join staging.stg_jolpica__pit_stops as stops using (season, round, driver_id)
+where {FINISHED}
+  and (results.season, results.round) in (select distinct season, round from staging.stg_jolpica__pit_stops)
+  and (results.season < {SEASON} or results.round < {ROUND})
+group by all
+order by results.season, results.round
+"""
+
+# The model-used columns of each of the ten marts the report reads, from the staging table under it.
+MODEL_COLUMNS = {
+    "races": ("stg_jolpica__races", ["season", "round", "circuit_id", "race_name", "date"]),
+    "results": ("stg_jolpica__results", ["season", "round", "driver_id", "constructor_id", "status"]),
+    "constructors": ("stg_jolpica__constructors", ["constructor_id", "name"]),
+    "circuits": ("stg_jolpica__circuits", ["circuit_id", "circuit_name"]),
+    "pit_stops": ("stg_jolpica__pit_stops", ["season", "round", "driver_id", "stop", "lap"]),
+    "pit_stops (stop_type) and race_incidents": (
+        "stg_fastf1_summary__track_status_periods", ["season", "round", "status", "start_lap", "end_lap"]),
+    "car_races": ("stg_fastf1_summary__car_races", [
+        "season", "round", "driver_id", "constructor_id", "circuit_id", "start_compound",
+        "air_temp_mean", "wet_laps", "laps_completed"]),
+    "practice_stints": ("stg_fastf1_practice__stints", [
+        "season", "round", "session", "constructor_id", "deg_s_per_lap", "laps"]),
+    "weather_forecasts": ("stg_open_meteo__forecasts", [
+        "season", "round", "kind", "hour_utc", "race_start_utc", "air_temp", "precipitation_probability_pct"]),
+    "stop_rules": ("stop_rules_seed", ["circuit_id", "from_season", "dry_minimum"]),
+}
+
+with open_database() as con:
+    cars = con.execute(CARS).df()
+    all_finishers = con.execute(ALL_FINISHERS).df()
+    staging = {
+        mart: con.execute(f"select {', '.join(columns)} from staging.{table}").df()
+        for mart, (table, columns) in MODEL_COLUMNS.items()
+    }
+
+finishers = cars[cars["finished"]]
+
+# Team-races where both cars finished: did they make the same number of stops?
+pairs = (
+    finishers.groupby(["season", "round", "constructor_id", "incident"], as_index=False)
+    .agg(cars=("stops", "size"), fewest=("stops", "min"), most=("stops", "max"))
+)
+team_races = pairs[pairs["cars"] == 2].assign(same=lambda d: (d["fewest"] == d["most"]).astype(int))
+
+# One row per race: stops per car (every car, every stop).
+races = (
+    cars.groupby(["season", "round", "circuit_id", "race_status", "weather"], as_index=False)
+    .agg(cars=("stops", "size"), stops=("stops", "sum"), red_flag_stops=("red_flag_stops", "sum"))
+    .assign(stops_per_car=lambda d: d["stops"] / d["cars"])
+)
+```
+
+## 1. Question kind and data used
+
+**Kind: forecast.** How many pit stops will Williams make in total, both cars and every stop, at the
+`{python} SEASON` United States Grand Prix (round `{python} ROUND`, Circuit of the Americas), a race not yet run?
+
+**Data used**, all from the `staging` schema of the DuckDB file built from the committed `data/raw/`
+(no marts):
+
+- `stg_jolpica__races`, `stg_jolpica__results`, `stg_jolpica__constructors`, `stg_jolpica__circuits`
+  and `stg_jolpica__pit_stops`: the stop count of record, finishers and status, from 2011.
+- `stg_fastf1_summary__car_races`: one row per car per race with a FastF1 summary
+  (`{python} len(cars)` rows before the cutoff: COTA in 2018, 2019 and 2021–2025, and 2026 rounds 1–17).
+- `stg_fastf1_summary__track_status_periods`: safety car, VSC and red-flag periods by lap, which give
+  each stop its type and each race its incident flag.
+- `stg_fastf1_practice__stints` and `stg_open_meteo__forecasts`: practice tyre wear (read by the
+  page's practice-wear check, one of the ten tables the report reads) and race weather forecasts.
+- `stop_rules_seed`: the race minimum by circuit.
+
+Every check below uses races before 2026 round 18 only.
+
+## 2. Rules and impossible answers
+
+The four rules the published model applies after the fact, each with one check and a verdict.
+
+### Red-flag stops count in the one model
+
+Stops made on a lap inside a red-flag period, per car, by what the race had:
+
+```{python}
+red_flag_stops = compare(cars, "red_flag_stops", "race_status")
+red_flag_stops
+```
+
+```{python}
+compare(finishers, "stops", "race_status")
+```
+
+**Verdict: visible before the build.** Only `{python} len(violations(races, lambda d: d.red_flag_stops == 0))`
+races before the cutoff had a red flag (section 3 lists them), and in them almost every car stopped
+once under it (`{python} round((lambda row: row.n * row["mean"])(red_flag_stops.set_index("race_status").loc["red flag"]))` stops in all). That is too few races to fit a
+separate red-flag part, and the stops are real stops in the count of record, so they belong inside
+the one count model, with the incident covariate below carrying the lift.
+
+### Incident covariate: safety car or red flag, VSC excluded
+
+Stops per finisher by the race's worst period, as above, and by the incident flag the model uses:
+
+```{python}
+compare(finishers, "stops", "incident")
+```
+
+**Verdict: partly visible.** The VSC exclusion is visible: VSC-only races sit at or below clean
+races in the table above. Counting a safety car alone is not visible here: safety-car races are no
+higher than clean ones, and the incident lift comes from the red-flag races. Including the safety car
+is a judgement (it gives a free stop, as a red flag does), not something these races show.
+
+### Race minimum: one stop in a dry race, two at Monaco from 2025
+
+Impossible answers: a finisher below its race minimum (dry: the `stop_rules_seed` row for the
+circuit, else 1; mixed or wet: 1). Fit rows with a FastF1 summary:
+
+```{python}
+violations(finishers, lambda d: d.stops >= d.minimum)
+```
+
+```{python}
+by_weather = compare(finishers, "stops", "weather")
+by_weather
+```
+
+Every finisher since 2011 with Jolpica pit stops, against the sporting rules' one stop (race weather
+unknown here):
+
+```{python}
+no_stop = violations(all_finishers, lambda d: d.stops >= 1)
+no_stop
+```
+
+**Verdict: visible before the build.** None of the `{python} int(by_weather["n"].sum())` finishers in
+the fit rows made fewer stops than the minimum, the
+`{python} int(by_weather.set_index("weather").loc["mixed", "n"])` mixed-race finishers included, so a
+model that can draw 0 stops for a running car gives an impossible answer. Monaco's two-stop minimum
+is tested on one race only: 2026 round 6, the one Monaco race in the fit rows. Across all
+`{python} int(profile(all_finishers, ["stops"]).loc[0, "rows"])` finishers since 2011, only the
+`{python} len(no_stop)` rows above made no stop:
+
+- **Ocon, Istanbul 2021 (round 16):** a wet race run on one set of intermediates; the one-stop rule
+  applies only in dry races.
+- **Karthikeyan, Sepang 2011 (round 2):** status "+42 Laps", so he was classified but barely running.
+- **Gasly, Abu Dhabi 2019 (round 21, "+2 Laps"):** Jolpica records no stop; not checked against
+  another source.
+
+None of them is a dry-race finisher the model fits on, so the rule stands.
+
+### Team plans: both cars make the same stop count
+
+Team-races where both cars finished; `same` is 1 when the two cars made the same number of stops,
+so its mean is the share:
+
+```{python}
+same_by_season = compare(team_races, "same", "season")
+same_by_season
+```
+
+```{python}
+compare(team_races, "same", "incident")
+```
+
+**Verdict: visible before the build.** In 2026 rounds 1–17,
+`{python} round((lambda row: row.n * row["mean"])(same_by_season.set_index("season").loc[SEASON]))` of
+`{python} int(same_by_season.set_index("season").loc[SEASON, "n"])` team-races had both cars on the same count,
+with or without an incident. That share is the check a model of the team total must pass: one that
+draws the two cars independently has to be compared with it. How strong a link the cars need is
+build work (ρ is set from the fitted model).
+
+## 3. Outliers
+
+Races whose stops per car sit more than two standard deviations from the mean of these races:
+
+```{python}
+violations(races, lambda d: (d.stops_per_car - d.stops_per_car.mean()).abs() <= 2 * d.stops_per_car.std())
+```
+
+Races with stops under a red flag:
+
+```{python}
+violations(races, lambda d: d.red_flag_stops == 0)
+```
+
+Reasons:
+
+- **Monaco, 2026 round 6:** a red flag late in the race (a free stop for almost every car) on top of
+  Monaco's two-stop minimum from 2025. Both are rules above, so the race stays in.
+- **Bahrain Grand Prix in Malaysia (Sepang), 2026 round 16:** a mixed race (rain on part of the
+  laps) with two safety cars. Weather is a covariate, so it stays in.
+- **Zandvoort, 2026 round 12, and Monza, 2026 round 13:** red flags on laps 2–3, so nearly every car
+  changed tyres under them. At Monza those were most of the race's stops (21 of 30, so stops per car
+  stayed low); at Zandvoort 21 of 65. Red-flag stops count, so both stay in.
+- **COTA itself (2018–2025):** one race a season, with no red flag and no wet race, so the circuit
+  history says nothing about either.
+
+## 4. Missing inputs
+
+`profile` of the columns the model and the page's practice-wear check use, one table per mart, read from the staging table under it
+(every row, the target race included):
+
+```{python}
+pd.concat(
+    {mart: profile(frame, MODEL_COLUMNS[mart][1]) for mart, frame in staging.items()},
+    names=["mart", None],
+).droplevel(1)
+```
+
+Gaps that matter to the model:
+
+- Practice stints (read by the page's practice-wear check) cover one session of one race (2026 round 13, FP2) and most of their wear slopes
+  are missing; there is no COTA practice, so the page's practice-wear check has nothing to show.
+- Weather forecasts cover 2026 only, so the COTA races of earlier seasons have no forecast.
+- In `car_races`, `start_compound` and `wet_laps` are missing only for the cars that completed no
+  lap (out of the fit rows anyway).
+- The track status periods have no row for a race with no safety car, VSC or red flag: such a race
+  is clean, not missing.
+- `stop_rules` has one row (Monaco from 2025); every other circuit uses the sporting rules' one stop.
+
+## 5. Opening block and method
+
+Opening-block wording for `report.qmd`:
+
+- **Answer:** Williams are expected to make **N (p10–p90)** pit stops in total at the 2026 United
+  States Grand Prix, both cars and every stop.
+- **How sure:** the backtest hit rate of the p10–p90 range over 2026's earlier team-races, or
+  "not backtested" (then `status: provisional`).
+- **What would make it wrong:** weather or start tyres other than the most likely scenario; a safety
+  car or red flag; and every declared gap (no Friday practice, after-the-race weather forecasts in
+  the backtest, no wet race in the data, circuit history beating the model's mean absolute error).
+
+**Method, in one line (as published):** a Poisson GLM of each running car's stops above the race
+minimum, on circuit history, team rate, air temperature, weather, start compound and incident (safety
+car or red flag), drawn 10,000 times with the two cars' extra stops linked so they often match.

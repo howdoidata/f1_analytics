@@ -215,6 +215,16 @@ def test_stray_sql_outside_data_py_fails_rule_3(tree, where, sql):
     assert any(line.startswith("rule 3") and culprit in line for line in found), found
 
 
+@pytest.mark.parametrize("sql", ["con.execute('x')", "q = \'\'\'SELECT *\\n  FROM staging.stg_x\'\'\'"])
+def test_sql_in_explore_qmd_is_exempt_but_not_in_report_qmd(tree, sql):
+    explore = tree / "reports" / "b" / "explore.qmd"
+    explore.write_text(f"---\ntitle: explore\n---\n\n```{{python}}\n{sql}\n```\n")
+    assert _check(_manifest(), tree) == []
+    _report(tree, "b", f"from f1_analytics.analysis import b_logic\n{sql}")
+    found = _check(_manifest(), tree)
+    assert found == ["rule 3: reports/b/report.qmd holds SQL; all SQL lives in src/f1_analytics/analysis/data.py"]
+
+
 def test_sql_in_data_py_is_allowed(tree):
     _module(tree, "f1_analytics.analysis.data", "def load_lib(con): return con.execute('SELECT * FROM lib')\n")
     assert _check(_manifest(), tree) == []

@@ -480,9 +480,9 @@ def coverage_sentence(table: pd.DataFrame) -> str:
 
 
 def hit_rate_text(report: ForecastReport) -> str:
-    """'81% of 187 team-races inside the range (target 80%)', or 'descriptive' with no backtest."""
+    """'81% of 187 team-races inside the range (target 80%)', or 'not backtested' with no backtest."""
     if report.backtest is None:
-        return "descriptive"
+        return "not backtested"
     table = report.backtest.table
     row = table[table["method"] == "model"].iloc[0]
     return f"{share(row.hit_rate)} of {int(row.n)} team-races inside the range (target {share(HIT_RATE_TARGET)})"
