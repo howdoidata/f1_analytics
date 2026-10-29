@@ -1,74 +1,259 @@
 version: 2
 
+# Every mart carries exactly one tag, `core` (reusable library) or `one_off`
+# (owned by the report folder in `meta.question`). tests/test_mart_check.py
+# enforces conventions rules 1-7: a core mart and every column are described,
+# its grain is tested (unique or unique_combination, plus not_null on the key)
+# and a column flagged `meta: {category: true}` has accepted_values.
+#
 # Tests marked (V) replace a Stage 2 validation/ check; the rest replace the
 # fail-loud checks the pandas loaders ran. Every test is error severity.
 models:
 
+  # --- core: Jolpica ----------------------------------------------------------
+
   - name: races
     description: >
       One row per race (Jolpica races.csv).
+    config:
+      tags: [core]
     data_tests:
       - unique_combination:
           arguments:
             columns: [season, round]
     columns:
       - name: season
+        description: Championship season (year).
         data_tests:
           - not_null
       - name: round
+        description: Round number within the season.
         data_tests:
           - not_null
+      - name: race_name
+        description: Grand Prix name, as Jolpica gives it.
       - name: circuit_id
-        description: (V) circuit_id -> circuits.
+        description: Jolpica circuit id. (V) circuit_id -> circuits.
         data_tests:
           - relationships:
               arguments:
                 to: ref('circuits')
                 field: circuit_id
+      - name: date
+        description: Race date (local).
+      - name: time
+        description: Race start time (UTC) as Jolpica gives it, e.g. 13:00:00Z; NULL for most early seasons.
+      - name: url
+        description: Wikipedia URL of the race.
 
   - name: circuits
     description: >
       One row per circuit.
+    config:
+      tags: [core]
     columns:
       - name: circuit_id
+        description: Jolpica circuit id.
         data_tests:
           - unique
           - not_null
+      - name: circuit_name
+        description: Circuit name.
+      - name: locality
+        description: Town or city of the circuit.
+      - name: country
+        description: Country of the circuit.
+      - name: lat
+        description: Latitude in degrees.
+      - name: lng
+        description: Longitude in degrees.
+      - name: url
+        description: Wikipedia URL of the circuit.
 
   - name: drivers
     description: >
       One row per driver.
+    config:
+      tags: [core]
     columns:
       - name: driver_id
-        description: (V) not_null.
+        description: Jolpica driver id. (V) not_null.
         data_tests:
           - unique
           - not_null
+      - name: given_name
+        description: Driver's given name.
+      - name: family_name
+        description: Driver's family name.
+      - name: dob
+        description: Date of birth (YYYY-MM-DD text).
+      - name: nationality
+        description: Driver's nationality.
+      - name: number
+        description: Permanent car number; NULL for drivers without one.
+      - name: code
+        description: Three-letter driver code (the FastF1 Driver code); NULL for many early drivers.
+      - name: url
+        description: Wikipedia URL of the driver.
 
   - name: constructors
     description: >
       One row per constructor.
+    config:
+      tags: [core]
     columns:
       - name: constructor_id
-        description: (V) not_null.
+        description: Jolpica constructor id. (V) not_null.
         data_tests:
           - unique
           - not_null
+      - name: name
+        description: Constructor name.
+      - name: nationality
+        description: Constructor's nationality.
+      - name: url
+        description: Wikipedia URL of the constructor.
 
   - name: results
     description: >
-      Race classification, one row per car per race.
+      Race classification, one row per car per race. A driver can hold two rows
+      in one race (a shared drive in the 1950s), so the grain is season, round,
+      driver_id and position.
+    config:
+      tags: [core]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, driver_id, position]
     columns:
       - name: season
-        description: (V)
+        description: Championship season (year). (V)
         data_tests:
           - not_null
       - name: round
-        description: (V)
+        description: Round number within the season. (V)
+        data_tests:
+          - not_null
+      - name: race_name
+        description: Grand Prix name.
+      - name: driver_id
+        description: Jolpica driver id. (V) not_null and -> drivers.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('drivers')
+                field: driver_id
+      - name: driver_name
+        description: Given and family name, space-separated.
+      - name: constructor_id
+        description: Jolpica constructor id. (V) -> constructors.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('constructors')
+                field: constructor_id
+      - name: constructor
+        description: Constructor name.
+      - name: grid
+        description: Starting grid slot; 0 is a pit-lane start.
+      - name: position
+        description: Classified finishing position (every car has one, retirements included). (V)
+        data_tests:
+          - not_null
+      - name: points
+        description: Championship points scored in the race. (V)
+        data_tests:
+          - not_null
+      - name: laps
+        description: Laps completed.
+      - name: status
+        description: Finishing status, e.g. Finished, +1 Lap, Accident (Jolpica's free text, not a fixed set).
+      - name: time
+        description: Total race time as text; NULL for cars not on the lead lap.
+      - name: fastest_lap
+        description: Lap number of the car's fastest lap; NULL where unrecorded.
+      - name: fastest_lap_rank
+        description: Rank of the car's fastest lap in the race; NULL where unrecorded.
+
+  - name: sprint_results
+    description: >
+      Sprint classification, one row per car per sprint.
+    config:
+      tags: [core]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, driver_id]
+    columns:
+      - name: season
+        description: Championship season (year).
+        data_tests:
+          - not_null
+      - name: round
+        description: Round number of the race weekend.
+        data_tests:
+          - not_null
+      - name: race_name
+        description: Grand Prix name of the weekend.
+      - name: driver_id
+        description: Jolpica driver id.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('drivers')
+                field: driver_id
+      - name: driver_name
+        description: Given and family name, space-separated.
+      - name: constructor_id
+        description: Jolpica constructor id.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('constructors')
+                field: constructor_id
+      - name: constructor
+        description: Constructor name.
+      - name: grid
+        description: Sprint starting grid slot; 0 is a pit-lane start.
+      - name: position
+        description: Classified sprint finishing position.
+      - name: points
+        description: Championship points scored in the sprint.
+      - name: laps
+        description: Laps completed.
+      - name: status
+        description: Finishing status (Jolpica's free text).
+      - name: time
+        description: Total sprint time as text; NULL for cars not on the lead lap.
+      - name: fastest_lap
+        description: Lap number of the car's fastest sprint lap.
+      - name: fastest_lap_rank
+        description: Rank of the car's fastest sprint lap.
+
+  - name: qualifying
+    description: >
+      Qualifying classification, one row per driver per race.
+    config:
+      tags: [core]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, driver_id]
+    columns:
+      - name: season
+        description: Championship season (year).
+        data_tests:
+          - not_null
+      - name: round
+        description: Round number within the season.
         data_tests:
           - not_null
       - name: driver_id
-        description: (V) not_null and -> drivers.
+        description: Jolpica driver id.
         data_tests:
           - not_null
           - relationships:
@@ -76,7 +261,7 @@ models:
                 to: ref('drivers')
                 field: driver_id
       - name: constructor_id
-        description: (V) -> constructors.
+        description: Jolpica constructor id.
         data_tests:
           - not_null
           - relationships:
@@ -84,134 +269,332 @@ models:
                 to: ref('constructors')
                 field: constructor_id
       - name: position
-        description: (V)
-        data_tests:
-          - not_null
-      - name: points
-        description: (V)
-        data_tests:
-          - not_null
-
-  - name: sprint_results
-    description: >
-      Sprint classification, one row per car per sprint.
-    columns:
-      - name: season
-        data_tests:
-          - not_null
-      - name: round
-        data_tests:
-          - not_null
-      - name: driver_id
-        data_tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('drivers')
-                field: driver_id
-      - name: constructor_id
-        data_tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('constructors')
-                field: constructor_id
-
-  - name: qualifying
-    description: >
-      Qualifying classification.
-    columns:
-      - name: season
-        data_tests:
-          - not_null
-      - name: round
-        data_tests:
-          - not_null
-      - name: driver_id
-        data_tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('drivers')
-                field: driver_id
-      - name: constructor_id
-        data_tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('constructors')
-                field: constructor_id
+        description: Qualifying position.
+      - name: q1
+        description: Q1 lap time as text (m:ss.sss); NULL if not set.
+      - name: q2
+        description: Q2 lap time as text; NULL if eliminated in Q1 or not set.
+      - name: q3
+        description: Q3 lap time as text; NULL if eliminated before Q3 or not set.
 
   - name: race_results_enriched
     description: >
-      results left-joined to races (date, time_race, circuit_id, url).
+      results left-joined to races (date, time_race, circuit_id, url). Same grain
+      as results.
+    config:
+      tags: [core]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, driver_id, position]
+    columns:
+      - name: season
+        description: Championship season (year).
+        data_tests:
+          - not_null
+      - name: round
+        description: Round number within the season.
+        data_tests:
+          - not_null
+      - name: race_name
+        description: Grand Prix name.
+      - name: driver_id
+        description: Jolpica driver id.
+        data_tests:
+          - not_null
+      - name: driver_name
+        description: Given and family name, space-separated.
+      - name: constructor_id
+        description: Jolpica constructor id.
+      - name: constructor
+        description: Constructor name.
+      - name: grid
+        description: Starting grid slot; 0 is a pit-lane start.
+      - name: position
+        description: Classified finishing position.
+        data_tests:
+          - not_null
+      - name: points
+        description: Championship points scored in the race.
+      - name: laps
+        description: Laps completed.
+      - name: status
+        description: Finishing status (Jolpica's free text).
+      - name: time
+        description: Total race time as text, from results.
+      - name: fastest_lap
+        description: Lap number of the car's fastest lap.
+      - name: fastest_lap_rank
+        description: Rank of the car's fastest lap in the race.
+      - name: date
+        description: Race date, from races.
+      - name: time_race
+        description: Race start time (UTC) as text, from races.time.
+      - name: circuit_id
+        description: Jolpica circuit id, from races.
+      - name: url
+        description: Wikipedia URL of the race, from races.
 
   - name: driver_standings_by_round
     description: >
       Cumulative driver standings after every round (sprint points included, sprint wins not).
+    config:
+      tags: [core]
     data_tests:
       - unique_combination:
           arguments:
             columns: [season, round, driver_id]
     columns:
+      - name: season
+        description: Championship season (year).
+        data_tests:
+          - not_null
+      - name: round
+        description: Round number within the season.
+        data_tests:
+          - not_null
+      - name: race_name
+        description: Grand Prix name of the round.
+      - name: date
+        description: Race date of the round, from races.
+      - name: driver_id
+        description: Jolpica driver id.
+        data_tests:
+          - not_null
+      - name: driver_name
+        description: Given and family name, space-separated.
+      - name: race_points
+        description: Points scored in the round, race and sprint together.
+      - name: race_wins
+        description: 1 if the driver won the round's race, else 0 (a sprint win does not count).
+      - name: cumulative_points
+        description: Points so far this season, up to and including the round.
+      - name: cumulative_wins
+        description: Race wins so far this season, up to and including the round.
       - name: standing_rank
+        description: >
+          Championship rank after the round: standard competition ranking on
+          cumulative points, then cumulative wins; an exact tie shares the rank.
         data_tests:
           - not_null
 
   - name: constructor_standings_by_round
     description: >
       Cumulative constructor standings after every round.
+    config:
+      tags: [core]
     data_tests:
       - unique_combination:
           arguments:
             columns: [season, round, constructor_id]
     columns:
+      - name: season
+        description: Championship season (year).
+        data_tests:
+          - not_null
+      - name: round
+        description: Round number within the season.
+        data_tests:
+          - not_null
+      - name: race_name
+        description: Grand Prix name of the round.
+      - name: date
+        description: Race date of the round, from races.
+      - name: constructor_id
+        description: Jolpica constructor id.
+        data_tests:
+          - not_null
+      - name: constructor
+        description: Constructor name.
+      - name: race_points
+        description: Points the constructor's cars scored in the round, race and sprint together.
+      - name: race_wins
+        description: 1 if one of the constructor's cars won the round's race, else 0 (a sprint win does not count).
+      - name: cumulative_points
+        description: Points so far this season, up to and including the round.
+      - name: cumulative_wins
+        description: Race wins so far this season, up to and including the round.
       - name: standing_rank
+        description: >
+          Championship rank after the round: standard competition ranking on
+          cumulative points, then cumulative wins; an exact tie shares the rank.
         data_tests:
           - not_null
 
   - name: final_driver_standings
     description: >
       Official season-end driver standings.
+    config:
+      tags: [core]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, driver_id]
     columns:
+      - name: season
+        description: Championship season (year).
+        data_tests:
+          - not_null
+      - name: position
+        description: Final championship position.
+      - name: points
+        description: Final championship points.
+      - name: wins
+        description: Race wins in the season.
       - name: driver_id
+        description: Jolpica driver id.
         data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('drivers')
                 field: driver_id
+      - name: constructor
+        description: Name of constructor_id, from constructors.
+      - name: driver_name
+        description: Given and family name, from drivers.
       - name: constructor_id
-        description: (V) not_null.
+        description: >
+          The first constructor the driver raced for that season (Jolpica lists
+          several, in order). (V) not_null.
         data_tests:
           - not_null
 
   - name: final_constructor_standings
     description: >
       Official season-end constructor standings.
+    config:
+      tags: [core]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, constructor_id]
     columns:
+      - name: season
+        description: Championship season (year).
+        data_tests:
+          - not_null
+      - name: position
+        description: Final championship position.
+      - name: points
+        description: Final championship points.
+      - name: wins
+        description: Race wins in the season.
       - name: constructor_id
+        description: Jolpica constructor id.
         data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('constructors')
                 field: constructor_id
+      - name: constructor
+        description: Constructor name.
+
+  # --- core: FastF1 -----------------------------------------------------------
 
   - name: raw_fastf1_laps
     description: >
-      Every FastF1 lap, id-mapped by Driver code and Team name.
+      Every FastF1 lap, id-mapped by Driver code and Team name. Columns in
+      CamelCase are FastF1's own, passed through as typed in staging; the
+      FastF1 timedelta columns are text such as `0 days 00:01:30.123000`.
+    config:
+      tags: [core]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, Driver, LapNumber]
     columns:
+      - name: race_label
+        description: Extract folder name, <RR>-<slug> (data/raw/fastf1/<season>/<race_label>/).
       - name: season
-        description: (V)
+        description: Championship season, from the extract folder. (V)
         data_tests:
           - not_null
       - name: round
-        description: (V)
+        description: Round number, from the extract's counts.json. (V)
         data_tests:
           - not_null
+      - name: Time
+        description: Session time at which the lap was set (the lap's end).
+      - name: Driver
+        description: Three-letter driver code.
+        data_tests:
+          - not_null
+      - name: DriverNumber
+        description: Car number.
+      - name: LapTime
+        description: Lap time; NULL where FastF1 has none (e.g. a lap interrupted by a red flag).
+      - name: LapNumber
+        description: Lap number within the race.
+        data_tests:
+          - not_null
+      - name: Stint
+        description: Stint number (1 from the start, +1 after each stop). A lap with no Stint cannot be grouped into one.
+        data_tests:
+          - not_null
+      - name: PitOutTime
+        description: Session time the car left the pit lane, on an out lap; else NULL.
+      - name: PitInTime
+        description: Session time the car entered the pit lane, on an in lap; else NULL.
+      - name: Sector1Time
+        description: Sector 1 time.
+      - name: Sector2Time
+        description: Sector 2 time.
+      - name: Sector3Time
+        description: Sector 3 time.
+      - name: Sector1SessionTime
+        description: Session time at the end of sector 1.
+      - name: Sector2SessionTime
+        description: Session time at the end of sector 2.
+      - name: Sector3SessionTime
+        description: Session time at the end of sector 3.
+      - name: SpeedI1
+        description: Speed at the first intermediate trap, km/h.
+      - name: SpeedI2
+        description: Speed at the second intermediate trap, km/h.
+      - name: SpeedFL
+        description: Speed at the finish line, km/h.
+      - name: SpeedST
+        description: Speed at the longest-straight speed trap, km/h.
+      - name: IsPersonalBest
+        description: True if the lap was the driver's fastest so far in the session.
+      - name: Compound
+        description: Tyre compound of the lap; NULL where FastF1 has none.
+        config:
+          meta:
+            category: true
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [SOFT, MEDIUM, HARD, INTERMEDIATE, WET]
+      - name: TyreLife
+        description: Laps driven on this set of tyres, this lap included.
+      - name: FreshTyre
+        description: True if the set was new at the start of the stint.
+      - name: Team
+        description: FastF1 team name (mapped to constructor_id).
+      - name: LapStartTime
+        description: Session time at the start of the lap.
+      - name: LapStartDate
+        description: Wall-clock start of the lap; empty in the committed extracts.
+      - name: TrackStatus
+        description: >
+          FastF1 track-status codes seen during the lap, concatenated (e.g. 1
+          green, 4 safety car, 671 VSC, VSC ending, then green). Not a
+          category: any combination of codes can occur.
+      - name: Position
+        description: Running position at the end of the lap.
+      - name: Deleted
+        description: Whether the lap time was deleted by the stewards; empty in the committed extracts.
+      - name: DeletedReason
+        description: Why the lap time was deleted; empty in the committed extracts.
+      - name: FastF1Generated
+        description: True if FastF1 interpolated the lap rather than reading it from timing data.
+      - name: IsAccurate
+        description: FastF1's flag that the lap's timing passed its accuracy checks.
       - name: driver_id
-        description: (V) not_null and -> drivers.
+        description: Jolpica driver id, mapped from Driver. (V) not_null and -> drivers.
         data_tests:
           - not_null
           - relationships:
@@ -219,70 +602,121 @@ models:
                 to: ref('drivers')
                 field: driver_id
       - name: constructor_id
-        description: (V) -> constructors.
+        description: Jolpica constructor id, mapped from Team. (V) -> constructors.
         data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('constructors')
                 field: constructor_id
-      - name: Stint
-        description: A lap with no Stint cannot be grouped into one.
-        data_tests:
-          - not_null
 
   - name: raw_fastf1_stints
     description: >
       One row per driver stint, derived from the laps.
+    config:
+      tags: [core]
     data_tests:
       - unique_combination:
           arguments:
             columns: [race_label, driver_id, stint_number]
     columns:
+      - name: race_label
+        description: Extract folder name, <RR>-<slug>.
+        data_tests:
+          - not_null
       - name: season
-        description: (V)
+        description: Championship season. (V)
         data_tests:
           - not_null
       - name: round
-        description: (V)
+        description: Round number within the season. (V)
         data_tests:
           - not_null
       - name: driver_id
-        description: (V) not_null and -> drivers.
+        description: Jolpica driver id. (V) not_null and -> drivers.
         data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('drivers')
                 field: driver_id
+      - name: stint_number
+        description: The laps' Stint number.
+        data_tests:
+          - not_null
       - name: constructor_id
-        description: (V) -> constructors.
+        description: Constructor of the stint's first lap that has one. (V) -> constructors.
         data_tests:
           - relationships:
               arguments:
                 to: ref('constructors')
                 field: constructor_id
+      - name: compound
+        description: Compound of the stint's first lap that has one; NULL if no lap has one.
+        config:
+          meta:
+            category: true
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [SOFT, MEDIUM, HARD, INTERMEDIATE, WET]
+      - name: lap_start
+        description: First lap number of the stint.
+      - name: lap_end
+        description: Last lap number of the stint.
+      - name: lap_count
+        description: Laps in the stint.
 
   - name: raw_fastf1_weather
     description: >
-      FastF1 track weather samples.
+      FastF1 track weather samples, about one a minute per race session.
+    config:
+      tags: [core]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, Time]
     columns:
+      - name: race_label
+        description: Extract folder name, <RR>-<slug>.
       - name: season
-        description: (V)
+        description: Championship season, from the extract folder. (V)
         data_tests:
           - not_null
       - name: round
-        description: (V)
+        description: Round number, from the extract's counts.json. (V)
         data_tests:
           - not_null
+      - name: Time
+        description: Session time of the sample.
+        data_tests:
+          - not_null
+      - name: AirTemp
+        description: Air temperature, °C.
+      - name: Humidity
+        description: Relative humidity, %.
+      - name: Pressure
+        description: Air pressure, mbar.
+      - name: Rainfall
+        description: True if it was raining at the sample.
+      - name: TrackTemp
+        description: Track temperature, °C.
+      - name: WindDirection
+        description: Wind direction, degrees (0-359).
+      - name: WindSpeed
+        description: Wind speed, m/s.
 
-  # --- Williams pit-stop forecast: stops, cars and practice stints ------------
+  # --- one_off: Williams pit-stop forecast (reports/2026-10-24-williams-cota-pit-stop-forecast)
 
   - name: pit_stops
     description: >
       The stop count of record (W1): one row per Jolpica pit stop, 2011 onwards,
       with the car's constructor from results and a stop_type from the FastF1
       track-status periods.
+    config:
+      tags: [one_off]
+      meta:
+        question: 2026-10-24-williams-cota-pit-stop-forecast
     data_tests:
       - unique_combination:
           arguments:
@@ -323,6 +757,10 @@ models:
     description: >
       One row per car per race with a FastF1 summary (story 2's car_races.csv),
       typed. Values pass through as written.
+    config:
+      tags: [one_off]
+      meta:
+        question: 2026-10-24-williams-cota-pit-stop-forecast
     data_tests:
       - unique_combination:
           arguments:
@@ -352,6 +790,10 @@ models:
     description: >
       One row per practice stint, from every
       data/raw/fastf1_practice/<season>/<RR>-<slug>/<session>_stints.csv file.
+    config:
+      tags: [one_off]
+      meta:
+        question: 2026-10-24-williams-cota-pit-stop-forecast
     data_tests:
       - unique_combination:
           arguments:
@@ -382,6 +824,10 @@ models:
       Historical Forecast API, the backtest's weather; kind forecast: the live
       Forecast API, an upcoming race's weather for the scenario grid).
       precipitation_probability is 0-1; air_temp is in °C.
+    config:
+      tags: [one_off]
+      meta:
+        question: 2026-10-24-williams-cota-pit-stop-forecast
     data_tests:
       - unique_combination:
           arguments:
@@ -406,6 +852,10 @@ models:
       race's FastF1 track-status periods hold an sc or red_flag period, false
       when they hold only vsc periods or none. The count model's incident
       covariate and incident chance read it.
+    config:
+      tags: [one_off]
+      meta:
+        question: 2026-10-24-williams-cota-pit-stop-forecast
     data_tests:
       - unique_combination:
           arguments:
@@ -424,6 +874,10 @@ models:
       `from_season` on, a running car in a dry race at `circuit_id` makes at
       least `dry_minimum` stops. A circuit with no row uses 1. The count
       model's race minimum reads it.
+    config:
+      tags: [one_off]
+      meta:
+        question: 2026-10-24-williams-cota-pit-stop-forecast
     data_tests:
       - unique_combination:
           arguments:
