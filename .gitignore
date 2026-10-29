@@ -30,7 +30,7 @@ dbt/.user.yml
 reports/**/*.pdf
 !reports/golden/*.pdf
 # Exploration pages are not published: commit explore.qmd, never its rendered HTML
-reports/*/explore.html
+reports/**/explore.html
 .quarto/
 *_files/
 **/*.quarto_ipynb

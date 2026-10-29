@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-10-24">
+
+<title>Williams pit stops: 2026 United States Grand Prix</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+color: #0b0b0b; max-width: 780px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+h1.title { margin-bottom: 0.2rem; }
+p.subtitle { color: #52514e; margin-top: 0; }
+h2 { border-bottom: 1px solid #e6e5e0; padding-bottom: 0.2rem; margin-top: 2.2rem; }
+table { border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+th, td { padding: 0.25rem 0.6rem; border-bottom: 1px solid #e6e5e0; vertical-align: top; }
+th { border-bottom: 2px solid #b8b7b0; }
+code { font-size: 0.9em; }
+figcaption, .figure-caption { color: #52514e; font-size: 0.9rem; }
+</style>
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Williams pit stops: 2026 United States Grand Prix</h1>
+<p class="subtitle">How many pit stops will Williams make in total at the Circuit of the Americas? Round 18, Sunday 2026-10-25</p>
+
+<p class="date">2026-10-24</p>
+</header>
+
+
+<h2 id="in-short">In short</h2>
+<ul>
+<li><strong>Answer:</strong> Williams are expected to make <strong>3.2 [2–6] pit stops</strong> in total at the 2026 United States Grand Prix (Circuit of the Americas, round 18, 2026-10-25), counting both cars and every stop: the average, with the p10–p90 range in brackets.</li>
+<li><strong>How sure:</strong> 81% of 187 team-races inside the range (target 80%).</li>
+<li><strong>What would make it wrong:</strong> weather or start tyres other than the most likely scenario below; a safety car or red flag (3.5 [2–6] stops with one). Known gaps: Friday practice is not loaded; the backtest uses weather forecasts issued after each race, so its hit rate is optimistic; there is no wet race in the data; circuit history beat the model on mean absolute error in the backtest (see <em>How well the model did this season</em>).</li>
+</ul>
+<h2 id="the-answer">The answer</h2>
+<p>In the headline under <em>In short</em> above, the first number is the average over 10,000 simulated races; the two in brackets are the range: in at least 8 of 10 simulated races the team made between those two numbers of stops, inclusive. This is the most likely scenario: <strong>dry</strong> weather, with the cars starting on <strong>SOFT (C4) + MEDIUM (C3)</strong>.</p>
+<p>That total already allows for a <strong>50% chance of a safety car or red flag</strong>, from how often one came out in earlier races at this circuit and earlier races this season.</p>
+<ul>
+<li>With no safety car or red flag: <strong>3.0 [2–5]</strong> stops.</li>
+<li>With a safety car or red flag: <strong>3.5 [2–6]</strong> stops.</li>
+</ul>
+<p>For comparison, two simple rules of thumb for this race: the circuit’s history (two cars × its stops per car since 2011) gives <strong>3.1</strong> stops, and the team’s season so far (two cars × its stops per car this season) gives <strong>4.5</strong>.</p>
+<h2 id="try-other-weather-and-start-tyres">Try other weather and start tyres</h2>
+<p>The page opens on the most likely scenario. Each weather option shows its chance under the current weather forecast. Each start-tyre option shows the chance of that weather and those start tyres together, from the forecast and the team’s start tyres in earlier races this season. An option at 0% is not expected under the current forecast, but you can still pick it to see its total.</p>
+<style>.scenario-controls fieldset { border: 1px solid #e6e5e0; margin: 0.8rem 0; padding: 0.4rem 0.8rem; } .scenario-controls label { display: block; margin: 0.15rem 0; } .scenario-result { font-size: 1.1rem; }</style>
+<div id="scenario-controls" class="scenario-controls">
+<fieldset><legend>Weather</legend>
+<label><input type="radio" name="scenario-weather" value="0" checked> dry: &gt;99%</label>
+<label><input type="radio" name="scenario-weather" value="1"> mixed: 0%, not expected under the current forecast</label>
+<label><input type="radio" name="scenario-weather" value="2"> wet: 0%, not expected under the current forecast</label>
+</fieldset>
+<fieldset><legend>Start tyres</legend>
+<label><input type="radio" name="scenario-tyres" value="0"> <span id="scenario-tyres-label-0">SOFT (C4) + SOFT (C4): 7%</span></label>
+<label><input type="radio" name="scenario-tyres" value="1" checked> <span id="scenario-tyres-label-1">SOFT (C4) + MEDIUM (C3): 57%</span></label>
+<label><input type="radio" name="scenario-tyres" value="2"> <span id="scenario-tyres-label-2">SOFT (C4) + INTERMEDIATE: 0%, not expected under the current forecast</span></label>
+<label><input type="radio" name="scenario-tyres" value="3"> <span id="scenario-tyres-label-3">MEDIUM (C3) + MEDIUM (C3): 29%</span></label>
+<label><input type="radio" name="scenario-tyres" value="4"> <span id="scenario-tyres-label-4">MEDIUM (C3) + HARD (C2): 7%</span></label>
+<label><input type="radio" name="scenario-tyres" value="5"> <span id="scenario-tyres-label-5">INTERMEDIATE + INTERMEDIATE: 0%, not expected under the current forecast</span></label>
+</fieldset>
+<p class="scenario-result">Total stops: <strong id="scenario-total">3.2 [2–6]</strong> (<span id="scenario-chance">chance of this scenario: 57%</span>)</p>
+</div>
+<script type="application/json" id="scenario-data">{"weathers": [{"value": "dry", "label": "dry: >99%"}, {"value": "mixed", "label": "mixed: 0%, not expected under the current forecast"}, {"value": "wet", "label": "wet: 0%, not expected under the current forecast"}], "tyres": ["SOFT|SOFT", "SOFT|MEDIUM", "SOFT|INTERMEDIATE", "MEDIUM|MEDIUM", "MEDIUM|HARD", "INTERMEDIATE|INTERMEDIATE"], "scenarios": [{"weather": "dry", "start_tyres": "SOFT|SOFT", "tyre_label": "SOFT (C4) + SOFT (C4): 7%", "chance": "chance of this scenario: 7%", "total": "3.3 [2\u20136]"}, {"weather": "dry", "start_tyres": "SOFT|MEDIUM", "tyre_label": "SOFT (C4) + MEDIUM (C3): 57%", "chance": "chance of this scenario: 57%", "total": "3.2 [2\u20136]"}, {"weather": "dry", "start_tyres": "SOFT|INTERMEDIATE", "tyre_label": "SOFT (C4) + INTERMEDIATE: 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "3.4 [2\u20136]"}, {"weather": "dry", "start_tyres": "MEDIUM|MEDIUM", "tyre_label": "MEDIUM (C3) + MEDIUM (C3): 29%", "chance": "chance of this scenario: 29%", "total": "3.1 [2\u20136]"}, {"weather": "dry", "start_tyres": "MEDIUM|HARD", "tyre_label": "MEDIUM (C3) + HARD (C2): 7%", "chance": "chance of this scenario: 7%", "total": "2.9 [2\u20135]"}, {"weather": "dry", "start_tyres": "INTERMEDIATE|INTERMEDIATE", "tyre_label": "INTERMEDIATE + INTERMEDIATE: 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "3.4 [2\u20136]"}, {"weather": "mixed", "start_tyres": "SOFT|SOFT", "tyre_label": "SOFT (C4) + SOFT (C4): 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "4.1 [2\u20137]"}, {"weather": "mixed", "start_tyres": "SOFT|MEDIUM", "tyre_label": "SOFT (C4) + MEDIUM (C3): 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "4.0 [2\u20137]"}, {"weather": "mixed", "start_tyres": "SOFT|INTERMEDIATE", "tyre_label": "SOFT (C4) + INTERMEDIATE: 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "4.1 [2\u20137]"}, {"weather": "mixed", "start_tyres": "MEDIUM|MEDIUM", "tyre_label": "MEDIUM (C3) + MEDIUM (C3): 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "3.8 [2\u20136]"}, {"weather": "mixed", "start_tyres": "MEDIUM|HARD", "tyre_label": "MEDIUM (C3) + HARD (C2): 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "3.5 [2\u20136]"}, {"weather": "mixed", "start_tyres": "INTERMEDIATE|INTERMEDIATE", "tyre_label": "INTERMEDIATE + INTERMEDIATE: 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "4.2 [2\u20137]"}, {"weather": "wet", "start_tyres": "SOFT|SOFT", "tyre_label": "SOFT (C4) + SOFT (C4): 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "4.1 [2\u20137]"}, {"weather": "wet", "start_tyres": "SOFT|MEDIUM", "tyre_label": "SOFT (C4) + MEDIUM (C3): 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "4.0 [2\u20137]"}, {"weather": "wet", "start_tyres": "SOFT|INTERMEDIATE", "tyre_label": "SOFT (C4) + INTERMEDIATE: 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "4.1 [2\u20137]"}, {"weather": "wet", "start_tyres": "MEDIUM|MEDIUM", "tyre_label": "MEDIUM (C3) + MEDIUM (C3): 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "3.8 [2\u20136]"}, {"weather": "wet", "start_tyres": "MEDIUM|HARD", "tyre_label": "MEDIUM (C3) + HARD (C2): 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "3.5 [2\u20136]"}, {"weather": "wet", "start_tyres": "INTERMEDIATE|INTERMEDIATE", "tyre_label": "INTERMEDIATE + INTERMEDIATE: 0%, not expected under the current forecast", "chance": "chance of this scenario: 0%, not expected under the current forecast", "total": "4.2 [2\u20137]"}], "preset_weather": "dry", "preset_tyres": "SOFT|MEDIUM"}</script>
+<script>
+(function () {
+  var root = document.getElementById("scenario-controls");
+  var data = JSON.parse(document.getElementById("scenario-data").textContent);
+  function checked(name) {
+    var input = root.querySelector('input[name="' + name + '"]:checked');
+    return input ? data[name === "scenario-weather" ? "weathers" : "tyres"][Number(input.value)] : null;
+  }
+  function find(weather, tyres) {
+    for (var i = 0; i < data.scenarios.length; i++) {
+      var s = data.scenarios[i];
+      if (s.weather === weather && s.start_tyres === tyres) { return s; }
+    }
+    return null;
+  }
+  function update() {
+    var weather = checked("scenario-weather").value;
+    data.tyres.forEach(function (tyres, i) {
+      var s = find(weather, tyres);
+      var label = document.getElementById("scenario-tyres-label-" + i);
+      if (s && label) { label.textContent = s.tyre_label; }
+    });
+    var chosen = find(weather, checked("scenario-tyres"));
+    document.getElementById("scenario-total").textContent = chosen ? chosen.total : "–";
+    document.getElementById("scenario-chance").textContent = chosen ? chosen.chance : "";
+  }
+  root.addEventListener("change", update);
+  update();
+})();
+</script>
+<p>No race in the data was wet, so the wet scenarios use the mixed-weather estimate.</p>
+<p>The start-tyre effect is a pattern in past races, not cause and effect: teams pick their start tyres for reasons that also change how often they stop. The compound names in brackets are the Pirelli allocation for this race, as labels only.</p>
+<p>Every scenario (all stops, safety-car and red-flag stops included):</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Weather</th>
+<th style="text-align: left;">Start tyres</th>
+<th style="text-align: right;">Chance</th>
+<th style="text-align: right;">Stops [p10–p90]</th>
+<th style="text-align: left;"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">dry</td>
+<td style="text-align: left;">SOFT (C4) + SOFT (C4)</td>
+<td style="text-align: right;">7%</td>
+<td style="text-align: right;">3.3 [2–6]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">dry</td>
+<td style="text-align: left;">SOFT (C4) + MEDIUM (C3)</td>
+<td style="text-align: right;">57%</td>
+<td style="text-align: right;">3.2 [2–6]</td>
+<td style="text-align: left;">preset</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">dry</td>
+<td style="text-align: left;">SOFT (C4) + INTERMEDIATE</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">3.4 [2–6]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">dry</td>
+<td style="text-align: left;">MEDIUM (C3) + MEDIUM (C3)</td>
+<td style="text-align: right;">29%</td>
+<td style="text-align: right;">3.1 [2–6]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">dry</td>
+<td style="text-align: left;">MEDIUM (C3) + HARD (C2)</td>
+<td style="text-align: right;">7%</td>
+<td style="text-align: right;">2.9 [2–5]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">dry</td>
+<td style="text-align: left;">INTERMEDIATE + INTERMEDIATE</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">3.4 [2–6]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">mixed</td>
+<td style="text-align: left;">SOFT (C4) + SOFT (C4)</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">4.1 [2–7]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">mixed</td>
+<td style="text-align: left;">SOFT (C4) + MEDIUM (C3)</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">4.0 [2–7]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">mixed</td>
+<td style="text-align: left;">SOFT (C4) + INTERMEDIATE</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">4.1 [2–7]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">mixed</td>
+<td style="text-align: left;">MEDIUM (C3) + MEDIUM (C3)</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">3.8 [2–6]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">mixed</td>
+<td style="text-align: left;">MEDIUM (C3) + HARD (C2)</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">3.5 [2–6]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">mixed</td>
+<td style="text-align: left;">INTERMEDIATE + INTERMEDIATE</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">4.2 [2–7]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">wet</td>
+<td style="text-align: left;">SOFT (C4) + SOFT (C4)</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">4.1 [2–7]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">wet</td>
+<td style="text-align: left;">SOFT (C4) + MEDIUM (C3)</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">4.0 [2–7]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">wet</td>
+<td style="text-align: left;">SOFT (C4) + INTERMEDIATE</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">4.1 [2–7]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">wet</td>
+<td style="text-align: left;">MEDIUM (C3) + MEDIUM (C3)</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">3.8 [2–6]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">wet</td>
+<td style="text-align: left;">MEDIUM (C3) + HARD (C2)</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">3.5 [2–6]</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">wet</td>
+<td style="text-align: left;">INTERMEDIATE + INTERMEDIATE</td>
+<td style="text-align: right;">0%</td>
+<td style="text-align: right;">4.2 [2–7]</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+<h2 id="how-well-the-model-did-this-season">How well the model did this season</h2>
+<p>Each earlier round of 2026 was forecast for every team from what was known before it, and each forecast was compared with the team’s actual total. Circuit history had the lowest mean absolute error, 1.56 stops, 0.14 stops below the model (1.70). The model’s p10–p90 range held the actual total in 81% of the 187 team-races, against a target of 80%; the range was 4.2 stops wide on average.</p>
+<table class="caption-top" style="width:100%;">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Method</th>
+<th style="text-align: right;">MAE</th>
+<th style="text-align: right;">MAE, clean races</th>
+<th style="text-align: right;">MAE, SC or red flag</th>
+<th style="text-align: right;">Hit rate</th>
+<th style="text-align: right;">Range width</th>
+<th style="text-align: right;">Team-races</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Model</td>
+<td style="text-align: right;">1.70</td>
+<td style="text-align: right;">1.36</td>
+<td style="text-align: right;">1.93</td>
+<td style="text-align: right;">81%</td>
+<td style="text-align: right;">4.2</td>
+<td style="text-align: right;">187</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Circuit history</td>
+<td style="text-align: right;">1.56</td>
+<td style="text-align: right;">1.31</td>
+<td style="text-align: right;">1.73</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">187</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Season form</td>
+<td style="text-align: right;">1.67</td>
+<td style="text-align: right;">1.39</td>
+<td style="text-align: right;">1.87</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">187</td>
+</tr>
+</tbody>
+</table>
+<p>MAE is the mean absolute error in stops per team-race. Circuit history and season form are the two rules of thumb above, worked out for each race. The hit rate is the share of actual totals inside the model’s p10–p90 range, and the range width is that range’s mean size in stops.</p>
+<h3 id="model-notes">Model notes</h3>
+<p>At this race a running car makes at least 1 stop, in any weather. In 55% of the draws the team’s two cars share one draw for their extra stops, so they tend to make the same number; in the rest each car draws its own. How often the team’s two cars made the same number of extra stops, numbers 1 apart, or numbers 2 or more apart, in the races the link is set from, as the model has it and as it happened:</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">The team’s two cars</th>
+<th style="text-align: right;">Model</th>
+<th style="text-align: right;">Observed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">same</td>
+<td style="text-align: right;">67%</td>
+<td style="text-align: right;">67%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">differ by 1</td>
+<td style="text-align: right;">22%</td>
+<td style="text-align: right;">29%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">differ by 2+</td>
+<td style="text-align: right;">11%</td>
+<td style="text-align: right;">4%</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Penalty stops with no tyre change cannot be told apart from other stops in the data, so they are counted as normal stops.</li>
+<li>The wet and mixed ranges rest on few races, so they are wider: every draw samples the model’s coefficients from their estimated uncertainty, and a level seen in few races is uncertain.</li>
+<li>The start-tyre effect is a pattern in past races, not cause and effect: teams choose their start tyres for reasons that also change how often they stop.</li>
+<li>A circuit or team with no stop history before the race uses the field mean: stops per car, all stops, over the races the model is fitted on.</li>
+<li>An unseen weather or start-tyre level uses its nearest seen level (wet → mixed → dry; WET → INTERMEDIATE).</li>
+<li>The model counts the stops of cars that keep running; a car out before its first stop is drawn separately, at the share of such cars in the season’s earlier races.</li>
+<li>Race weather comes from Open-Meteo’s Historical Forecast API, because its Previous Runs API has rain probability for only two of 2026’s first 17 rounds (Miami and Canada): the rain chance p is the higher precipitation probability of the race-start hour and the next, and the weights are dry 1 - p, mixed p/2 and wet p/2.</li>
+<li>That API keeps the latest forecast for each hour, fetched after the races, not the forecast made the day before, so the backtest’s weather is better than a real day-before forecast and its scores are optimistic.</li>
+<li>Tyre wear is not a model input: the race wear slope is often negative, because the car getting lighter as fuel burns outweighs the wear.</li>
+<li>The incident chance rests on few races: it is the share of earlier races at the circuit and earlier races of the season with a safety car or red flag (a VSC does not count), and the backtest tests it only through its season half, because no backtest round is at a circuit with earlier races in the data.</li>
+<li>A running car makes at least the race minimum of stops: 1 in a dry race, more where a circuit’s rules require it, and 1 in a mixed or wet race; the model counts the stops above it.</li>
+<li>The team’s two cars usually make the same number of stops: in each draw they share one random draw for their extra stops with a chance set from the season’s earlier races where both finished, and each car keeps its own spread.</li>
+</ul>
+<h2 id="past-races-at-this-circuit">Past races at this circuit</h2>
+<p>Every car’s stops at each earlier race at this circuit since 2011, split by type. This is shown for reference only; the stop types are not a forecast figure. “Type unknown” counts stops the data does not classify.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">Season</th>
+<th style="text-align: right;">Round</th>
+<th style="text-align: right;">Cars</th>
+<th style="text-align: right;">Stops</th>
+<th style="text-align: right;">Normal</th>
+<th style="text-align: right;">Under SC/VSC</th>
+<th style="text-align: right;">Red flag</th>
+<th style="text-align: right;">Type unknown</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">2012</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">24</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2013</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">27</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2014</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">36</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2015</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">47</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2016</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">43</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">43</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2017</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">25</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2019</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2021</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">41</td>
+<td style="text-align: right;">39</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2022</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2023</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2024</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2025</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+<h2 id="friday-practice">Friday practice</h2>
+<p>A check against history: practice tyre wear does not change the forecast.</p>
+<p><strong>Friday practice not loaded yet.</strong></p>
+<h2 id="data-and-method">Data and method</h2>
+<p>Every number on this page comes from <code>f1_analytics.analysis.pit_stops</code>, run on the local DuckDB file built from the committed raw data, with the scenarios read from the scenario file <code>uv run scenarios</code> writes and checked against the database when the page is rendered. The model is a Poisson count model of each running car’s stops above the race minimum, fitted on races before this one, with 10,000 seeded draws.</p>
+<footer class="credits">
+<p>Results and pit stops: <a href="https://github.com/jolpica/jolpica-f1">Jolpica F1 API</a>, CC BY-NC-SA 4.0.
+Lap and practice data: Formula 1 timing data obtained with <a href="https://github.com/theOehrly/Fast-F1">FastF1</a>;
+F1 timing data © Formula One World Championship Limited. This page is unofficial and not associated with the Formula 1 companies.
+Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a>, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</p>
+</footer>
+
+
+
+
+
+</body></html>

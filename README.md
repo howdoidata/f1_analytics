@@ -8,7 +8,7 @@ It is a portfolio project. It shows the full path from raw data to a published a
 
 ## Reports
 
-**[Report gallery](https://howdoidata.github.io/f1_analytics/)**: every report, newest first, rendered in the browser, with links to the Quarto source. In the repo, the same list is in [`reports/README.md`](reports/README.md).
+**[Report gallery](https://howdoidata.github.io/f1_analytics/)**: every report, recurring pages first, then editions newest first, rendered in the browser, with links to the Quarto source. In the repo, the same list is in [`reports/README.md`](reports/README.md).
 
 ## Prerequisites
 
@@ -34,12 +34,12 @@ uv sync                          # creates .venv/ with Python 3.13 and the pinne
 uv run pytest                    # offline test suite, about 8 minutes
 uv run build                     # data/raw/ -> data/processed/f1_analytics.duckdb (offline, no credentials)
 uv run scenarios --constructor williams --season 2026 --round 18   # the pit-stop page's scenario file (offline)
-uv run quarto render reports     # every report to report.html and report.pdf, about 5 minutes
+uv run quarto render reports     # the recurring pages (today the pit-stop page) to report.html
 ```
 
-Each report is then at `reports/<date>-<slug>/report.html` and `report.pdf`. Open the HTML in a browser; it loads plotly.js from its CDN, so the charts need an internet connection. The pit-stop forecast page is the exception: it is HTML only, with everything embedded, so it works offline. It reads the scenario file `uv run scenarios` writes to `data/processed/scenarios/`, and its render stops with an error naming that command when the file is missing or out of date with the database.
+Reports live in topic folders under `reports/`: `<topic>/recurring/report.html` is re-rendered for each race, and `<topic>/editions/<date>-<slug>/report.html` are frozen editions the project render never touches (render one by hand with `uv run quarto render reports/<topic>/editions/<name>/report.qmd`). Open the HTML in a browser; the editions with charts load plotly.js from its CDN, so they need an internet connection. The pit-stop forecast page is HTML only, with everything embedded, so it works offline. For another team or race, first edit `title`, `subtitle`, `date`, `status` and `gaps` in the front matter of `reports/team_stops/recurring/report.qmd` (the gallery reads them from there, so `-M` would change only the HTML), then run `uv run quarto render reports/team_stops/recurring/report.qmd -P constructor_id:<id> -P season:<s> -P round:<r> -P compounds:HARD=C3,MEDIUM=C4,SOFT=C5` (the race's Pirelli labels) with no `-M`, then `uv run gallery`. It reads the scenario file `uv run scenarios` writes to `data/processed/scenarios/`, and its render stops with an error naming that command when the file is missing or out of date with the database.
 
-The render prints Jupyter kernel warnings such as "Kernel is running over TCP without encryption"; they are expected and harmless. A render also rewrites the random chart IDs in the committed `report.html` files, so `git status` shows them as modified even when no number changed.
+The render prints Jupyter kernel warnings such as "Kernel is running over TCP without encryption"; they are expected and harmless. Rendering an edition with charts by hand also rewrites the random chart IDs in its committed `report.html`, so `git status` shows it as modified even when no number changed.
 
 `uv sync` downloads Python 3.13 if you don't have it. After that, `uv run build` and the tests make no network calls and need no credentials.
 
@@ -69,7 +69,7 @@ The Jolpica dump was made once with `uv run python scripts/dump_jolpica.py` (alr
 
 ### Reports
 
-Each report is `reports/<date>-<slug>/report.qmd`, a Quarto document whose figures, tables and numbers all come from `f1_analytics.analysis` (tested in `tests/test_analysis_*.py`). Quarto runs the Python through the Jupyter engine in the uv environment and reads the DuckDB file read-only. If you render before `uv run build`, the render stops with an error that names the missing file and says to run `uv run build`.
+Each report is a `report.qmd` in a topic folder (`reports/<topic>/recurring/` or `reports/<topic>/editions/<date>-<slug>/`), a Quarto document whose figures, tables and numbers all come from `f1_analytics.analysis` (tested in `tests/test_analysis_*.py`). Quarto runs the Python through the Jupyter engine in the uv environment and reads the DuckDB file read-only. If you render before `uv run build`, the render stops with an error that names the missing file and says to run `uv run build`.
 
 The HTML is committed; the PDFs are gitignored. `reports/golden/` holds the original Singapore and Zandvoort PDF reports that the current values are compared against whenever the pipeline changes. CI runs the tests and the build but does not render.
 

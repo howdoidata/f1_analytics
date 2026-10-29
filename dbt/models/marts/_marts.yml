@@ -1,7 +1,7 @@
 version: 2
 
 # Every mart carries exactly one tag, `core` (reusable library) or `one_off`
-# (owned by the report folder in `meta.question`). tests/test_mart_check.py
+# (owned by the reports/ topic folder in `meta.question`). tests/test_mart_check.py
 # enforces conventions rules 1-7: a core mart and every column are described,
 # its grain is tested (unique or unique_combination, plus not_null on the key)
 # and a column flagged `meta: {category: true}` has accepted_values.
@@ -706,7 +706,7 @@ models:
       - name: WindSpeed
         description: Wind speed, m/s.
 
-  # --- one_off: Williams pit-stop forecast (reports/2026-10-24-williams-cota-pit-stop-forecast)
+  # --- one_off: Williams pit-stop forecast (reports/team_stops)
 
   - name: pit_stops
     description: >
@@ -716,7 +716,7 @@ models:
     config:
       tags: [one_off]
       meta:
-        question: 2026-10-24-williams-cota-pit-stop-forecast
+        question: team_stops
     data_tests:
       - unique_combination:
           arguments:
@@ -760,7 +760,7 @@ models:
     config:
       tags: [one_off]
       meta:
-        question: 2026-10-24-williams-cota-pit-stop-forecast
+        question: team_stops
     data_tests:
       - unique_combination:
           arguments:
@@ -793,7 +793,7 @@ models:
     config:
       tags: [one_off]
       meta:
-        question: 2026-10-24-williams-cota-pit-stop-forecast
+        question: team_stops
     data_tests:
       - unique_combination:
           arguments:
@@ -827,7 +827,7 @@ models:
     config:
       tags: [one_off]
       meta:
-        question: 2026-10-24-williams-cota-pit-stop-forecast
+        question: team_stops
     data_tests:
       - unique_combination:
           arguments:
@@ -855,7 +855,7 @@ models:
     config:
       tags: [one_off]
       meta:
-        question: 2026-10-24-williams-cota-pit-stop-forecast
+        question: team_stops
     data_tests:
       - unique_combination:
           arguments:
@@ -877,7 +877,7 @@ models:
     config:
       tags: [one_off]
       meta:
-        question: 2026-10-24-williams-cota-pit-stop-forecast
+        question: team_stops
     data_tests:
       - unique_combination:
           arguments:

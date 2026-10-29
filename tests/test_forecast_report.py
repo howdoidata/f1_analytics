@@ -26,7 +26,8 @@ from f1_analytics.analysis.pit_stops import PracticeWear, practice_wear_vs_histo
 from f1_analytics.config import PROJECT_ROOT
 
 
-REPORT_DIR = PROJECT_ROOT / "reports" / "2026-10-24-williams-cota-pit-stop-forecast"
+PAGE = Path("team_stops") / "recurring"  # the recurring page, relative to reports/
+REPORT_DIR = PROJECT_ROOT / "reports" / PAGE
 CHAIN_ROUND = 3
 CHAIN_CIRCUIT = "albert_park"
 FORBIDDEN = re.compile(r"williams|albon|sainz|americas|\bcota\b|austin", re.IGNORECASE)
@@ -100,6 +101,22 @@ def test_chance_text_and_labels():
     assert pr.scenario_label("mixed", 0.0) == f"mixed: 0%, {pr.NOT_EXPECTED}"
     assert pr.scenario_label("dry", 1.0) == "dry: 100%"
     assert pr.tyre_label("SOFT|INTERMEDIATE", {"SOFT": "C4"}) == "SOFT (C4) + INTERMEDIATE"
+
+
+def test_parse_compounds_reads_name_label_pairs():
+    """Matrix row: another race's labels, as `-P compounds:` passes them."""
+    assert pr.parse_compounds("HARD=C3,MEDIUM=C4,SOFT=C5") == {"HARD": "C3", "MEDIUM": "C4", "SOFT": "C5"}
+    assert pr.parse_compounds(" HARD = C2 , SOFT=C4") == {"HARD": "C2", "SOFT": "C4"}
+
+
+@pytest.mark.parametrize("text", ["HARD-C3", "HARD=C3,,SOFT=C5", "", "HARD=", "=C3", "HYPERSOFT=C6", "SOFT=C4,SOFT=C5"])
+def test_parse_compounds_rejects_bad_strings_naming_the_form(text):
+    """Matrix row: a pair without `=`, an empty pair or side, an unknown or repeated compound."""
+    with pytest.raises(ValueError) as excinfo:
+        pr.parse_compounds(text)
+    message = str(excinfo.value)
+    assert repr(text) in message
+    assert "NAME=LABEL," in message
 
 
 class _Model:
@@ -233,10 +250,13 @@ def test_practice_tables_on_the_chain_world(chain):
 # --------------------------------------------------------------------------
 
 
+OTHER_COMPOUNDS = "HARD=C3,MEDIUM=C4,SOFT=C5"
+
+
 def _render(chain, tmp_path: Path, scenarios_dir: Path) -> subprocess.CompletedProcess:
     """Render a copy of the page (in a copy of the reports project) for the chain world."""
     project = tmp_path / "reports"
-    page = project / REPORT_DIR.name
+    page = project / PAGE
     page.mkdir(parents=True)
     shutil.copy(PROJECT_ROOT / "reports" / "_quarto.yml", project / "_quarto.yml")
     shutil.copy(REPORT_DIR / "report.qmd", page / "report.qmd")
@@ -244,6 +264,7 @@ def _render(chain, tmp_path: Path, scenarios_dir: Path) -> subprocess.CompletedP
         [QUARTO, "render", str(page / "report.qmd"),
          "-P", f"constructor_id:{CHAIN_TEAM}", "-P", f"season:{CHAIN_SEASON}", "-P", f"round:{CHAIN_ROUND}",
          "-P", f"db_path:{chain['db']}", "-P", f"scenarios_dir:{scenarios_dir}",
+         "-P", f"compounds:{OTHER_COMPOUNDS}",
          "-M", "title:Team pit stops", "-M", "subtitle:Chain world"],
         capture_output=True, text=True, cwd=project, timeout=600,
     )
@@ -253,11 +274,14 @@ def _render(chain, tmp_path: Path, scenarios_dir: Path) -> subprocess.CompletedP
 def test_other_team_render_names_no_williams_or_cota(chain, tmp_path):
     result = _render(chain, tmp_path, chain["scenarios"])
     assert result.returncode == 0, result.stderr[-3000:]
-    html = (tmp_path / "reports" / REPORT_DIR.name / "report.html").read_text(encoding="utf-8")
-    assert not (tmp_path / "reports" / REPORT_DIR.name / "report.pdf").exists()
+    html = (tmp_path / "reports" / PAGE / "report.html").read_text(encoding="utf-8")
+    assert not (tmp_path / "reports" / PAGE / "report.pdf").exists()
     assert FORBIDDEN.findall(html) == []
     assert "Mercedes" in html and pr.PRACTICE_NOT_LOADED in html
     assert _external_assets(html) == []
+    # The `-P compounds:` labels, not the COTA defaults, name the tyres.
+    assert re.search(r"(SOFT \(C5\)|MEDIUM \(C4\)|HARD \(C3\))", html)
+    assert not re.search(r"(SOFT \(C4\)|MEDIUM \(C3\)|HARD \(C2\))", html)
 
 
 @needs_quarto

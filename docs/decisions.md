@@ -30,11 +30,11 @@ The dbt project in `dbt/` reads the raw CSVs directly. Staging models type and r
 
 ## Reports are Quarto documents that only call `analysis/`
 
-Each report is `reports/<date>-<slug>/report.qmd`. Every figure, table and number in it comes from a function in `src/f1_analytics/analysis/`, and those functions have tests. A report does not run SQL, import plotly or compute anything itself, so what a reader sees is what the tests cover.
+Each report is a `report.qmd` in a topic folder: `reports/<topic>/recurring/` for the page re-rendered each race, `reports/<topic>/editions/<date>-<slug>/` for a frozen edition, which the project render no longer touches. Every figure, table and number in it comes from a function in `src/f1_analytics/analysis/`, and those functions have tests. A report does not run SQL, import plotly or compute anything itself, so what a reader sees is what the tests cover.
 
 The rendered HTML is committed so the reports can be read without rendering them. It loads plotly.js from its CDN rather than embedding it, which keeps each file small. The PDFs are generated locally and gitignored.
 
-One exception: the pit-stop forecast page (`reports/2026-10-24-williams-cota-pit-stop-forecast/`) is rendered with `embed-resources: true` and to HTML only, so it is one self-contained file that works offline. It has no plotly chart, and its weather and start-tyre controls are a small inline script over data embedded in the page, not Quarto's OJS, whose runtime loads its input library from a CDN and does not run from a `file://` URL.
+One exception: the pit-stop forecast page (`reports/team_stops/recurring/` and its COTA edition) is rendered with `embed-resources: true` and to HTML only, so it is one self-contained file that works offline. It has no plotly chart, and its weather and start-tyre controls are a small inline script over data embedded in the page, not Quarto's OJS, whose runtime loads its input library from a CDN and does not run from a `file://` URL.
 
 CI runs the test suite and the build, but it does not render the reports: rendering needs Quarto, TeX and Chrome. The reports are rendered locally from a fresh clone before they are committed.
 
@@ -44,7 +44,7 @@ CI runs the test suite and the build, but it does not render the reports: render
 
 ## The gallery is generated
 
-`uv run gallery` builds `reports/README.md` and `reports/index.html` from each report's frontmatter, newest first. A test fails when the committed copies are out of date, so the gallery cannot drift from the reports.
+`uv run gallery` builds `reports/README.md` and `reports/index.html` from each report's frontmatter, recurring pages first, then editions newest first, each card labelled "Recurring" or "Edition" from its path. A test fails when the committed copies are out of date, so the gallery cannot drift from the reports.
 
 GitHub Pages publishes only the report HTML and the gallery, through `.github/workflows/pages.yml`. A workflow is used instead of serving a branch because a branch would publish the whole repo, raw data included. The workflow copies files; it does not render.
 
