@@ -29,7 +29,7 @@ with open_database() as con:
 ## In short
 
 - **Answer:** at the cutoff (round `{python} report["cutoff_round"]` of `{python} report["target_season"]`, the `{python} report["cutoff_race"]` on `{python} report["cutoff_date"]`), the drivers' championship leader became champion in **`{python} rate_range_text(report["driver_summary"])`**, and the constructors' leader in **`{python} rate_range_text(report["constructor_summary"])`**.
-- **How sure:** descriptive. A count of past seasons, not a forecast tested on held-out seasons.
+- **How sure:** a count over `{python} report["driver_summary"]["total"]` seasons.
 - **What would make it wrong:** a close title fight this season, where a small lead converts less often than these rates; the cutoff moving as new rounds are added. Known gaps: only `{python} report["driver_summary"]["total"]` historical seasons reach this round; tied co-leaders count as converted if either becomes champion; round `{python} report["cutoff_round"]` is a different share of the season across eras.
 
 ## Cutoff definition

@@ -74,10 +74,10 @@ def test_coverage_sentence_gives_hit_rate_target_and_width():
         "the range was 4.2 stops wide on average.")
 
 
-def test_hit_rate_text_reads_the_model_row_or_says_descriptive():
+def test_hit_rate_text_reads_the_model_row_or_says_not_backtested():
     with_backtest = SimpleNamespace(backtest=SimpleNamespace(table=_table(1.7, 1.56, 1.67)))
     assert pr.hit_rate_text(with_backtest) == "81% of 187 team-races inside the range (target 80%)"
-    assert pr.hit_rate_text(SimpleNamespace(backtest=None)) == "descriptive"
+    assert pr.hit_rate_text(SimpleNamespace(backtest=None)) == "not backtested"
 
 
 def test_no_earlier_rounds_sentence():

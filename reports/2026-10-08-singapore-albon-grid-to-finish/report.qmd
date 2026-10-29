@@ -32,7 +32,7 @@ actual = sg.actual_result(results)
 ## In short
 
 - **Answer:** a change of **`{python} signed(pooled["median"])`** from grid slot to finish (+ is places gained, − places lost; median of the simulated races; middle half `{python} span(*pooled["middle_half"])`, middle 80% `{python} span(*pooled["middle_80"])`).
-- **How sure:** descriptive. The simulation is built from 2026 results so far and has not been backtested.
+- **How sure:** not backtested. The simulation is built from 2026 results so far.
 - **What would make it wrong:** his grid slot (qualifying had not run, so it is simulated); a retirement (`{python} pct(pooled["retire"], 0)` chance); anything 2026 results do not capture, as there is no Singapore, weather or safety-car adjustment. Known gaps: round 16 arrived labelled "Bahrain Grand Prix in Malaysia" and which race it was is unresolved; a small sample of `{python} summary["starts"]` races.
 
 ## Answer

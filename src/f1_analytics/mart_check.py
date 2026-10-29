@@ -7,6 +7,11 @@ files under `repo_root` and, for rule 3, the tables each `analysis/data.py`
 loader declares with `@reads`. `tests/test_mart_check.py` runs it on a fresh
 `dbt parse`.
 
+The stray-SQL part of rule 3 skips files named `explore.qmd`: a report's
+exploration may query raw and staging tables directly (conventions,
+"Exploration done-criteria"); `report.qmd`, `data.py` loaders and analysis
+modules stay strict.
+
 Rule 3 follows imports at module level, so it can fail wrongly but never pass
 wrongly: a report reaches every `f1_analytics` module its `{python}` cells
 (and inline `{python}` expressions) import, and every module those import in turn; it reads the union of
@@ -30,6 +35,7 @@ DATA_MODULE = f"{ANALYSIS_PACKAGE}.data"
 DATA_FILE = Path("src/f1_analytics/analysis/data.py")
 ANALYSIS_DIR = Path("src/f1_analytics/analysis")
 REPORTS_DIR = Path("reports")
+EXPLORE_FILE = "explore.qmd"  # exempt from the stray-SQL part of rule 3
 
 # SQL outside data.py: a DuckDB or pandas SQL call, or a SELECT ... FROM
 # (any case, across lines).
@@ -133,11 +139,16 @@ def rule_2_question_exists(all_marts: Mapping[str, dict], repo_root: Path) -> li
 
 
 def stray_sql(repo_root: Path) -> list[str]:
-    """Rule 3: SQL in a report or in an analysis module other than data.py."""
+    """Rule 3: SQL in a report or in an analysis module other than data.py.
+
+    Files named `explore.qmd` are exempt: exploration may query raw and
+    staging tables directly. `report.qmd`, `data.py` and analysis modules stay strict.
+    """
     files = sorted((repo_root / ANALYSIS_DIR).rglob("*.py")) if (repo_root / ANALYSIS_DIR).is_dir() else []
     files = [path for path in files if path != repo_root / DATA_FILE]
     for pattern in ("*.qmd", "*.py"):
         files += sorted((repo_root / REPORTS_DIR).rglob(pattern))
+    files = [path for path in files if path.name != EXPLORE_FILE]
     found = []
     for path in files:
         text = path.read_text(encoding="utf-8")
