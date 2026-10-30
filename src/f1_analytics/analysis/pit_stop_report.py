@@ -3,9 +3,10 @@
 The page (`reports/team_stops/recurring/report.qmd`, re-rendered for a team and race) calls
 `build_report` once with its parameters and prints what this module returns,
 so the `.qmd` computes nothing itself. Every figure comes from
-`f1_analytics.analysis.pit_stops`; this module only reads the scenario file,
-checks it is current, and words and formats the results. No team, driver or
-circuit is named here: they come from the page's parameters and the marts.
+`f1_analytics.analysis.pit_stops`; this module only checks the inputs are
+current (`stale_inputs`), reads the scenario file, checks it is current, and
+words and formats the results. No team, driver or circuit is named here: they
+come from the page's parameters and the marts.
 """
 
 from __future__ import annotations
@@ -43,7 +44,9 @@ from f1_analytics.analysis.pit_stops.backtest import CARS_PER_TEAM
 from f1_analytics.analysis.pit_stops.history import HISTORY_START_SEASON, STOP_TYPES
 from f1_analytics.analysis.pit_stops.model import COMPOUNDS, DRAWS, WEATHER_FALLBACK
 from f1_analytics.analysis.pit_stops.weather import DAY_BEFORE, LIVE, WEATHER_CATEGORIES, race_window
-from f1_analytics.config import DUCKDB_PATH, PROCESSED_DATA_DIR
+from f1_analytics.config import DUCKDB_PATH, PROCESSED_DATA_DIR, RAW_DATA_DIR
+from f1_analytics.fetch_weather import FORECAST_KIND, OPEN_METEO_DIR
+from f1_analytics.scenarios import _is_built
 
 
 NOT_EXPECTED = "not expected under the current forecast"
@@ -60,6 +63,65 @@ SCENARIOS_DIR = PROCESSED_DATA_DIR / "scenarios"
 
 class ScenarioFileError(RuntimeError):
     """The scenario file is missing or differs from `scenario_grid` on the current database."""
+
+
+class StaleDataError(RuntimeError):
+    """The race's live forecast is missing or not built, or an earlier round lacks results or pit stops."""
+
+
+# --------------------------------------------------------------------------
+# Stale inputs
+# --------------------------------------------------------------------------
+
+
+def stale_inputs(
+    tables: PitStopTables, season: int, round: int, raw_dir: str | Path | None = None
+) -> list[str]:
+    """What the page's inputs lack, each with the command that fixes it; empty when they are current.
+
+    The race's live forecast file (`<raw>/open_meteo/forecast/<s>-<RR>.json`) must
+    exist and be the fetch the database holds (`scenarios._is_built`), and every
+    earlier round of the season must have results and pit stops. The race's own
+    results are not checked: it has not run yet. Empty or None `raw_dir` is `data/raw/`.
+    """
+    raw_dir = Path(raw_dir) if raw_dir else RAW_DATA_DIR
+    problems: list[str] = []
+    forecast_file = raw_dir / OPEN_METEO_DIR / FORECAST_KIND / f"{season}-{round:02d}.json"
+    if not forecast_file.exists():
+        problems.append(
+            f"no live forecast file {forecast_file}; fetch it with "
+            f"`uv run fetch-weather --season {season} --round {round}`, then `uv run build`"
+        )
+    elif not _is_built(tables, forecast_file, season, round):
+        problems.append(
+            f"the database has no live forecast for {season} round {round} from {forecast_file} "
+            f"(missing, or an older fetch); load it with `uv run build`"
+        )
+
+    def rounds_with(frame: pd.DataFrame) -> set[int]:
+        return {int(r) for r in frame.loc[frame["season"] == season, "round"]}
+
+    resulted, stopped = rounds_with(tables.results), rounds_with(tables.pit_stops)
+    earlier = sorted(int(r) for r in tables.races.loc[tables.races["season"] == season, "round"] if r < round)
+    lacking = []
+    for r in earlier:
+        gaps = [text for text, held in (("no results", resulted), ("no pit stops", stopped)) if r not in held]
+        if gaps:
+            lacking.append(f"round {r} ({', '.join(gaps)})")
+    if lacking:
+        problems.append(
+            f"earlier rounds lack inputs: {', '.join(lacking)}; fetch them with `uv run refresh`, then `uv run build`"
+        )
+    return problems
+
+
+def _check_fresh(tables: PitStopTables, season: int, round: int, raw_dir: str | Path | None = None) -> None:
+    """Raise `StaleDataError` listing every `stale_inputs` problem, if there is any."""
+    problems = stale_inputs(tables, season, round, raw_dir)
+    if problems:
+        raise StaleDataError(
+            f"{season} round {round} can't render on stale data:\n" + "\n".join(f"- {p}" for p in problems)
+        )
 
 
 # --------------------------------------------------------------------------
@@ -171,14 +233,18 @@ def build_report(
     compounds: Mapping[str, str],
     db_path: str | Path | None = None,
     scenarios_dir: str | Path | None = None,
+    raw_dir: str | Path | None = None,
 ) -> ForecastReport:
-    """Load the marts, check the scenario file and compute the page's forecasts, backtest and history.
+    """Load the marts, check the inputs and the scenario file, and compute the page's forecasts, backtest and history.
 
-    An empty or None `db_path` / `scenarios_dir` is the project's DuckDB file / `data/processed/scenarios/`.
+    Raises `StaleDataError` (before the scenario-file check) when `stale_inputs` finds a problem.
+    An empty or None `db_path` / `scenarios_dir` / `raw_dir` is the project's DuckDB file /
+    `data/processed/scenarios/` / `data/raw/`.
     """
     tables = load_pit_stop_tables(Path(db_path) if db_path else DUCKDB_PATH)
     scenarios_dir = Path(scenarios_dir) if scenarios_dir else SCENARIOS_DIR
     race = race_info(tables, constructor_id, season, round)
+    _check_fresh(tables, season, round, raw_dir)
     circuit = race.circuit_id
     path = scenario_path(scenarios_dir, constructor_id, season, round)
     scenarios = read_scenarios(tables, path, constructor_id, circuit, season, round)
@@ -634,6 +700,7 @@ __all__ = [
     "ForecastReport",
     "Race",
     "ScenarioFileError",
+    "StaleDataError",
     "backtest_sentence",
     "backtest_table",
     "benchmarks",
@@ -658,6 +725,7 @@ __all__ = [
     "scenario_table",
     "scenarios_command",
     "split_table",
+    "stale_inputs",
     "team_link_sentence",
     "tyre_label",
     "season_backtest",
