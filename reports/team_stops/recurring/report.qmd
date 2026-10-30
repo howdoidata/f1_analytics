@@ -41,6 +41,8 @@ report = pr.build_report(
 )
 race, model = report.race, report.model
 bench = pr.benchmarks(report)
+# The front-matter gaps above, printed under *In short* (Quarto runs this in the page's folder).
+gaps = pr.page_gaps("report.qmd")
 ```
 
 ## In short
@@ -48,7 +50,8 @@ bench = pr.benchmarks(report)
 - **Answer:** `{python} race.team_name` are expected to make **`{python} pr.headline(report)` pit stops** in total at the `{python} race.season` `{python} race.race_name` (`{python} race.circuit_name`, round `{python} race.round`, `{python} race.date`), counting both cars and every stop: the average, with the p10–p90 range in brackets.
 - **Inputs:** `{python} pr.freshness_text(report)`.
 - **How sure:** `{python} pr.BACKTEST_ADVISORY` `{python} pr.accuracy_text(report)`
-- **What would make it wrong:** weather or start tyres other than the most likely scenario below; a safety car or red flag (`{python} pr.range_text(report.incident)` stops with one). Known gaps: Friday practice is not shown yet; the backtest uses weather forecasts issued after each race, so its hit rate is optimistic; there is no wet race in the data.
+- **What would make it wrong:** weather or start tyres other than the most likely scenario below; a safety car or red flag (`{python} pr.range_text(report.incident)` stops with one).
+- **Known gaps:** `{python} pr.gaps_text(gaps)`
 
 ## The answer
 

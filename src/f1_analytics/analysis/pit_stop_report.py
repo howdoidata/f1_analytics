@@ -17,7 +17,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Sequence
 
 import pandas as pd
 
@@ -46,6 +46,7 @@ from f1_analytics.analysis.pit_stops.model import COMPOUNDS, DRAWS, WEATHER_FALL
 from f1_analytics.analysis.pit_stops.weather import DAY_BEFORE, LIVE, WEATHER_CATEGORIES, race_window
 from f1_analytics.config import DUCKDB_PATH, PROCESSED_DATA_DIR, RAW_DATA_DIR
 from f1_analytics.fetch_weather import FORECAST_KIND, OPEN_METEO_DIR
+from f1_analytics.gallery import read_frontmatter
 from f1_analytics.scenarios import _is_built
 
 
@@ -612,6 +613,19 @@ def untested_sentence(season: int, rounds: tuple[tuple[int, str], ...]) -> str:
     return f"Left out of the {season} backtest: {names}."
 
 
+def page_gaps(qmd: str | Path) -> list[str]:
+    """The `gaps` in a page's front matter; a one-line `gaps: <text>` is one gap, as in the gallery."""
+    gaps = read_frontmatter(Path(qmd)).get("gaps", [])
+    return [gaps] if isinstance(gaps, str) else list(gaps)
+
+
+def gaps_text(gaps: Sequence[str]) -> str:
+    """The page's front-matter gaps as sentences, each as written; 'none listed.' with none."""
+    if not gaps:
+        return "none listed."
+    return " ".join(gap.rstrip(".") + "." for gap in gaps)
+
+
 def coverage_sentence(table: pd.DataFrame) -> str:
     row = table[table["method"] == "model"].iloc[0]
     return (
@@ -752,11 +766,13 @@ __all__ = [
     "controls_data",
     "controls_html",
     "coverage_sentence",
+    "gaps_text",
     "headline",
     "history_table",
     "minimum_sentence",
     "missing_input",
     "no_backtest_sentence",
+    "page_gaps",
     "practice_history_table",
     "practice_loaded",
     "practice_table",
