@@ -51,6 +51,11 @@ from f1_analytics.scenarios import _is_built
 
 NOT_EXPECTED = "not expected under the current forecast"
 PRACTICE_NOT_LOADED = "Friday practice not loaded yet"
+PRACTICE_NOT_SHOWN = (
+    "Friday practice is not shown yet: its tyre-wear filters don't match race wear, "
+    "so it would not compare like for like with earlier races at this circuit."
+)
+BACKTEST_ADVISORY = "The backtest is advisory: it never changes the forecast."
 NO_FIT_RACE = "no earlier race to fit the model on"
 NO_CAR_RACES = "no car_races rows"
 NO_START_COMPOUNDS = "no start compounds"
@@ -632,6 +637,41 @@ def no_backtest_sentence(season: int, untested: tuple[tuple[int, str], ...] = ()
     return f"There are no earlier rounds in {season} to test on."
 
 
+def accuracy_text(report: ForecastReport) -> str:
+    """The model's backtest MAE next to both rules of thumb (at 2 decimals), then the range's hit rate.
+
+    With no backtest, "Not backtested: " and `no_backtest_sentence`. States relations only: no judgement.
+    """
+    if report.backtest is None:
+        return "Not backtested: " + no_backtest_sentence(report.race.season, report.untested_rounds)
+    table = report.backtest.table
+    mae = {row.method: round(float(row.mae), MAE_DECIMALS) for row in table.itertuples(index=False)}
+    model = mae["model"]
+    rules = [m for m in METHOD_LABELS if m != "model"]
+
+    def stops(v: float) -> str:
+        return f"{v:.{MAE_DECIMALS}f}"
+
+    def relation(other: float) -> str:
+        if model == other:
+            return "the same as"
+        return "lower than" if model < other else "higher than"
+
+    relations = {m: relation(mae[m]) for m in rules}
+    if len(set(relations.values())) == 1:
+        listed = " and ".join(f"{METHOD_LABELS[m].lower()} {stops(mae[m])}" for m in rules)
+        comparison = f"{relations[rules[0]]} both rules of thumb: {listed}"
+    else:
+        comparison = " and ".join(
+            f"{relations[m]} {METHOD_LABELS[m].lower()} ({stops(mae[m])})" for m in rules)
+    row = table[table["method"] == "model"].iloc[0]
+    return (
+        f"The model's mean absolute error, {stops(model)} stops, was {comparison}. "
+        f"Its p10–p90 range held the actual total in {share(row.hit_rate)} of {int(row.n)} team-races "
+        f"(target {share(HIT_RATE_TARGET)})."
+    )
+
+
 def backtest_table(table: pd.DataFrame) -> pd.DataFrame:
     def fixed(v: float, decimals: int = MAE_DECIMALS) -> str:
         return "–" if math.isnan(v) else f"{v:.{decimals}f}"
@@ -688,6 +728,7 @@ def practice_history_table(practice: PracticeWear, team_name: str) -> pd.DataFra
 
 
 __all__ = [
+    "BACKTEST_ADVISORY",
     "DRAWS",
     "HISTORY_START_SEASON",
     "MODEL_NOTES",
@@ -697,10 +738,12 @@ __all__ = [
     "NO_FIT_RACE",
     "NO_START_COMPOUNDS",
     "PRACTICE_NOT_LOADED",
+    "PRACTICE_NOT_SHOWN",
     "ForecastReport",
     "Race",
     "ScenarioFileError",
     "StaleDataError",
+    "accuracy_text",
     "backtest_sentence",
     "backtest_table",
     "benchmarks",

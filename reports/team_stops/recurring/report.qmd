@@ -8,10 +8,10 @@ format:
     embed-resources: true
 status: provisional
 gaps:
-  - Friday practice is not loaded
+  - "Friday practice is not shown yet: its tyre-wear filters don't match race wear"
+  - "The backtest is advisory: it never changes the forecast"
   - The backtest uses forecasts issued after the race, so its hit rate is optimistic
   - No wet race in the data
-  - Circuit history beats the model's mean absolute error (1.56 vs 1.70 stops)
 ---
 
 ```{python}
@@ -47,8 +47,8 @@ bench = pr.benchmarks(report)
 
 - **Answer:** `{python} race.team_name` are expected to make **`{python} pr.headline(report)` pit stops** in total at the `{python} race.season` `{python} race.race_name` (`{python} race.circuit_name`, round `{python} race.round`, `{python} race.date`), counting both cars and every stop: the average, with the p10–p90 range in brackets.
 - **Inputs:** `{python} pr.freshness_text(report)`.
-- **How sure:** `{python} pr.hit_rate_text(report)`.
-- **What would make it wrong:** weather or start tyres other than the most likely scenario below; a safety car or red flag (`{python} pr.range_text(report.incident)` stops with one). Known gaps: Friday practice is not loaded; the backtest uses weather forecasts issued after each race, so its hit rate is optimistic; there is no wet race in the data; circuit history beat the model on mean absolute error in the backtest (see *How well the model did this season*).
+- **How sure:** `{python} pr.BACKTEST_ADVISORY` `{python} pr.accuracy_text(report)`
+- **What would make it wrong:** weather or start tyres other than the most likely scenario below; a safety car or red flag (`{python} pr.range_text(report.incident)` stops with one). Known gaps: Friday practice is not shown yet; the backtest uses weather forecasts issued after each race, so its hit rate is optimistic; there is no wet race in the data.
 
 ## The answer
 
@@ -86,6 +86,8 @@ print(markdown_table(pr.scenario_table(report), "llrrl"))
 ```
 
 ## How well the model did this season
+
+`{python} pr.BACKTEST_ADVISORY`
 
 ```{python}
 #| output: asis
@@ -133,23 +135,7 @@ print(markdown_table(pr.history_table(report.circuit_history), "rrrrrrrr"))
 
 ## Friday practice
 
-A check against history: practice tyre wear does not change the forecast.
-
-```{python}
-#| output: asis
-if not pr.practice_loaded(report.practice):
-    print(f"**{pr.PRACTICE_NOT_LOADED}.**\n")
-else:
-    print(
-        "Tyre wear in seconds per lap lost over a stint, lap-weighted, this weekend's practice sessions next to "
-        "earlier races at this circuit. The slopes are raw, not fuel-corrected: a car gets lighter as it burns "
-        "fuel, which hides some of the wear, so a slope can be negative. A car in FP1 that does not match a race "
-        "driver (a rookie run) is skipped.\n"
-    )
-    print(markdown_table(pr.practice_table(report.practice, race.team_name), "lrrrr"))
-    print("\nEarlier races at this circuit:\n")
-    print(markdown_table(pr.practice_history_table(report.practice, race.team_name), "rrrr"))
-```
+`{python} pr.PRACTICE_NOT_SHOWN`
 
 ## Data and method
 
