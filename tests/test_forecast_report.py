@@ -546,7 +546,7 @@ def test_other_team_render_names_no_williams_or_cota(chain, tmp_path):
     # The comparison sentence (the chain world's one-round backtest), advisory marker and practice text.
     assert re.search(r"both rules of thumb|than circuit history.*than season form", html)
     assert "team-races (target 80%)" in html
-    assert html.count(pr.BACKTEST_ADVISORY) >= 2  # under In short and opening the backtest section
+    assert html.count(pr.BACKTEST_ADVISORY) == 1  # once, on the How sure line
     # Unique to PRACTICE_NOT_SHOWN (the Friday practice section), with no apostrophe for Pandoc to curl.
     assert "not shown yet" in html and "so it would not compare like for like" in html
     assert "Field s/lap" not in html and pr.PRACTICE_NOT_LOADED not in html
@@ -569,6 +569,8 @@ def test_render_names_the_round_left_out_and_its_missing_input(knocked_out, tmp_
     assert f"round 1 ({pr.NO_FIT_RACE})" in html
     assert f"No earlier round of {CHAIN_SEASON} is left to test on." in html
     assert "no earlier rounds" not in html
+    # The How sure line itself, not only the backtest section, says there is no backtest.
+    assert re.search(r"How sure:</strong>\s*" + re.escape(pr.BACKTEST_ADVISORY) + r"\s*Not backtested: ", html)
 
 
 @needs_quarto

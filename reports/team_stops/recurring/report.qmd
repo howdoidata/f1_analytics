@@ -9,7 +9,6 @@ format:
 status: provisional
 gaps:
   - "Friday practice is not shown yet: its tyre-wear filters don't match race wear"
-  - "The backtest is advisory: it never changes the forecast"
   - The backtest uses forecasts issued after the race, so its hit rate is optimistic
   - No wet race in the data
 ---
@@ -89,8 +88,6 @@ print(markdown_table(pr.scenario_table(report), "llrrl"))
 ```
 
 ## How well the model did this season
-
-`{python} pr.BACKTEST_ADVISORY`
 
 ```{python}
 #| output: asis
