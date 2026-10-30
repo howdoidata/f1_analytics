@@ -89,7 +89,7 @@ print(markdown_table(pr.scenario_table(report), "llrrl"))
 ```{python}
 #| output: asis
 if report.backtest is None:
-    print((pr.untested_sentence(race.season, report.untested_rounds) + " " + pr.no_backtest_sentence(race.season)).strip())
+    print((pr.untested_sentence(race.season, report.untested_rounds) + " " + pr.no_backtest_sentence(race.season, report.untested_rounds)).strip())
 else:
     table = report.backtest.table
     print(

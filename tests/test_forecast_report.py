@@ -109,9 +109,17 @@ def test_freshness_text_with_no_earlier_results():
 
 def test_untested_sentence():
     assert pr.untested_sentence(2023, ()) == ""
-    assert pr.untested_sentence(2023, (1,)) == (
-        "Round 1 of 2023 is left out: the model has no earlier race to be fitted on for it.")
-    assert pr.untested_sentence(2023, (1, 2)).startswith("Rounds 1, 2 of 2023 are left out")
+    assert pr.untested_sentence(2023, ((1, pr.NO_FIT_RACE),)) == (
+        "Left out of the 2023 backtest: round 1 (no earlier race to fit the model on).")
+    assert pr.untested_sentence(2023, ((1, pr.NO_FIT_RACE), (2, pr.NO_DAY_BEFORE))) == (
+        "Left out of the 2023 backtest: round 1 (no earlier race to fit the model on), "
+        "round 2 (no day-before forecast).")
+
+
+def test_no_backtest_sentence_with_rounds_left_out():
+    text = pr.no_backtest_sentence(2023, ((1, pr.NO_FIT_RACE),))
+    assert text == "No earlier round of 2023 is left to test on."
+    assert "no earlier rounds" not in text
 
 
 def test_chance_text_and_labels():
@@ -238,7 +246,7 @@ def test_report_on_the_chain_world(chain):
     assert report.preset_forecast.total.mean == preset["mean"]
     assert report.clean.total.raw_mean <= report.preset_forecast.total.raw_mean <= report.incident.total.raw_mean
     # Round 1 has no earlier race to fit on, so the backtest is round 2's three teams.
-    assert report.untested_rounds == (1,)
+    assert report.untested_rounds == ((1, pr.NO_FIT_RACE),)
     assert report.backtest is not None and set(report.backtest.table["n"]) == {3}
     assert pr.backtest_table(report.backtest.table)["MAE, clean races"].tolist() == ["–", "–", "–"]
     assert pr.hit_rate_text(report).endswith(" of 3 team-races inside the range (target 80%)")
@@ -253,9 +261,74 @@ def test_round_one_has_no_backtest(chain):
     """Matrix row `round = 1`: no earlier rounds, so no backtest and the "no earlier rounds" sentence."""
     tables = load_pit_stop_tables(chain["db"])
     assert pr.season_backtest(tables, CHAIN_SEASON, []) == (None, ())
-    assert pr.season_backtest(tables, CHAIN_SEASON, [1]) == (None, (1,))
+    assert pr.season_backtest(tables, CHAIN_SEASON, [1]) == (None, ((1, pr.NO_FIT_RACE),))
+    assert [pr.missing_input(tables, CHAIN_SEASON, r) for r in (1, 2, 3)] == [None, None, None]
     assert pr.untested_sentence(CHAIN_SEASON, ()) == ""
     assert pr.no_backtest_sentence(CHAIN_SEASON) == f"There are no earlier rounds in {CHAIN_SEASON} to test on."
+
+
+# Chain worlds with one of round 2's backtest inputs knocked out of the raw tree.
+
+
+def _drop_day_before(raw: Path) -> None:
+    (raw / "open_meteo" / "day_before" / f"{CHAIN_SEASON}-02.json").unlink()
+
+
+def _edit_round_two_car_races(raw: Path, edit) -> None:
+    path = raw / "fastf1_summary" / "car_races.csv"
+    frame = pd.read_csv(path, dtype=str, keep_default_na=False)
+    round_two = (frame["season"] == str(CHAIN_SEASON)) & (frame["round"] == "2")
+    assert round_two.any()
+    edit(frame, round_two).to_csv(path, index=False)
+
+
+def _blank_start_compounds(raw: Path) -> None:
+    def edit(frame, rows):
+        frame.loc[rows, "start_compound"] = ""
+        return frame
+    _edit_round_two_car_races(raw, edit)
+
+
+def _drop_car_races(raw: Path) -> None:
+    _edit_round_two_car_races(raw, lambda frame, rows: frame[~rows])
+
+
+KNOCKOUTS = {
+    "day_before": (_drop_day_before, pr.NO_DAY_BEFORE),
+    "start_compounds": (_blank_start_compounds, pr.NO_START_COMPOUNDS),
+    "car_races": (_drop_car_races, pr.NO_CAR_RACES),
+}
+
+
+@pytest.fixture(scope="module", params=sorted(KNOCKOUTS))
+def knocked_out(request, tmp_path_factory) -> dict:
+    """A chain world missing one of 2023 R2's backtest inputs, built, with a current scenario file at R3."""
+    knock_out, reason = KNOCKOUTS[request.param]
+    root = tmp_path_factory.mktemp(f"forecast_report_no_{request.param}")
+    raw = make_chain_world(root / "raw")
+    knock_out(raw)
+    db_path = root / "chain.duckdb"
+    assert cli.build(["--raw-dir", str(raw), "--db", str(db_path)]) == 0
+    out = root / "scenarios"
+    args = ["--constructor", CHAIN_TEAM, "--season", str(CHAIN_SEASON), "--round", str(CHAIN_ROUND)]
+    assert scenarios.main(args, db_path=db_path, raw_dir=raw, out_dir=out) == 0
+    return {"db": db_path, "scenarios": out, "root": root, "reason": reason}
+
+
+def test_round_missing_an_input_is_left_out_and_named(knocked_out):
+    """Matrix rows 2-5: round 2 is left out with its reason; round 1 has no fit race, so no backtest."""
+    reason = knocked_out["reason"]
+    tables = load_pit_stop_tables(knocked_out["db"])
+    assert pr.missing_input(tables, CHAIN_SEASON, 1) is None
+    assert pr.missing_input(tables, CHAIN_SEASON, 2) == reason
+    report = pr.build_report(
+        CHAIN_TEAM, CHAIN_SEASON, CHAIN_ROUND, {"SOFT": "C3"}, knocked_out["db"], knocked_out["scenarios"])
+    assert report.untested_rounds == ((1, pr.NO_FIT_RACE), (2, reason))
+    assert report.backtest is None
+    assert pr.untested_sentence(CHAIN_SEASON, report.untested_rounds) == (
+        f"Left out of the {CHAIN_SEASON} backtest: round 1 ({pr.NO_FIT_RACE}), round 2 ({reason}).")
+    assert pr.no_backtest_sentence(CHAIN_SEASON, report.untested_rounds) == (
+        f"No earlier round of {CHAIN_SEASON} is left to test on.")
 
 
 def test_practice_tables_on_the_chain_world(chain):
@@ -311,10 +384,22 @@ def test_other_team_render_names_no_williams_or_cota(chain, tmp_path):
     assert FORBIDDEN.findall(html) == []
     assert "Mercedes" in html and pr.PRACTICE_NOT_LOADED in html
     assert "forecast as of 2026-10-20 12:00 UTC" in html and "results through round 2" in html
+    assert f"Left out of the {CHAIN_SEASON} backtest: round 1 ({pr.NO_FIT_RACE})." in html
     assert _external_assets(html) == []
     # The `-P compounds:` labels, not the COTA defaults, name the tyres.
     assert re.search(r"(SOFT \(C5\)|MEDIUM \(C4\)|HARD \(C3\))", html)
     assert not re.search(r"(SOFT \(C4\)|MEDIUM \(C3\)|HARD \(C2\))", html)
+
+
+@needs_quarto
+def test_render_names_the_round_left_out_and_its_missing_input(knocked_out, tmp_path):
+    result = _render(knocked_out, tmp_path, knocked_out["scenarios"])
+    assert result.returncode == 0, result.stderr[-3000:]
+    html = (tmp_path / "reports" / PAGE / "report.html").read_text(encoding="utf-8")
+    assert f"round 2 ({knocked_out['reason']})" in html
+    assert f"round 1 ({pr.NO_FIT_RACE})" in html
+    assert f"No earlier round of {CHAIN_SEASON} is left to test on." in html
+    assert "no earlier rounds" not in html
 
 
 @needs_quarto

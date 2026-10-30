@@ -57,6 +57,17 @@ uv run fetch-weather --season 2026 --round 18   # maintainer only: Open-Meteo's 
 uv run scenarios --constructor williams --season 2026 --round 18   # the weather x start-tyre scenario file, from the built database, into data/processed/scenarios/ (offline)
 ```
 
+#### After each race
+
+`<s>` and `<r>` are the season and round of the race just run.
+
+1. `uv run refresh`: the new Jolpica round, then a build.
+2. `uv run fetch-sessions --season <s> --round <r>`: the race summary into `car_races`.
+3. `uv run fetch-weather --season <s> --round <r> --day-before`: the day-before forecast the backtest uses.
+4. `uv run fetch-weather --season <s> --round <next round>`: the next race's live forecast, which the scenario file and the page use (close to that race).
+5. `uv run build`.
+6. Write the scenario file with `uv run scenarios --constructor <id> --season <s> --round <next round>`, re-render the page as in Quick start above, then reread its front-matter gaps and the rounds its backtest leaves out, with their reasons.
+
 `uv run build` runs `dbt build` on the project in `dbt/`: staging tables (schema `staging`) type the raw CSVs, the marts in `main` are the tables the analysis reads, and the dbt tests check them. It builds into a fresh temporary file and swaps it in only if every model and test passes and no guarded table (`results`, `sprint_results`, `qualifying`, `raw_fastf1_*`, `pit_stops`, `car_races`, `practice_stints`, `weather_forecasts`, `race_incidents`, `stop_rules`) has shrunk; otherwise it exits 1 and leaves the previous DuckDB file as it was. Each build's test results are in `dbt/target/run_results.json`. Paths resolve from the package location, so `uv run build` writes to this repo's `data/processed/` whatever the current directory.
 
 To run dbt directly, from the repo root (this writes straight to `data/processed/f1_analytics.duckdb`, with no swap or shrink guard):

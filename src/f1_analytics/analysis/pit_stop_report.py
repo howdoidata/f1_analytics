@@ -42,12 +42,16 @@ from f1_analytics.analysis.pit_stops import (
 from f1_analytics.analysis.pit_stops.backtest import CARS_PER_TEAM
 from f1_analytics.analysis.pit_stops.history import HISTORY_START_SEASON, STOP_TYPES
 from f1_analytics.analysis.pit_stops.model import COMPOUNDS, DRAWS, WEATHER_FALLBACK
-from f1_analytics.analysis.pit_stops.weather import LIVE, WEATHER_CATEGORIES
+from f1_analytics.analysis.pit_stops.weather import DAY_BEFORE, LIVE, WEATHER_CATEGORIES, race_window
 from f1_analytics.config import DUCKDB_PATH, PROCESSED_DATA_DIR
 
 
 NOT_EXPECTED = "not expected under the current forecast"
 PRACTICE_NOT_LOADED = "Friday practice not loaded yet"
+NO_FIT_RACE = "no earlier race to fit the model on"
+NO_CAR_RACES = "no car_races rows"
+NO_START_COMPOUNDS = "no start compounds"
+NO_DAY_BEFORE = "no day-before forecast"
 METHOD_LABELS = {"model": "Model", "circuit_history": "Circuit history", "season_form": "Season form"}
 MAE_DECIMALS = 2
 HIT_RATE_TARGET = 0.8
@@ -134,7 +138,7 @@ class ForecastReport:
     clean: Forecast
     incident: Forecast
     backtest: Backtest | None
-    untested_rounds: tuple[int, ...]
+    untested_rounds: tuple[tuple[int, str], ...]
     forecast_fetched_at: str
     results_through: int | None
     split_check: pd.DataFrame
@@ -210,22 +214,52 @@ def build_report(
     )
 
 
-def season_backtest(tables: PitStopTables, season: int, rounds: list[int]) -> tuple[Backtest | None, tuple[int, ...]]:
-    """`backtest` over `rounds`, leaving out the leading rounds with no earlier race to fit on.
+def missing_input(tables: PitStopTables, season: int, round: int) -> str | None:
+    """Why `backtest` cannot run on the round, checked before it runs; None when nothing is missing.
 
-    Returns the backtest (None when no round is left) and the rounds left out.
-    A round with no fit races has none before it either, so only leading rounds can fail.
+    In order: the round's `car_races` rows, a known start compound among them,
+    and the day-before forecast's race window (as `race_weather` reads it).
     """
-    rounds = list(rounds)
-    skipped: list[int] = []
-    while rounds:
+    cars = tables.car_races[(tables.car_races["season"] == season) & (tables.car_races["round"] == round)]
+    if cars.empty:
+        return NO_CAR_RACES
+    if cars["start_compound"].dropna().empty:
+        return NO_START_COMPOUNDS
+    try:
+        race_window(tables, season, round, kind=DAY_BEFORE)
+    except ValueError:
+        return NO_DAY_BEFORE
+    return None
+
+
+def season_backtest(
+    tables: PitStopTables, season: int, rounds: list[int]
+) -> tuple[Backtest | None, tuple[tuple[int, str], ...]]:
+    """`backtest` over `rounds`, leaving out rounds missing an input and leading rounds with no race to fit on.
+
+    Returns the backtest (None when no round is left) and the (round, reason)
+    pairs left out, in round order. Rounds missing an input (`missing_input`)
+    go first; of the rest, a round with no fit races has none before it either,
+    so only leading rounds can fail that way.
+    """
+    skipped: list[tuple[int, str]] = []
+    kept: list[int] = []
+    for r in rounds:
+        reason = missing_input(tables, season, r)
+        if reason is None:
+            kept.append(r)
+        else:
+            skipped.append((r, reason))
+    tested = None
+    while kept:
         try:
-            return backtest(tables, season, rounds), tuple(skipped)
+            tested = backtest(tables, season, kept)
+            break
         except ValueError as error:
-            if str(error) != f"no fit races before {season} round {rounds[0]}":
+            if str(error) != f"no fit races before {season} round {kept[0]}":
                 raise
-            skipped.append(rounds.pop(0))
-    return None, tuple(skipped)
+            skipped.append((kept.pop(0), NO_FIT_RACE))
+    return tested, tuple(sorted(skipped))
 
 
 # --------------------------------------------------------------------------
@@ -499,14 +533,12 @@ def backtest_sentence(table: pd.DataFrame) -> str:
             f"{stops(model - others[best])} stops below the model ({stops(model)}).")
 
 
-def untested_sentence(season: int, rounds: tuple[int, ...]) -> str:
-    """'' with no left-out round; else which earlier rounds the backtest leaves out and why."""
+def untested_sentence(season: int, rounds: tuple[tuple[int, str], ...]) -> str:
+    """'' with no left-out round; else each earlier round the backtest leaves out, with why."""
     if not rounds:
         return ""
-    names = ", ".join(str(r) for r in rounds)
-    word = "Round" if len(rounds) == 1 else "Rounds"
-    verb = "is" if len(rounds) == 1 else "are"
-    return f"{word} {names} of {season} {verb} left out: the model has no earlier race to be fitted on for {'it' if len(rounds) == 1 else 'them'}."
+    names = ", ".join(f"round {r} ({reason})" for r, reason in rounds)
+    return f"Left out of the {season} backtest: {names}."
 
 
 def coverage_sentence(table: pd.DataFrame) -> str:
@@ -527,7 +559,10 @@ def hit_rate_text(report: ForecastReport) -> str:
     return f"{share(row.hit_rate)} of {int(row.n)} team-races inside the range (target {share(HIT_RATE_TARGET)})"
 
 
-def no_backtest_sentence(season: int) -> str:
+def no_backtest_sentence(season: int, untested: tuple[tuple[int, str], ...] = ()) -> str:
+    """Why there is no backtest: no earlier rounds, or every earlier round left out (`untested`)."""
+    if untested:
+        return f"No earlier round of {season} is left to test on."
     return f"There are no earlier rounds in {season} to test on."
 
 
@@ -591,6 +626,10 @@ __all__ = [
     "HISTORY_START_SEASON",
     "MODEL_NOTES",
     "NOT_EXPECTED",
+    "NO_CAR_RACES",
+    "NO_DAY_BEFORE",
+    "NO_FIT_RACE",
+    "NO_START_COMPOUNDS",
     "PRACTICE_NOT_LOADED",
     "ForecastReport",
     "Race",
@@ -606,6 +645,7 @@ __all__ = [
     "headline",
     "history_table",
     "minimum_sentence",
+    "missing_input",
     "no_backtest_sentence",
     "practice_history_table",
     "practice_loaded",
