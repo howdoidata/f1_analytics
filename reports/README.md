@@ -15,7 +15,6 @@ Status: **provisional**
 Known gaps:
 
 - Friday practice is not shown yet: its tyre-wear filters don't match race wear
-- The backtest is advisory: it never changes the forecast
 - The backtest uses forecasts issued after the race, so its hit rate is optimistic
 - No wet race in the data
 

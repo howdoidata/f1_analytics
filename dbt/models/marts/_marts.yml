@@ -618,7 +618,7 @@ models:
     data_tests:
       - unique_combination:
           arguments:
-            columns: [race_label, driver_id, stint_number]
+            columns: [season, race_label, driver_id, stint_number]
     columns:
       - name: race_label
         description: Extract folder name, <RR>-<slug>.
