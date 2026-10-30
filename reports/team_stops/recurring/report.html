@@ -58,8 +58,10 @@ figcaption, .figure-caption { color: #52514e; font-size: 0.9rem; }
 <h2 id="in-short">In short</h2>
 <ul>
 <li><strong>Answer:</strong> Williams are expected to make <strong>3.2 [2–6] pit stops</strong> in total at the 2026 United States Grand Prix (Circuit of the Americas, round 18, 2026-10-25), counting both cars and every stop: the average, with the p10–p90 range in brackets.</li>
-<li><strong>How sure:</strong> 81% of 187 team-races inside the range (target 80%).</li>
-<li><strong>What would make it wrong:</strong> weather or start tyres other than the most likely scenario below; a safety car or red flag (3.5 [2–6] stops with one). Known gaps: Friday practice is not loaded; the backtest uses weather forecasts issued after each race, so its hit rate is optimistic; there is no wet race in the data; circuit history beat the model on mean absolute error in the backtest (see <em>How well the model did this season</em>).</li>
+<li><strong>Inputs:</strong> forecast as of 2026-10-21 14:42 UTC; results through round 17.</li>
+<li><strong>How sure:</strong> The backtest is advisory: it never changes the forecast. The model’s mean absolute error, 1.70 stops, was higher than both rules of thumb: circuit history 1.56 and season form 1.67. Its p10–p90 range held the actual total in 81% of 187 team-races (target 80%).</li>
+<li><strong>What would make it wrong:</strong> weather or start tyres other than the most likely scenario below; a safety car or red flag (3.5 [2–6] stops with one).</li>
+<li><strong>Known gaps:</strong> Friday practice is not shown yet: its tyre-wear filters don’t match race wear. The backtest is advisory: it never changes the forecast. The backtest uses forecasts issued after the race, so its hit rate is optimistic. No wet race in the data.</li>
 </ul>
 <h2 id="the-answer">The answer</h2>
 <p>In the headline under <em>In short</em> above, the first number is the average over 10,000 simulated races; the two in brackets are the range: in at least 8 of 10 simulated races the team made between those two numbers of stops, inclusive. This is the most likely scenario: <strong>dry</strong> weather, with the cars starting on <strong>SOFT (C4) + MEDIUM (C3)</strong>.</p>
@@ -262,6 +264,7 @@ figcaption, .figure-caption { color: #52514e; font-size: 0.9rem; }
 </tbody>
 </table>
 <h2 id="how-well-the-model-did-this-season">How well the model did this season</h2>
+<p>The backtest is advisory: it never changes the forecast.</p>
 <p>Each earlier round of 2026 was forecast for every team from what was known before it, and each forecast was compared with the team’s actual total. Circuit history had the lowest mean absolute error, 1.56 stops, 0.14 stops below the model (1.70). The model’s p10–p90 range held the actual total in 81% of the 187 team-races, against a target of 80%; the range was 4.2 stops wide on average.</p>
 <table class="caption-top" style="width:100%;">
 <colgroup>
@@ -516,8 +519,7 @@ figcaption, .figure-caption { color: #52514e; font-size: 0.9rem; }
 </tbody>
 </table>
 <h2 id="friday-practice">Friday practice</h2>
-<p>A check against history: practice tyre wear does not change the forecast.</p>
-<p><strong>Friday practice not loaded yet.</strong></p>
+<p>Friday practice is not shown yet: its tyre-wear filters don’t match race wear, so it would not compare like for like with earlier races at this circuit.</p>
 <h2 id="data-and-method">Data and method</h2>
 <p>Every number on this page comes from <code>f1_analytics.analysis.pit_stops</code>, run on the local DuckDB file built from the committed raw data, with the scenarios read from the scenario file <code>uv run scenarios</code> writes and checked against the database when the page is rendered. The model is a Poisson count model of each running car’s stops above the race minimum, fitted on races before this one, with 10,000 seeded draws.</p>
 <footer class="credits">
