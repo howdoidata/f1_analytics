@@ -25,9 +25,10 @@ season = 2026
 round = 18
 # The Pirelli allocation for the race, as NAME=LABEL pairs: labels only, the model never reads them.
 compounds = "HARD=C2,MEDIUM=C3,SOFT=C4"
-# Empty: the project's DuckDB file and data/processed/scenarios/.
+# Empty: the project's DuckDB file, data/processed/scenarios/ and data/raw/.
 db_path = ""
 scenarios_dir = ""
+raw_dir = ""
 ```
 
 ```{python}
@@ -36,7 +37,7 @@ from f1_analytics.analysis import pit_stop_report as pr
 from f1_analytics.analysis.formatting import count, markdown_table, num, share
 
 report = pr.build_report(
-    constructor_id, season, round, pr.parse_compounds(compounds), db_path, scenarios_dir
+    constructor_id, season, round, pr.parse_compounds(compounds), db_path, scenarios_dir, raw_dir
 )
 race, model = report.race, report.model
 bench = pr.benchmarks(report)

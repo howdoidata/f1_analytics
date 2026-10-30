@@ -6,6 +6,8 @@ Quarto is absent, and fail in CI, which installs it. The committed `report.html`
 
 from __future__ import annotations
 
+import dataclasses
+import json
 import math
 import os
 import re
@@ -20,11 +22,12 @@ import pandas as pd
 import pytest
 
 from chain_world import CHAIN_SEASON, CHAIN_TEAM, make_chain_world
-from f1_analytics import cli, scenarios
+from f1_analytics import cli, config, scenarios
 from f1_analytics.analysis import pit_stop_report as pr
 from f1_analytics.analysis.data import load_pit_stop_tables
 from f1_analytics.analysis.pit_stops import PracticeWear, practice_wear_vs_history
-from f1_analytics.config import PROJECT_ROOT
+from f1_analytics.config import PROJECT_ROOT, RAW_DATA_DIR
+from test_real_db import require_real_db
 
 
 PAGE = Path("team_stops") / "recurring"  # the recurring page, relative to reports/
@@ -206,7 +209,7 @@ def chain(tmp_path_factory) -> dict[str, Path]:
     out = root / "scenarios"
     args = ["--constructor", CHAIN_TEAM, "--season", str(CHAIN_SEASON), "--round", str(CHAIN_ROUND)]
     assert scenarios.main(args, db_path=db_path, raw_dir=raw, out_dir=out) == 0
-    return {"db": db_path, "scenarios": out, "root": root}
+    return {"db": db_path, "scenarios": out, "root": root, "raw": raw}
 
 
 def _scenario_file(chain) -> Path:
@@ -239,7 +242,8 @@ def test_stale_and_missing_scenario_files_name_the_command(chain, tmp_path):
 
 
 def test_report_on_the_chain_world(chain):
-    report = pr.build_report(CHAIN_TEAM, CHAIN_SEASON, CHAIN_ROUND, {"SOFT": "C3"}, chain["db"], chain["scenarios"])
+    report = pr.build_report(
+        CHAIN_TEAM, CHAIN_SEASON, CHAIN_ROUND, {"SOFT": "C3"}, chain["db"], chain["scenarios"], chain["raw"])
     preset = report.preset
     assert pr.headline(report) == pr.stop_range(preset["mean"], preset["p10"], preset["p90"])
     # The preset forecast is the preset row of the scenario file.
@@ -312,7 +316,7 @@ def knocked_out(request, tmp_path_factory) -> dict:
     out = root / "scenarios"
     args = ["--constructor", CHAIN_TEAM, "--season", str(CHAIN_SEASON), "--round", str(CHAIN_ROUND)]
     assert scenarios.main(args, db_path=db_path, raw_dir=raw, out_dir=out) == 0
-    return {"db": db_path, "scenarios": out, "root": root, "reason": reason}
+    return {"db": db_path, "scenarios": out, "root": root, "raw": raw, "reason": reason}
 
 
 def test_round_missing_an_input_is_left_out_and_named(knocked_out):
@@ -322,13 +326,114 @@ def test_round_missing_an_input_is_left_out_and_named(knocked_out):
     assert pr.missing_input(tables, CHAIN_SEASON, 1) is None
     assert pr.missing_input(tables, CHAIN_SEASON, 2) == reason
     report = pr.build_report(
-        CHAIN_TEAM, CHAIN_SEASON, CHAIN_ROUND, {"SOFT": "C3"}, knocked_out["db"], knocked_out["scenarios"])
+        CHAIN_TEAM, CHAIN_SEASON, CHAIN_ROUND, {"SOFT": "C3"}, knocked_out["db"], knocked_out["scenarios"],
+        knocked_out["raw"])
     assert report.untested_rounds == ((1, pr.NO_FIT_RACE), (2, reason))
     assert report.backtest is None
     assert pr.untested_sentence(CHAIN_SEASON, report.untested_rounds) == (
         f"Left out of the {CHAIN_SEASON} backtest: round 1 ({pr.NO_FIT_RACE}), round 2 ({reason}).")
     assert pr.no_backtest_sentence(CHAIN_SEASON, report.untested_rounds) == (
         f"No earlier round of {CHAIN_SEASON} is left to test on.")
+
+
+# --------------------------------------------------------------------------
+# Stale inputs: the render refuses
+# --------------------------------------------------------------------------
+
+
+FORECAST_FILE = Path("open_meteo") / "forecast" / f"{CHAIN_SEASON}-{CHAIN_ROUND:02d}.json"
+
+
+def _refetched_raw(chain, raw: Path) -> Path:
+    """A raw dir whose live forecast file is a newer fetch than the one the chain world's DB holds."""
+    path = raw / FORECAST_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.loads((chain["raw"] / FORECAST_FILE).read_text())
+    payload["fetched_at"] = "2026-10-21T06:00:00Z"
+    path.write_text(json.dumps(payload))
+    return raw
+
+
+def test_fresh_chain_world_has_no_stale_inputs(chain):
+    tables = load_pit_stop_tables(chain["db"])
+    assert pr.stale_inputs(tables, CHAIN_SEASON, CHAIN_ROUND, chain["raw"]) == []
+
+
+def test_missing_live_forecast_file_is_named_with_the_fetch_command(chain, tmp_path):
+    tables = load_pit_stop_tables(chain["db"])
+    [problem] = pr.stale_inputs(tables, CHAIN_SEASON, CHAIN_ROUND, tmp_path)
+    assert str(tmp_path / FORECAST_FILE) in problem
+    assert f"`uv run fetch-weather --season {CHAIN_SEASON} --round {CHAIN_ROUND}`, then `uv run build`" in problem
+
+
+def test_live_forecast_not_built_is_named_with_the_build_command(chain, tmp_path):
+    tables = load_pit_stop_tables(chain["db"])
+    raw = _refetched_raw(chain, tmp_path)
+    [problem] = pr.stale_inputs(tables, CHAIN_SEASON, CHAIN_ROUND, raw)
+    assert str(raw / FORECAST_FILE) in problem
+    assert "older fetch" in problem and "`uv run build`" in problem
+
+
+def _without_round(frame: pd.DataFrame, round: int) -> pd.DataFrame:
+    return frame[~((frame["season"] == CHAIN_SEASON) & (frame["round"] == round))]
+
+
+def test_earlier_round_lacking_results_or_pit_stops_is_named(chain, tmp_path):
+    tables = load_pit_stop_tables(chain["db"])
+    no_stops = dataclasses.replace(tables, pit_stops=_without_round(tables.pit_stops, 2))
+    no_both = dataclasses.replace(no_stops, results=_without_round(tables.results, 2))
+    fix = "fetch them with `uv run refresh`, then `uv run build`"
+    assert pr.stale_inputs(no_stops, CHAIN_SEASON, CHAIN_ROUND, chain["raw"]) == [
+        f"earlier rounds lack inputs: round 2 (no pit stops); {fix}"]
+    assert pr.stale_inputs(no_both, CHAIN_SEASON, CHAIN_ROUND, chain["raw"]) == [
+        f"earlier rounds lack inputs: round 2 (no results, no pit stops); {fix}"]
+    # Both problems are named together, so one render names every fix.
+    problems = pr.stale_inputs(no_both, CHAIN_SEASON, CHAIN_ROUND, _refetched_raw(chain, tmp_path))
+    assert len(problems) == 2 and "older fetch" in problems[0] and "round 2" in problems[1]
+
+
+def test_round_one_has_no_earlier_round_check(chain):
+    tables = load_pit_stop_tables(chain["db"])
+    empty = dataclasses.replace(tables, results=tables.results.iloc[0:0], pit_stops=tables.pit_stops.iloc[0:0])
+    assert not any("earlier rounds" in p for p in pr.stale_inputs(empty, CHAIN_SEASON, 1, chain["raw"]))
+
+
+def _drop_round_two(raw: Path, *relative: str) -> None:
+    for name in relative:
+        path = raw / name
+        frame = pd.read_csv(path, dtype=str, keep_default_na=False)
+        rows = (frame["season"] == str(CHAIN_SEASON)) & (frame["round"] == "2")
+        assert rows.any()
+        frame[~rows].to_csv(path, index=False)
+
+
+STALE_WORLDS = {
+    "no_pit_stops": (("jolpica/pit_stops.csv",), "round 2 (no pit stops)"),
+    "not_refreshed": (("jolpica/results.csv", "jolpica/pit_stops.csv", "fastf1_summary/car_races.csv"),
+                      "round 2 (no results, no pit stops)"),
+}
+
+
+@pytest.fixture(scope="module", params=sorted(STALE_WORLDS))
+def stale_world(request, tmp_path_factory) -> dict:
+    """A chain world built with some of 2023 R2's raw inputs removed."""
+    files, named = STALE_WORLDS[request.param]
+    root = tmp_path_factory.mktemp(f"forecast_report_stale_{request.param}")
+    raw = make_chain_world(root / "raw")
+    _drop_round_two(raw, *files)
+    db_path = root / "chain.duckdb"
+    assert cli.build(["--raw-dir", str(raw), "--db", str(db_path)]) == 0
+    return {"db": db_path, "raw": raw, "root": root, "named": named}
+
+
+def test_build_report_refuses_an_earlier_round_lacking_inputs(stale_world, tmp_path):
+    # An empty scenarios dir: a ScenarioFileError would mean the check ran too late.
+    with pytest.raises(pr.StaleDataError) as error:
+        pr.build_report(CHAIN_TEAM, CHAIN_SEASON, CHAIN_ROUND, {"SOFT": "C3"},
+                        stale_world["db"], tmp_path, stale_world["raw"])
+    message = str(error.value)
+    assert message.startswith(f"{CHAIN_SEASON} round {CHAIN_ROUND} can't render on stale data:")
+    assert stale_world["named"] in message and "`uv run refresh`, then `uv run build`" in message
 
 
 def test_practice_tables_on_the_chain_world(chain):
@@ -358,8 +463,8 @@ def test_require_quarto_skips_locally_and_fails_in_ci(monkeypatch):
 OTHER_COMPOUNDS = "HARD=C3,MEDIUM=C4,SOFT=C5"
 
 
-def _render(chain, tmp_path: Path, scenarios_dir: Path) -> subprocess.CompletedProcess:
-    """Render a copy of the page (in a copy of the reports project) for the chain world."""
+def _render(chain, tmp_path: Path, scenarios_dir: Path, raw_dir: Path | None = None) -> subprocess.CompletedProcess:
+    """Render a copy of the page (in a copy of the reports project) for the chain world (its raw dir by default)."""
     project = tmp_path / "reports"
     page = project / PAGE
     page.mkdir(parents=True)
@@ -369,6 +474,7 @@ def _render(chain, tmp_path: Path, scenarios_dir: Path) -> subprocess.CompletedP
         [QUARTO, "render", str(page / "report.qmd"),
          "-P", f"constructor_id:{CHAIN_TEAM}", "-P", f"season:{CHAIN_SEASON}", "-P", f"round:{CHAIN_ROUND}",
          "-P", f"db_path:{chain['db']}", "-P", f"scenarios_dir:{scenarios_dir}",
+         "-P", f"raw_dir:{raw_dir or chain['raw']}",
          "-P", f"compounds:{OTHER_COMPOUNDS}",
          "-M", "title:Team pit stops", "-M", "subtitle:Chain world"],
         capture_output=True, text=True, cwd=project, timeout=600,
@@ -407,6 +513,14 @@ def test_stale_scenario_file_fails_the_render(chain, tmp_path):
     result = _render(chain, tmp_path, _stale_copy(chain, tmp_path / "stale"))
     assert result.returncode != 0
     assert "uv run scenarios" in result.stdout + result.stderr
+
+
+@needs_quarto
+def test_live_forecast_not_built_fails_the_render(chain, tmp_path):
+    result = _render(chain, tmp_path, chain["scenarios"], _refetched_raw(chain, tmp_path / "raw"))
+    assert result.returncode != 0
+    output = result.stdout + result.stderr
+    assert "StaleDataError" in output and "uv run build" in output
 
 
 @needs_quarto
@@ -478,21 +592,17 @@ def test_page_body_names_no_team_or_circuit_outside_the_parameters():
 
 
 # --------------------------------------------------------------------------
-# The real database (skips without it)
+# The real database (skips locally without it, fails in CI)
 # --------------------------------------------------------------------------
 
 
 def test_real_db_minimum_link_and_incident_line():
-    from f1_analytics.config import DUCKDB_PATH
     from f1_analytics.analysis.pit_stops import fit_count_model, forecast, incident_chance, race_weather
     from f1_analytics.analysis.pit_stops.weather import LIVE
 
-    if not Path(DUCKDB_PATH).exists():
-        pytest.skip("real DuckDB not built; run uv run build")
-    tables = load_pit_stop_tables(DUCKDB_PATH)
-    if not ((tables.weather_forecasts["season"] == 2026) & (tables.weather_forecasts["round"] == 18)
-            & (tables.weather_forecasts["kind"] == LIVE)).any():
-        pytest.skip("no live forecast for 2026 R18 in the database")
+    # Read at call time, so a test can point it at a missing file.
+    tables = load_pit_stop_tables(require_real_db(config.DUCKDB_PATH))
+    assert pr.stale_inputs(tables, 2026, 18, RAW_DATA_DIR) == []
     model = fit_count_model(tables, 2026, 18)
     assert pr.minimum_sentence(model) == "At this race a running car makes at least 1 stop, in any weather."
     assert "In 55% of the draws" in pr.team_link_sentence(model)
@@ -505,3 +615,10 @@ def test_real_db_minimum_link_and_incident_line():
         for incident in (False, None, True)
     ]
     assert runs == sorted(runs) and not any(math.isnan(r) for r in runs)
+
+
+def test_real_db_page_test_fails_in_ci_without_the_db(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "DUCKDB_PATH", tmp_path / "missing.duckdb")
+    monkeypatch.setenv("CI", "true")
+    with pytest.raises(pytest.fail.Exception):
+        test_real_db_minimum_link_and_incident_line()
