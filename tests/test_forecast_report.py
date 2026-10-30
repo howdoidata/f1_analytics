@@ -95,6 +95,19 @@ def test_coverage_sentence_gives_hit_rate_target_and_width():
         "the range was 4.2 stops wide on average.")
 
 
+def test_gaps_text_prints_each_gap_as_written():
+    gaps = ["Friday practice is not shown yet: its filters differ", "No wet race in the data."]
+    assert pr.gaps_text(gaps) == "Friday practice is not shown yet: its filters differ. No wet race in the data."
+    assert pr.gaps_text([]) == "none listed."
+
+
+def test_page_gaps_reads_a_list_or_a_one_line_gap(tmp_path):
+    assert any("not shown yet" in gap for gap in pr.page_gaps(REPORT_DIR / "report.qmd"))
+    one_line = tmp_path / "report.qmd"
+    one_line.write_text("---\ntitle: T\ngaps: No wet race\n---\n", encoding="utf-8")
+    assert pr.page_gaps(one_line) == ["No wet race"]
+
+
 def test_hit_rate_text_reads_the_model_row_or_says_not_backtested():
     with_backtest = SimpleNamespace(backtest=SimpleNamespace(table=_table(1.7, 1.56, 1.67)))
     assert pr.hit_rate_text(with_backtest) == "81% of 187 team-races inside the range (target 80%)"
@@ -538,6 +551,8 @@ def test_other_team_render_names_no_williams_or_cota(chain, tmp_path):
     assert "not shown yet" in html and "so it would not compare like for like" in html
     assert "Field s/lap" not in html and pr.PRACTICE_NOT_LOADED not in html
     assert "forecast as of 2026-10-20 12:00 UTC" in html and "results through round 2" in html
+    # Known gaps come from the front matter, not hand-typed prose.
+    assert "No wet race in the data." in html and "there is no wet race in the data" not in html
     assert f"Left out of the {CHAIN_SEASON} backtest: round 1 ({pr.NO_FIT_RACE})." in html
     assert _external_assets(html) == []
     # The `-P compounds:` labels, not the COTA defaults, name the tyres.
