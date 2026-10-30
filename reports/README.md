@@ -14,10 +14,10 @@ Status: **provisional**
 
 Known gaps:
 
-- Friday practice is not loaded
+- Friday practice is not shown yet: its tyre-wear filters don't match race wear
+- The backtest is advisory: it never changes the forecast
 - The backtest uses forecasts issued after the race, so its hit rate is optimistic
 - No wet race in the data
-- Circuit history beats the model's mean absolute error (1.56 vs 1.70 stops)
 
 [Report (HTML)](team_stops/recurring/report.html) · [Source (`report.qmd`)](team_stops/recurring/report.qmd)
 

@@ -22,7 +22,7 @@ import pandas as pd
 import pytest
 
 from chain_world import CHAIN_SEASON, CHAIN_TEAM, make_chain_world
-from f1_analytics import cli, config, scenarios
+from f1_analytics import cli, config, gallery, scenarios
 from f1_analytics.analysis import pit_stop_report as pr
 from f1_analytics.analysis.data import load_pit_stop_tables
 from f1_analytics.analysis.pit_stops import PracticeWear, practice_wear_vs_history
@@ -99,6 +99,47 @@ def test_hit_rate_text_reads_the_model_row_or_says_not_backtested():
     with_backtest = SimpleNamespace(backtest=SimpleNamespace(table=_table(1.7, 1.56, 1.67)))
     assert pr.hit_rate_text(with_backtest) == "81% of 187 team-races inside the range (target 80%)"
     assert pr.hit_rate_text(SimpleNamespace(backtest=None)) == "not backtested"
+
+
+def _accuracy(model: float, circuit: float, season: float) -> str:
+    return pr.accuracy_text(SimpleNamespace(backtest=SimpleNamespace(table=_table(model, circuit, season))))
+
+
+def test_accuracy_text_model_behind_both():
+    assert _accuracy(1.697, 1.556, 1.668) == (
+        "The model's mean absolute error, 1.70 stops, was higher than both rules of thumb: "
+        "circuit history 1.56 and season form 1.67. "
+        "Its p10–p90 range held the actual total in 81% of 187 team-races (target 80%).")
+
+
+def test_accuracy_text_model_ahead_of_both():
+    assert _accuracy(1.40, 1.556, 1.468).startswith(
+        "The model's mean absolute error, 1.40 stops, was lower than both rules of thumb: "
+        "circuit history 1.56 and season form 1.47.")
+
+
+def test_accuracy_text_model_between():
+    assert _accuracy(1.60, 1.556, 1.668).startswith(
+        "The model's mean absolute error, 1.60 stops, was higher than circuit history (1.56) "
+        "and lower than season form (1.67).")
+
+
+def test_accuracy_text_tie_at_two_decimals():
+    assert _accuracy(1.5551, 1.5562, 1.70).startswith(
+        "The model's mean absolute error, 1.56 stops, was the same as circuit history (1.56) "
+        "and lower than season form (1.70).")
+
+
+def test_accuracy_text_makes_no_judgement():
+    for row in ((1.697, 1.556, 1.668), (1.40, 1.556, 1.468), (1.60, 1.556, 1.668), (1.5551, 1.5562, 1.70)):
+        assert not re.search(r"meaningful|negligible|significant|better|worse|beat", _accuracy(*row))
+
+
+def test_accuracy_text_without_backtest_is_the_no_backtest_sentence():
+    report = SimpleNamespace(backtest=None, race=SimpleNamespace(season=2023), untested_rounds=())
+    assert pr.accuracy_text(report) == "Not backtested: " + pr.no_backtest_sentence(2023)
+    report.untested_rounds = ((1, pr.NO_FIT_RACE),)
+    assert pr.accuracy_text(report) == "Not backtested: " + pr.no_backtest_sentence(2023, ((1, pr.NO_FIT_RACE),))
 
 
 def test_no_earlier_rounds_sentence():
@@ -488,7 +529,14 @@ def test_other_team_render_names_no_williams_or_cota(chain, tmp_path):
     html = (tmp_path / "reports" / PAGE / "report.html").read_text(encoding="utf-8")
     assert not (tmp_path / "reports" / PAGE / "report.pdf").exists()
     assert FORBIDDEN.findall(html) == []
-    assert "Mercedes" in html and pr.PRACTICE_NOT_LOADED in html
+    assert "Mercedes" in html
+    # The comparison sentence (the chain world's one-round backtest), advisory marker and practice text.
+    assert re.search(r"both rules of thumb|than circuit history.*than season form", html)
+    assert "team-races (target 80%)" in html
+    assert html.count(pr.BACKTEST_ADVISORY) >= 2  # under In short and opening the backtest section
+    # Unique to PRACTICE_NOT_SHOWN (the Friday practice section), with no apostrophe for Pandoc to curl.
+    assert "not shown yet" in html and "so it would not compare like for like" in html
+    assert "Field s/lap" not in html and pr.PRACTICE_NOT_LOADED not in html
     assert "forecast as of 2026-10-20 12:00 UTC" in html and "results through round 2" in html
     assert f"Left out of the {CHAIN_SEASON} backtest: round 1 ({pr.NO_FIT_RACE})." in html
     assert _external_assets(html) == []
@@ -573,6 +621,27 @@ def test_external_asset_check_catches_a_cdn():
         "https://cdn.jsdelivr.net/x.js"]
     assert _external_assets('<link rel="stylesheet" href="//cdn.example/x.css">') == ["//cdn.example/x.css"]
     assert _external_assets('<a href="https://open-meteo.com/">credit</a>') == []
+
+
+DIGIT = re.compile(r"\d")
+
+
+def _gaps_with_digits(path: Path) -> list[str]:
+    """The front-matter `gaps` lines that carry a digit: a typed number goes stale between races."""
+    gaps = gallery.read_frontmatter(path).get("gaps", [])
+    return [gap for gap in gaps if DIGIT.search(gap)]
+
+
+def test_committed_page_gaps_carry_no_digit():
+    assert _gaps_with_digits(REPORT_DIR / "report.qmd") == []
+    assert any("not shown yet" in gap for gap in gallery.read_frontmatter(REPORT_DIR / "report.qmd")["gaps"])
+
+
+def test_gaps_digit_check_names_a_planted_line(tmp_path):
+    text = (REPORT_DIR / "report.qmd").read_text(encoding="utf-8")
+    planted = tmp_path / "report.qmd"
+    planted.write_text(text.replace("gaps:\n", "gaps:\n  - Planted 1.70\n", 1), encoding="utf-8")
+    assert _gaps_with_digits(planted) == ["Planted 1.70"]
 
 
 def test_page_frontmatter_is_html_only():
