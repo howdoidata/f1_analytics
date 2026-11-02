@@ -6,6 +6,15 @@ The repo holds a copy of the public F1 results history (1950 to the latest round
 
 It is a portfolio project. It shows the full path from raw data to a published answer: sourcing, modelling with dbt, data tests, tested analysis code and the written report. [`PROJECT.md`](PROJECT.md) describes the scope and the tools, and [`docs/decisions.md`](docs/decisions.md) explains why it is built this way.
 
+## What this shows
+
+- **The problem:** analysis whose numbers can't be checked or re-run. The spreadsheet is gone, the query changed, and nobody can say where a figure came from.
+- **What changes:** one command rebuilds a tested database from committed raw data, and every number in a report comes from a tested function.
+- **In past work:** automating recurring reporting removed most of the manual preparation and increased the team's capacity to deliver analysis.
+- **What this demo proves:** 40 dbt models (staging and marts) with data tests, 430 Python tests, CI on every pull request and merge, reports published to GitHub Pages, and a pit-stop forecast backtested against a naive baseline.
+
+The F1 data is licensed for non-commercial use only (see [`data/raw/NOTICE.md`](data/raw/NOTICE.md)). This repo shows method and code, not a data product.
+
 ## Reports
 
 **[Report gallery](https://howdoidata.github.io/f1_analytics/)**: every report, recurring pages first, then editions newest first, rendered in the browser, with links to the Quarto source. In the repo, the same list is in [`reports/README.md`](reports/README.md).
@@ -28,7 +37,7 @@ To see what you already have: `uv --version`, `quarto --version`, and `quarto ch
 ## Quick start
 
 ```bash
-git clone https://github.com/howdoidata/f1_analytics.git   # or git@github.com:howdoidata/f1_analytics.git; needs access while the repo is private
+git clone https://github.com/howdoidata/f1_analytics.git   # or git@github.com:howdoidata/f1_analytics.git
 cd f1_analytics
 uv sync                          # creates .venv/ with Python 3.13 and the pinned packages (needs network)
 uv run pytest                    # offline test suite, about 8 minutes
